@@ -1,4 +1,36 @@
-# Competition Cubing Simulator — project notes
+# Competition Cubing Simulator: project notes
+
+## Current setup status (verified 2026-10-06)
+
+This section supersedes the older workspace and cloud status statements in the initial planning record below. Product ideas and the ordered roadmap remain unchanged.
+
+- GitHub is the canonical source of truth: https://github.com/Brandonius813/cubing-comp-sim. The stable Mac working copy is `Documents/Codex/cubing-comp-sim`. At the start of this check, both `main` branches were at `02ca25e`; all four tracked files matched, and the local working tree was clean. No app code exists.
+- This check runs inside the separate ChatGPT project. Its generated local mirror has project instructions and an empty `sources/` folder. It is separate from the Git checkout. Reusable local project registration was not verified.
+- Codex Cloud originally listed a private `cubing-comp-sim` environment with **Unknown repository**. Opening it failed with **Couldn’t start editing environment**.
+- GitHub access in the cloud repository picker works. A replacement draft was created with only `Brandonius813/cubing-comp-sim` selected. It appears in settings with the correct repository, private sharing, and **Unpublished** status.
+- **Cloud setup is blocked:** the replacement’s **Continue setup** action also fails with **Couldn’t start editing environment**. The cause is unknown. The original environment was retained. No published replacement, cloud checkout, command execution, or fresh-task verification has been established.
+- No app stack, dependencies, database, authentication, app hosting, or deployment configuration has been chosen. Codex Cloud provides a development environment; it does not deploy the app.
+
+## Finish cloud setup
+
+1. Open **Settings > Codex Cloud > Environments**. Choose the replacement with the correct repository and **Unpublished** label, then **Continue setup**. If the web action fails, try the desktop app.
+2. Confirm the checkout, read `AGENTS.md` and this file, and run `pwd`, `git remote -v`, `git status --short --branch`, `git log -1 --oneline`, and `git ls-files`. Report actual outputs. No app dependencies need installation yet.
+3. Review the setup, save, and publish. Confirm **Environment published**.
+4. Start a fresh cloud task in that environment. Repeat the read-only repository and command checks without editing files or opening another PR.
+5. Record the publication and verification results here before marking cloud setup complete. Retain the old environment until the replacement works.
+
+## First branch and pull request exercise
+
+This documentation change uses `docs/cloud-setup-status`, targeting `main`. A branch holds a separate line of changes. A commit saves a snapshot. A pull request shows the difference for review before merging.
+
+The workflow is: refresh `main`, create a branch, make one bounded change, inspect the diff and run relevant checks, commit and push, then open a PR. Review **Files changed** before merging. After a merge, update the Mac working copy with a fast-forward pull. An open PR does not update either `main` automatically.
+
+For this exercise, review the current setup facts and verification steps. The original Mac checkout remains unchanged while the documentation is proposed on GitHub. Cloud setup is still blocked regardless of whether the PR is ready.
+
+## Initial planning record (historical setup status)
+
+The workspace and cloud status statements below reflect the earlier foundation session. Use the current setup status above for those facts.
+
 
 Last updated: 2026-10-06
 
