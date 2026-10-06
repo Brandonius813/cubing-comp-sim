@@ -1,0 +1,11 @@
+# Local credentials and environment values
+.env
+.env.*
+!.env.example
+
+# macOS and common generated files
+.DS_Store
+node_modules/
+dist/
+build/
+coverage/
