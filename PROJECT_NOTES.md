@@ -35,8 +35,8 @@ These are ideas, not commitments for version one. Product scope and rules must b
 
 Each item is a checkpoint, not permission to start all later work. We will finish and record one checkpoint before moving to the next.
 
-1. **Choose the project home and shared source of truth.** Understand this local folder, the separate ChatGPT “Cubing Comp Sim” project, and what GitHub would add. Decide where project documents live and how future chats/agents find them. **Decision recorded below; repository bootstrap is next.**
-2. **Learn and choose the Git/GitHub workflow.** Repository vs. working folder, commits, branches, pull requests, and later whether Git worktrees help parallel work. Create/connect a repository only after agreeing on its location and workflow. **In progress.**
+1. **Choose the project home and shared source of truth.** Understand this local folder, the separate ChatGPT “Cubing Comp Sim” project, and what GitHub would add. Decide where project documents live and how future chats/agents find them. **Complete: public GitHub repository for durable code/engineering decisions; local workspace selected.**
+2. **Learn and choose the Git/GitHub workflow.** Repository vs. working folder, commits, branches, pull requests, and later whether Git worktrees help parallel work. **In progress: local Git repository initialized; GitHub remote and Codex Cloud are waiting on authentication.**
 3. **Define the first user and product boundary.** Specify the primary competition-practice scenario, first-release platforms, one complete core loop, and what is explicitly deferred.
 4. **Write down WCA behavior.** Verify inspection, +2/DNF handling, round size, averages, and BPA/WPA semantics from authoritative rules; identify which behavior is simulation guidance versus official competition procedure.
 5. **Study scramble generation.** Evaluate TNoodle and alternatives, event-by-event coverage, WCA specification/versioning, licensing, runtime/platform compatibility, reproducibility, and a correctness test plan before selecting an implementation.
@@ -53,13 +53,13 @@ Each item is a checkpoint, not permission to start all later work. We will finis
 ## Workspace facts (checked 2026-10-06)
 
 - This conversation began in a generated local Codex task folder under `Documents/Codex`, not in a Git repository. It is not registered as a reusable local project.
-- A stable local repository workspace has been chosen: `Documents/Codex/cubing-comp-sim`. Its local Git setup is in progress; no app code has been written.
+- Stable local repository workspace: `Documents/Codex/cubing-comp-sim`. Git is initialized on branch `main`; initial commit `4e804f9` contains only `README.md`, `AGENTS.md`, `PROJECT_NOTES.md`, and `.gitignore`. No app code has been written.
 - Local files are not automatically a GitHub backup or synced to another computer. A GitHub remote must be created and changes pushed.
 - A separate ChatGPT project named **Cubing Comp Sim** exists. This chat is not currently attached to that project, and the ChatGPT project is not the same thing as this local folder or a GitHub repository.
 - The desktop app's Projects view can also register local projects that connect chats to folders on this Mac. This folder is not currently registered as a local project. A cloud ChatGPT project and a local Codex project are different: the former shares project sources/instructions between its chats; the latter gives local chats access to the selected folder. Neither replaces Git history or a remote GitHub repository.
 - GitHub CLI is installed, but its saved GitHub authentication is invalid. Re-authentication is needed before creating the public repository or publishing changes.
-- No GitHub repository or issue board has been created yet. Decisions to use a public repository and GitHub Issues/Projects instead of Jira have been recorded below.
-- Proposed repository slug: `cubing-comp-sim` (provisional until the public repository is created).
+- No GitHub remote or issue board has been created yet. Decisions to use a public repository and GitHub Issues/Projects instead of Jira have been recorded below.
+- Proposed public repository slug: `cubing-comp-sim`.
 
 ## Workspace and collaboration options (comparison, not decisions)
 
