@@ -12,4 +12,4 @@ A focused cubing app for warming up for and simulating a WCA competition. The in
 
 ## Current focus
 
-The project foundation is published at [github.com/Brandonius813/cubing-comp-sim](https://github.com/Brandonius813/cubing-comp-sim). Set up and publish its Codex Cloud environment next; then choose a small first product slice before writing application code.
+The project foundation is published at [github.com/Brandonius813/cubing-comp-sim](https://github.com/Brandonius813/cubing-comp-sim). A replacement Codex Cloud environment is linked to this repository but remains unpublished: reopening setup fails. See [the verified setup status](PROJECT_NOTES.md#current-setup-status-verified-2026-10-06) and [cloud verification steps](PROJECT_NOTES.md#finish-cloud-setup). Finish cloud verification and the first documentation PR review before choosing a small first product slice.
