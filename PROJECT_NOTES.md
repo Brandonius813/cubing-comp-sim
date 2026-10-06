@@ -35,8 +35,8 @@ These are ideas, not commitments for version one. Product scope and rules must b
 
 Each item is a checkpoint, not permission to start all later work. We will finish and record one checkpoint before moving to the next.
 
-1. **Choose the project home and shared source of truth.** Understand this local folder, the separate ChatGPT “Cubing Comp Sim” project, and what GitHub would add. Decide where project documents live and how future chats/agents find them. **Complete: public GitHub repository for durable code/engineering decisions; local workspace selected.**
-2. **Learn and choose the Git/GitHub workflow.** Repository vs. working folder, commits, branches, pull requests, and later whether Git worktrees help parallel work. **In progress: local Git repository initialized; GitHub remote and Codex Cloud are waiting on authentication.**
+1. **Choose the project home and shared source of truth.** Understand this local folder, the separate ChatGPT “Cubing Comp Sim” project, and what GitHub would add. Decide where project documents live and how future chats/agents find them. **Complete: public GitHub repository is the durable home for code/engineering decisions; the local folder is its working copy.**
+2. **Learn and choose the Git/GitHub workflow.** Repository vs. working folder, commits, branches, pull requests, and later whether Git worktrees help parallel work. **In progress: Git is initialized locally; the public remote is created and the initial commits are pushed. Next: publish a Codex Cloud environment, then learn the branch/PR review loop.**
 3. **Define the first user and product boundary.** Specify the primary competition-practice scenario, first-release platforms, one complete core loop, and what is explicitly deferred.
 4. **Write down WCA behavior.** Verify inspection, +2/DNF handling, round size, averages, and BPA/WPA semantics from authoritative rules; identify which behavior is simulation guidance versus official competition procedure.
 5. **Study scramble generation.** Evaluate TNoodle and alternatives, event-by-event coverage, WCA specification/versioning, licensing, runtime/platform compatibility, reproducibility, and a correctness test plan before selecting an implementation.
@@ -53,13 +53,14 @@ Each item is a checkpoint, not permission to start all later work. We will finis
 ## Workspace facts (checked 2026-10-06)
 
 - This conversation began in a generated local Codex task folder under `Documents/Codex`, not in a Git repository. It is not registered as a reusable local project.
-- Stable local repository workspace: `Documents/Codex/cubing-comp-sim`. Git is initialized on branch `main`; initial commit `4e804f9` contains only `README.md`, `AGENTS.md`, `PROJECT_NOTES.md`, and `.gitignore`. No app code has been written.
-- Local files are not automatically a GitHub backup or synced to another computer. A GitHub remote must be created and changes pushed.
+- Stable local repository workspace: `Documents/Codex/cubing-comp-sim`. Git is initialized on branch `main`; commits `4e804f9` and `d52b4a0` contain project documentation and workflow scaffolding only. No app code has been written.
+- Public GitHub repository: [github.com/Brandonius813/cubing-comp-sim](https://github.com/Brandonius813/cubing-comp-sim). The local `main` branch tracks `origin/main`; both initial commits were pushed successfully.
 - A separate ChatGPT project named **Cubing Comp Sim** exists. This chat is not currently attached to that project, and the ChatGPT project is not the same thing as this local folder or a GitHub repository.
 - The desktop app's Projects view can also register local projects that connect chats to folders on this Mac. This folder is not currently registered as a local project. A cloud ChatGPT project and a local Codex project are different: the former shares project sources/instructions between its chats; the latter gives local chats access to the selected folder. Neither replaces Git history or a remote GitHub repository.
-- GitHub CLI is installed, but its saved GitHub authentication is invalid. Re-authentication is needed before creating the public repository or publishing changes.
-- No GitHub remote or issue board has been created yet. Decisions to use a public repository and GitHub Issues/Projects instead of Jira have been recorded below.
-- Proposed public repository slug: `cubing-comp-sim`.
+- GitHub CLI is installed and authenticated; it created the public repository and pushed the initial commits.
+- The GitHub repository is the public source of truth. Keep credentials, private user data, and private planning out of it.
+- GitHub Issues and Projects are the chosen starting tracker instead of Jira. No issue or project board has been created yet.
+- Codex Cloud has not been configured yet. The official desktop/web flow is: **Work in > Cloud > Select environment > Create environment**, choose this GitHub repository, let Codex prepare and test setup, review it, then publish. Each task uses an isolated workspace; the published environment is the reusable setup, not a shared live checkout.
 
 ## Workspace and collaboration options (comparison, not decisions)
 
@@ -90,6 +91,13 @@ Reference: [Codex command guide](https://learn.chatgpt.com/docs/developer-comman
 - **Reason:** Public code and engineering history support the portfolio goal; GitHub keeps changes reviewable and accessible to local and cloud agents; its built-in issue/project tools keep tasks near code and pull requests.
 - **Tradeoffs accepted:** Anyone can view and fork public repository content, so pushed files and issue/project discussions must be public-safe. Codex Cloud requires a connected repository and a configured environment before remote work can run.
 - **Revisit if:** Public visibility becomes unsuitable, or project tracking grows beyond what GitHub Issues and Projects handle comfortably.
+
+### Decision: Public repository created (2026-10-06)
+
+- **Choice:** Publish the project foundation to `https://github.com/Brandonius813/cubing-comp-sim` as a public repository on `main`.
+- **Reason:** This makes the source of truth accessible to Codex Cloud and keeps engineering decisions and change history reviewable for the portfolio.
+- **Tradeoffs accepted:** Repository contents and activity are visible to everyone and can be forked. Review files and issue discussions for public suitability before pushing or posting.
+- **Revisit if:** Any required content cannot safely be public; in that case remove it from the repository and reconsider visibility before adding further material.
 
 No product, architecture, hosting, or stack decisions have been made yet. Record future decisions here in this format:
 

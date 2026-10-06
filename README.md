@@ -2,7 +2,7 @@
 
 A focused cubing app for warming up for and simulating a WCA competition. The intended experience is to open the app and get going with minimal setup.
 
-**Status:** foundation and product decisions. No application code has been started.
+**Status:** public repository and project foundation are in place. No application code has been started.
 
 ## Project guide
 
@@ -12,4 +12,4 @@ A focused cubing app for warming up for and simulating a WCA competition. The in
 
 ## Current focus
 
-Set up the GitHub repository and Codex Cloud environment before beginning application implementation. The first commits are project documentation and workflow scaffolding only.
+The project foundation is published at [github.com/Brandonius813/cubing-comp-sim](https://github.com/Brandonius813/cubing-comp-sim). Set up and publish its Codex Cloud environment next; then choose a small first product slice before writing application code.
