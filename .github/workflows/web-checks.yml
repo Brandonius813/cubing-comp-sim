@@ -20,7 +20,7 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: engine/pom.xml
-      - run: npm install --include=optional --no-fund
+      - run: npm ci --include=optional --no-fund
       - run: npm run typecheck
       - run: npm test
       - run: node --test engine/scripts/svg-conformance.test.mjs scripts/assert-engine.test.mjs

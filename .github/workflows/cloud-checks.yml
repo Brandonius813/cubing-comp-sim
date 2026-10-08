@@ -33,11 +33,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install --no-fund
+      - run: npm ci --no-fund
       - run: npm run build
       - run: npm test
-      - name: Review dependency lock
-        run: node -e "console.log('CCS_API_LOCK=' + require('node:zlib').gzipSync(require('node:fs').readFileSync('package-lock.json')).toString('base64'))"
       - uses: actions/upload-artifact@v4
         with:
           name: api-lockfile

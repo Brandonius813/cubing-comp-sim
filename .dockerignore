@@ -1,0 +1,9 @@
+.git
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+**/test-results
+**/target
+public/engine
+*.tsbuildinfo

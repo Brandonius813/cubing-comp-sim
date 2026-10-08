@@ -64,6 +64,7 @@ describe('Sentry diagnostic transport using the real SDK', () => {
   it('sends a real SDK envelope without global-scope PII, raw errors, history or reset URLs', async () => {
     const sdk = await import('@sentry/browser');
     const scope = sdk.getGlobalScope();
+    const previous = scope.getScopeData();
     scope.setUser({ email: 'PRIVATE_EMAIL@example.test', ip_address: '192.0.2.123' });
     scope.setExtra('history', 'PRIVATE_HISTORY');
     scope.setTag('token', 'PRIVATE_RESET_TOKEN');
@@ -87,7 +88,11 @@ describe('Sentry diagnostic transport using the real SDK', () => {
       expect(body).not.toContain('123456789');
       expect(body).not.toContain('"breadcrumbs"');
       expect(body).not.toContain('"stacktrace"');
-    } finally { scope.clear(); }
+    } finally {
+      scope.setUser(previous.user);
+      scope.setExtra('history', previous.extra.history);
+      scope.setTag('token', previous.tags.token);
+    }
   });
 
   it('does not treat a failed HTTP delivery as successful', async () => {

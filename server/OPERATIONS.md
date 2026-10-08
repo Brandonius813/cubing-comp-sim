@@ -4,7 +4,7 @@ The guest website works without this server. Cloud operations are disabled until
 
 ## Run and verify
 
-From `server/`, run `npm install`, `npm run build`, and `npm test`. Commit the generated package lock once installation has succeeded. Copy `.env.example` to an ignored `.env` and supply real values through your local secret store or hosting environment, never source control. Run `npm run migrate` once with a database role allowed to create the backend tables, then `npm run dev`. Production starts with `npm start` after building. The Docker build uses the application root as context: `docker build -f server/Dockerfile -t ccs-api .`.
+From `server/`, run `npm ci`, `npm run build`, and `npm test`. The dependency lock is committed and checked by CI. Copy `.env.example` to an ignored `.env` and supply real values through your local secret store or hosting environment, never source control. Run `npm run migrate` once with a database role allowed to create the backend tables, then `npm run dev`. Production starts with `npm start` after building. The Docker build uses the application root as context: `docker build -f server/Dockerfile -t ccs-api .`.
 
 Supabase must require email confirmation and use production SMTP before signup is enabled. Configure an exact site URL and allowlisted confirmation/recovery redirects for each environment. Browser public settings are `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_API_URL`, and `VITE_APP_URL`. No browser service-role key is needed. The API uses the public key to verify signed tokens and current user records with Supabase.
 

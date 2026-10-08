@@ -3,7 +3,8 @@ import { isTelemetryEventName, safeBuildId, sanitizeProperties, UUID } from './s
 
 type SentryModule = Pick<typeof import('@sentry/browser'), 'BrowserClient' | 'makeFetchTransport'>;
 type SentryClient = InstanceType<SentryModule['BrowserClient']>;
-type SentryEvent = Parameters<SentryClient['captureEvent']>[0];
+// beforeSend accepts error events only, while captureEvent also accepts transactions.
+type SentryEvent = Parameters<NonNullable<ConstructorParameters<SentryModule['BrowserClient']>[0]['beforeSend']>>[0];
 
 export interface SentryConfig {
   dsn?: string;
