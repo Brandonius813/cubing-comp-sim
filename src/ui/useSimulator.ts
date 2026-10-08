@@ -201,14 +201,16 @@ export function useSimulator(blockKeyboard: boolean) {
       if (event.repeat || event.isComposing || editable(event.target) || blockKeyboard || !loaded) return;
       const active = phaseRef.current;
       if (active === 'solving') { event.preventDefault(); actions.current.stop(); return; }
-      if (saving) return;
       const round = getRound();
-      const canStart = current.current.settings.inputMethod === 'timer' && (active === 'inspection' || (active === 'ready' && (!current.current.settings.inspection || !round || !getEvent(round.eventId).inspection)));
+      const canStart = round !== null && scrambleRef.current !== null && current.current.settings.inputMethod === 'timer' && (active === 'inspection' || (active === 'ready' && (!current.current.settings.inspection || !getEvent(round.eventId).inspection)));
       if (event.code === 'Space' && canStart) {
         event.preventDefault(); if (holdStart.current !== null) return;
         prepareAudio(); holdStart.current = performance.now(); setHolding(true);
         heldTimer.current = setTimeout(() => setArmed(true), current.current.settings.holdMs); return;
       }
+      // The scramble is committed before ready/inspection. Stage-only draft writes
+      // are serialized, so they must not make a valid timer-start press disappear.
+      if (saving) return;
       if ((event.code === 'Space' || event.code === 'Enter') && (['home', 'complete', 'scramble', 'waiting', 'ready', 'engine-error'].includes(active) || (active === 'inspection' && current.current.settings.inputMethod === 'manual'))) { event.preventDefault(); actions.current.primary(); }
       else if (event.code === 'Enter' && active === 'confirm') { event.preventDefault(); void actions.current.advance(); }
     };

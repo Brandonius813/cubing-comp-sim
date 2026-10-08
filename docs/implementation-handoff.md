@@ -19,9 +19,9 @@ The cloud API uses Supabase identity verification, PostgreSQL metadata, and a pr
 - The actual JVM reference and TeaVM browser engine compiled successfully in GitHub Actions.
 - Engine proof runs 37852096123 and 37852467665 passed 32 seeded cases and fresh WebCrypto generation for all 16 events. They also compare random-number behavior, puzzle state, drawing geometry/colors, and upstream minimum-distance checks.
 - Source hash verification covers 72 upstream files. The original algorithms remain unchanged. JVM/WebCrypto randomness adaptation is explicit and tested.
-- Application unit tests cover scoring, inspection, cumulative penalties, manual parsing, import validation, cloud conflict handling, and telemetry privacy. Final test counts and browser results are recorded in the pull request and CI checks.
+- All 84 application unit tests passed in run 37854629354, covering scoring, cumulative penalties, parsing, import validation, cloud conflict handling, and consent/redaction with the actual Sentry SDK. Seven engine integrity/SVG regression tests also passed.
 - A fixed 3×3 data fixture containing 100,000 attempts across 20,000 rounds serialized to 45,690,136 bytes (43.57 MiB), within the 100 MiB transfer limit. On Node 24.13.0/macOS arm64, serialization took 54 ms and parsing plus validation 117 ms. `src/storage/capacity.ts` reproduces it. This excludes actual scramble generation, IndexedDB, UI, network/compression, and other devices; event notation lengths change file size.
-- API build and tests passed in run 37853046759. Tests use controlled storage/auth dependencies; they do not replace live provider integration checks.
+- API build and all 21 tests passed in run 37854329948, including actual PostgreSQL transactions, concurrent first uploads, retry behavior, rollback after an injected write failure, and deletion fencing. Supabase identity and R2 integration still require staging.
 - Browser acceptance uses the actual production service worker, actual scramble worker, actual IndexedDB, and disabled networking. Chromium, Firefox, and WebKit are configured. Results are not assumed until their jobs pass.
 - This task's Mac sandbox cannot launch Chrome or compile the Java engine. Networked CI provides the actual compiler/browser evidence. A UI-only local build is not evidence of offline scrambling.
 
@@ -38,6 +38,6 @@ The cloud API uses Supabase identity verification, PostgreSQL metadata, and a pr
 
 ## Deferred product work
 
-Native Mac, Windows, iOS/iPadOS, and Android clients follow a stable website. Google and WCA social sign-in need separate registrations and are not presented as working buttons. Background competition audio needs a licensed source and product tuning. Additional translations need review; translation infrastructure should keep them independent of scoring logic.
+Native Mac, Windows, iOS/iPadOS, and Android clients follow a stable website. Google and WCA social sign-in need separate registrations and are not presented as working buttons. Background competition audio needs a licensed source and product tuning. English and Spanish catalogs and persisted language switching are implemented; Spanish terminology still needs native-speaker/cuber review. Additional catalogs are independent of scoring logic. Advanced historical statistics, background audio, and signed-in email/profile management are not complete.
 
 No production deployment, domain change, billing purchase, or App Store submission has been performed.

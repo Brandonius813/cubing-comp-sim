@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, readdir } from 'node:fs/promises';
+import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { checkOfflineWorker } from './engine-check.mjs';
@@ -13,6 +13,7 @@ async function screenshots(page, name, artifacts) {
     await page.setViewportSize({ width, height });
     await page.screenshot({ path: path.join(artifacts, `${name}-${width}x${height}.png`), fullPage: true });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${name} overflows horizontally at ${width} pixels.`);
+    if (name === 'home') assert.ok(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight), 'The desktop home screen should fit its viewport.');
   }
   await page.setViewportSize({ width: 1600, height: 1000 });
 }
@@ -75,6 +76,55 @@ async function checkLanguagePersistence(page) {
   await page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Settings', exact: true }).waitFor();
   assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+}
+
+async function timerSettingsPersisted(page) {
+  await page.waitForFunction(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('cubing-comp-sim');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      const settings = await new Promise((resolve, reject) => {
+        const tx = db.transaction('meta', 'readonly');
+        const request = tx.objectStore('meta').get('state');
+        tx.oncomplete = () => resolve(request.result?.settings);
+        tx.onabort = () => reject(tx.error);
+      });
+      return settings?.inputMethod === 'timer' && settings.inspection === false && settings.holdMs === 0;
+    } finally { db.close(); }
+  });
+}
+
+async function failureDiagnostics(page) {
+  return page.evaluate(async () => {
+    const details = {
+      phase: document.querySelector('[data-phase]')?.getAttribute('data-phase'),
+      activeElementTag: document.activeElement?.tagName,
+      activeElementId: document.activeElement?.id,
+      savingVisible: Boolean(document.querySelector('.save-status')),
+      savingText: document.querySelector('.save-status')?.textContent ?? null,
+    };
+    const stored = await new Promise(resolve => {
+      const timeout = setTimeout(() => resolve({ storageError: 'metadata-read-timeout' }), 3000);
+      const finish = value => { clearTimeout(timeout); resolve(value); };
+      const request = indexedDB.open('cubing-comp-sim');
+      request.onerror = () => finish({ storageError: request.error?.name });
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('meta', 'readonly');
+        const metadata = tx.objectStore('meta').get('state');
+        tx.oncomplete = () => {
+          const state = metadata.result;
+          db.close();
+          finish({ revision: state?.revision, settings: state?.settings, draftStage: state?.draft?.stage ?? null });
+        };
+        tx.onabort = () => { db.close(); finish({ storageError: tx.error?.name }); };
+      };
+    });
+    return { ...details, ...stored };
+  });
 }
 
 async function checkStoredSvgIsolation(page) {
@@ -155,6 +205,7 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     await savedAttemptCount(page, 5);
 
     await configureInput(page, 'timer');
+    await timerSettingsPersisted(page);
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).click();
     await phase(page, 'scramble', 180_000);
     await page.getByRole('button', { name: 'Scramble is good', exact: true }).click();
@@ -190,6 +241,12 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     assert.equal(worker.length, 1, 'Expected the compiled scramble worker asset.');
     const timing = await checkOfflineWorker(page, `/assets/${worker[0]}`);
     // Exercise the destructive import UI only after saving and offline checks.
+    await page.locator('button.event-selector').click();
+    const returnPicker = page.getByRole('dialog', { name: 'Choose event', exact: true });
+    await returnPicker.getByRole('button', { name: '3×3 Cube', exact: true }).click();
+    await returnPicker.waitFor({ state: 'hidden' });
+    await phase(page, 'home');
+    await savedAttemptCount(page, 6);
     await page.getByRole('button', { name: 'View all stats', exact: true }).click();
     await page.getByLabel('Import history file', { exact: true }).setInputFiles({ name: 'invalid-save.json', mimeType: 'application/json', buffer: Buffer.from('{"schemaVersion":999}') });
     await page.getByRole('button', { name: 'Replace history', exact: true }).click();
@@ -206,6 +263,9 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     assert.deepEqual(errors, [], 'The browser emitted an uncaught application error.');
     return `Desktop browser: Spanish settings persistence, manual Ao5 and reload, keyboard start/stop, offline reload, and 16 offline event drawings passed. Generation milliseconds: ${JSON.stringify(timing)}`;
   } catch (error) {
+    const diagnostics = await failureDiagnostics(page).catch(cause => ({ diagnosticError: String(cause) }));
+    console.error(`Browser fixture diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`);
+    await writeFile(path.join(artifacts, 'diagnostics.json'), JSON.stringify(diagnostics, null, 2));
     await page.screenshot({ path: path.join(artifacts, 'failure.png'), fullPage: true }).catch(() => undefined);
     throw error;
   } finally {
