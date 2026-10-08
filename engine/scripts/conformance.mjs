@@ -3,6 +3,7 @@ import { readFile, copyFile, writeFile } from 'node:fs/promises';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import { canonicalSvg } from './svg-conformance.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const compiled = path.join(root, 'target/browser/tnoodle.js');
@@ -17,25 +18,6 @@ const required = ['222', '333', '444', '555', '666', '777', '333oh', '333bf',
   '444bf', '555bf', 'minx', 'pyram', 'skewb', 'sq1', 'fto', 'clock'];
 assert.deepEqual([...new Set(fixtures.map(x => x.eventId))].sort(), [...required].sort());
 
-// SVG attribute/style order is not meaningful. JVM and browser HashMaps may
-// enumerate differently. Round geometric coordinates only, to 1e-6 pixels.
-// Sticker colors, element order, path commands and all other content are exact.
-function canonicalSvg(svg) {
-  assert.match(svg, /^<svg[\s>]/);
-  return svg.replace(/<([A-Za-z][\w:-]*)([^<>]*)>/g, (_, tag, attributes) => {
-    const pairs = [...attributes.matchAll(/([\w:-]+)="([^"]*)"/g)].map(([, key, value]) => {
-      if (key === 'style') {
-        value = value.split(';').map(x => x.trim()).filter(Boolean).sort().join(';');
-      } else if (/^(x|y|x1|x2|y1|y2|cx|cy|rx|ry|r|width|height|stroke-width|d|points|transform|viewBox)$/.test(key)) {
-        value = value.replace(/[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g,
-          number => String(Math.round(Number(number) * 1e6) / 1e6));
-      }
-      return `${key}="${value}"`;
-    }).sort();
-    return `<${tag}${pairs.length ? ' ' + pairs.join(' ') : ''}>`;
-  }).replace(/>\s+</g, '><').trim();
-}
-
 const results = [];
 for (const fixture of fixtures) {
   const began = performance.now();
@@ -43,10 +25,13 @@ for (const fixture of fixtures) {
     fixture.eventId + ': bounded entropy differs from the JVM Random contract');
   const [notation, svg] = engine.generateForConformance(fixture.eventId, fixture.seed);
   assert.ok(notation.trim(), fixture.eventId + ': empty scramble');
+  if (fixture.eventId === 'minx') {
+    assert.equal(notation, fixture.notation, 'Megaminx move sequence differs from JVM');
+  }
   // Search timeout may choose another valid notation for the same sampled state.
-  assert.equal(canonicalSvg(svg), canonicalSvg(fixture.svg),
+  assert.equal(canonicalSvg(svg, fixture.eventId), canonicalSvg(fixture.svg, fixture.eventId),
     fixture.eventId + ': seeded state differs from JVM reference');
-  assert.equal(canonicalSvg(engine.draw(fixture.eventId, fixture.notation)), canonicalSvg(fixture.svg),
+  assert.equal(canonicalSvg(engine.draw(fixture.eventId, fixture.notation), fixture.eventId), canonicalSvg(fixture.svg, fixture.eventId),
     fixture.eventId + ': drawing differs from JVM reference');
   assert.equal(engine.meetsMinimumDistance(fixture.eventId, notation), true,
     fixture.eventId + ': minimum distance failed');

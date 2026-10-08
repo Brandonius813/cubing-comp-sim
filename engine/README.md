@@ -26,7 +26,7 @@ The reference command compiles and runs the original upstream code on the JVM wi
 
 The browser command compiles through TeaVM 0.16.0 into an ES2015 JavaScript module. It places `tnoodle.js`, `manifest.json`, and `LICENSE.txt` in `public/engine/`. The manifest records the exact source version and output checksum.
 
-The conformance command compares the compiled JavaScript's seeded puzzle states and drawings against the JVM reference. SVG attribute/style ordering is normalized and geometric coordinates are rounded to 1e-6 pixels. Colors and element ordering must match. A search using a time budget can find different valid move sequences for the same sampled state, so equality of scramble strings is not the requirement. It also generates fresh WebCrypto scrambles for every event and checks minimum distance.
+The conformance command compares the compiled JavaScript's seeded puzzle states and drawings against the JVM reference. SVG attribute/style ordering is normalized and geometric coordinates are rounded to 1e-6 pixels. Colors and paint ordering must match. Megaminx alone traverses an upstream enum-keyed HashMap when drawing whole faces, so those face groups can appear in a different serialization order. The comparator requires exactly twelve convex, disjoint pentagons, eleven stickers per face, opaque fills, and common black borders before sorting intact face groups. Every sticker position/color and within-face paint order remains significant. A separate exact Megaminx move-sequence assertion also applies. A search using a time budget can find different valid move sequences for the same sampled state, so equality of scramble strings is not required for search-based events. The test also generates fresh WebCrypto scrambles for every event and checks minimum distance.
 
 Do not release a generated engine that fails this comparison.
 
@@ -36,6 +36,7 @@ Do not release a generated engine that fails this comparison.
 2. The `compatibility/` directory defines inert GWT export annotations, an inert GWT marker interface, and the diagnostic logging methods the solvers call. GWT's old export runtime is not used. These do not implement puzzle behavior.
 3. `EngineCommon` uses an explicit constructor mapping instead of TNoodle's reflective registry. It still constructs the original upstream puzzle classes and calls `generateWcaScramble` and `drawScramble` directly.
 4. `BrowserEngine` exposes a small JavaScript boundary. Production generation uses fresh secure entropy. Seeded generation is exported only for conformance tests and is never called by application code.
+5. `JvmCompatibleRandom` preserves Java's specified `Random.nextInt(bound)` mapping over raw entropy. TeaVM 0.16 uses a different, also uniform bounded-integer algorithm by default. That difference made identical seeds sample different puzzle states in the first CI run. The adapter restores the JVM contract for production and conformance inputs. A 96-value vector spanning powers of two, rejection-heavy bounds, puzzle bounds, and `Integer.MAX_VALUE` is compared with the real JVM before puzzle conformance assertions. No puzzle or drawing assertion was removed or weakened.
 
 ## Application contract
 
@@ -56,9 +57,9 @@ The website's service worker must cache the complete generated module and worker
 
 ## Current evidence and remaining gates
 
-On 2026-10-08, the development environment verified all 72 upstream file hashes and successfully prepared the browser source tree. The Java reference could not run because this Mac environment has only a Java 8 runtime and no JDK compiler. Maven and the TeaVM dependency cache are absent; shell network access is restricted. No compiled artifact has been fabricated or checked in.
+On 2026-10-08, local source verification passed for all 72 upstream files. This Mac environment cannot compile Java because it has only a Java 8 runtime and no JDK compiler. Networked GitHub Actions subsequently compiled and ran the original JVM reference successfully and compiled the browser engine with TeaVM successfully in run `37850793623`, job `113562901361`.
 
-The source/build integration is ready for the networked CI environment. Actual JVM compilation, TeaVM compilation, JVM/JavaScript conformance, and real browser generation are **not yet verified** until those jobs run. This is an explicit release blocker, not permission to substitute an easier scramble algorithm.
+That first conformance run exposed the bounded-random difference described above at the 2×2 seeded-state assertion. It failed closed. Run `37851219759` then passed all twenty seeded cube cases through 5×5 blindfolded and all associated random-vector comparisons with the `webcrypto.2` adapter. It exposed Megaminx's irrelevant whole-face serialization ordering, addressed by the geometry-checked comparator described above. Three local comparator regression tests pass, including rejection of overlapping/missing faces and sensitivity to color/geometry/within-face paint changes. Full JVM/JavaScript conformance and real browser offline generation remain release gates until those checks pass. No compiled artifact has been fabricated.
 
 After successful compilation/conformance, run a browser acceptance job in Chromium, Firefox, and WebKit that:
 
