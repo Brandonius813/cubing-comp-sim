@@ -7,7 +7,7 @@ import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 
 /** Only these functions cross the Java/browser boundary. */
 public final class BrowserEngine {
-    private static final SecureRandom ENTROPY = new SecureRandom();
+    private static final Random ENTROPY = new JvmCompatibleRandom(new SecureRandom());
 
     private BrowserEngine() {}
 
@@ -29,7 +29,12 @@ public final class BrowserEngine {
     /** Deterministic conformance input, never called by the application. */
     @JSExport
     public static String[] generateForConformance(String event, int seed) throws InvalidScrambleException {
-        return EngineCommon.generate(event, new Random(seed));
+        return EngineCommon.generate(event, new JvmCompatibleRandom(new Random(seed)));
+    }
+
+    @JSExport
+    public static int[] randomVectorForConformance(int seed) {
+        return EngineCommon.randomVector(new JvmCompatibleRandom(new Random(seed)));
     }
 
     @JSExport

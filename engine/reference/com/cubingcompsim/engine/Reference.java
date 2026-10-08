@@ -1,6 +1,7 @@
 package com.cubingcompsim.engine;
 
 import java.util.Random;
+import java.util.Arrays;
 import org.worldcubeassociation.tnoodle.scrambles.Puzzle;
 
 /** JVM reference runs against byte-for-byte upstream source, with assertions enabled. */
@@ -26,6 +27,7 @@ public final class Reference {
                     throw new AssertionError("SVG failed for " + event);
                 }
                 System.out.println("{\"eventId\":" + json(event) + ",\"seed\":" + seed
+                    + ",\"randomVector\":" + Arrays.toString(EngineCommon.randomVector(new Random(seed)))
                     + ",\"notation\":" + json(generated[0]) + ",\"svg\":" + json(generated[1])
                     + ",\"jvmElapsedMs\":" + ((System.nanoTime() - began) / 1000000) + "}");
                 System.err.println(event + " sample " + sample + " passed");

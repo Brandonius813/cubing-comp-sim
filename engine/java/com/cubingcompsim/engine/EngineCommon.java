@@ -9,7 +9,7 @@ import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 
 /** The explicit event mapping avoids reflective construction in a browser. */
 public final class EngineCommon {
-    public static final String VERSION = "tnoodle-lib@d01a947d9f028f38085cda9b0507a9cf3d3f38a8+webcrypto.1";
+    public static final String VERSION = "tnoodle-lib@d01a947d9f028f38085cda9b0507a9cf3d3f38a8+webcrypto.2";
     public static final String[] EVENTS = {
         "222", "333", "444", "555", "666", "777", "333oh", "333bf",
         "444bf", "555bf", "minx", "pyram", "skewb", "sq1", "fto", "clock"
@@ -17,6 +17,16 @@ public final class EngineCommon {
     private static final Map<String, Puzzle> PUZZLES = new HashMap<>();
 
     private EngineCommon() {}
+
+    public static int[] randomVector(Random entropy) {
+        int[] bounds = {1, 2, 3, 12, 729, 5040, 40320, 239500800, 479001600,
+            1073741824, 1073741825, Integer.MAX_VALUE};
+        int[] values = new int[bounds.length * 8];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = entropy.nextInt(bounds[i % bounds.length]);
+        }
+        return values;
+    }
 
     public static Puzzle puzzle(String event) {
         Puzzle existing = PUZZLES.get(event);

@@ -10,7 +10,7 @@ const modulePath = path.join(root, 'target/browser/tnoodle.mjs');
 await copyFile(compiled, modulePath);
 const engine = await import(pathToFileURL(modulePath).href);
 const lock = JSON.parse(await readFile(path.join(root, 'upstream-lock.json'), 'utf8'));
-assert.equal(engine.engineVersion(), `tnoodle-lib@${lock.commit}+webcrypto.1`);
+assert.equal(engine.engineVersion(), `tnoodle-lib@${lock.commit}+webcrypto.2`);
 const fixtures = (await readFile(path.join(root, 'target/reference-fixtures.jsonl'), 'utf8'))
   .trim().split('\n').map(line => JSON.parse(line));
 const required = ['222', '333', '444', '555', '666', '777', '333oh', '333bf',
@@ -39,6 +39,8 @@ function canonicalSvg(svg) {
 const results = [];
 for (const fixture of fixtures) {
   const began = performance.now();
+  assert.deepEqual(Array.from(engine.randomVectorForConformance(fixture.seed)), fixture.randomVector,
+    fixture.eventId + ': bounded entropy differs from the JVM Random contract');
   const [notation, svg] = engine.generateForConformance(fixture.eventId, fixture.seed);
   assert.ok(notation.trim(), fixture.eventId + ': empty scramble');
   // Search timeout may choose another valid notation for the same sampled state.
