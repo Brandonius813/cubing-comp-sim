@@ -1,0 +1,26 @@
+name: Dependency security checks
+on:
+  push:
+    branches: [feat/desktop-web-foundation]
+    paths: ['package*.json', 'server/package*.json', '.github/workflows/dependency-checks.yml']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        directory: ['.', 'server']
+    defaults:
+      run:
+        working-directory: ${{ matrix.directory }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts --no-fund --no-audit
+      - run: npm audit --json --audit-level=high
