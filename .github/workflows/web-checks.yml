@@ -35,17 +35,6 @@ jobs:
           for browser in chromium firefox webkit; do
             BROWSER="$browser" npm run test:browser
           done
-      - name: Review build evidence
-        if: always()
-        run: |
-          python3 - <<'PYTHON'
-          import base64, io, pathlib, tarfile
-          payload = io.BytesIO()
-          with tarfile.open(fileobj=payload, mode="w:gz") as archive:
-            for path in [pathlib.Path("package-lock.json"), *pathlib.Path("test-results/browser/chromium").glob("*-1440x900.png"), pathlib.Path("test-results/browser/chromium/failure.png"), *pathlib.Path("dist").rglob("*")]:
-              if path.is_file() and path.suffix != ".map": archive.add(path, arcname=str(path))
-          print("CCS_REVIEW_EVIDENCE=" + base64.b64encode(payload.getvalue()).decode())
-          PYTHON
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -1,7 +1,7 @@
 name: Offline engine proof
 on:
   push:
-    branches: [feat/desktop-web-foundation]
+    branches: [main]
     paths: ['engine/**', 'scripts/build-engine.mjs', '.github/workflows/engine-proof.yml']
   workflow_dispatch:
 permissions:

@@ -12,6 +12,7 @@ if (process.env.CCS_BROWSER_CHANNEL && browserName !== 'chromium') throw new Err
 let browser;
 let dev;
 let production;
+let connectionAvailable = true;
 try {
   browser = await engines[browserName].launch({
     headless: true,
@@ -29,9 +30,28 @@ try {
     // The production build is intentional: development does not install a service worker.
     // Build the real engine and run npm run build before this acceptance command.
     const { checkDesktopApp } = await import('../tests/e2e/app-check.mjs');
-    production = await preview({ root, preview: { host: '127.0.0.1', port: 0, strictPort: false } });
+    production = await preview({
+      root,
+      preview: { host: '127.0.0.1', port: 0, strictPort: false },
+      plugins: [{
+        name: 'browser-check-connection-fixture',
+        configurePreviewServer(server) {
+          server.middlewares.use((request, response, next) => {
+            if (!connectionAvailable && request.url?.split('?')[0] === '/connection-check.json') {
+              response.writeHead(503, { 'Cache-Control': 'no-store', 'Content-Type': 'application/json' });
+              response.end('{"available":false}');
+              return;
+            }
+            next();
+          });
+        },
+      }],
+    });
     const address = production.httpServer.address();
-    console.log(`[${browserName}] ${await checkDesktopApp(browser, `http://127.0.0.1:${address.port}`, { browserName })}`);
+    console.log(`[${browserName}] ${await checkDesktopApp(browser, `http://127.0.0.1:${address.port}`, {
+      browserName,
+      setConnectionAvailable: available => { connectionAvailable = available; },
+    })}`);
   }
 } finally {
   await browser?.close();

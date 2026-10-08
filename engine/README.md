@@ -8,7 +8,7 @@ The `vendor/tnoodle-lib` directory contains 72 byte-for-byte upstream source/ref
 
 Supported event identifiers: `222 333 444 555 666 777 333oh 333bf 444bf 555bf minx pyram skewb sq1 fto clock`. FMC and Multi-Blind are not exposed. The 4×4 mapping uses `FourByFourCubePuzzle`, never the fast random-turn variant. Clock has the same status in the app as other events.
 
-The repository is GPL-3.0 licensed. Its license is retained under `vendor/tnoodle-lib/LICENSE`; the browser build copies it beside the generated module. The public application repository supplies the complete vendored algorithms, adapters, and build scripts. Each CI engine manifest links to its exact application source commit, separately from the pinned upstream TNoodle commit. Keep that matching source available with every distributed web build. Native store distribution will receive a separate licensing review when native packaging begins. This app is a training simulator and does not claim WCA approval.
+The upstream TNoodle library is GPL-3.0 licensed. Its license is retained under `vendor/tnoodle-lib/LICENSE`; the browser build copies it beside the generated module. The public application repository supplies the complete vendored algorithms, adapters, and build scripts. Each CI engine manifest links to its exact application source commit, separately from the pinned upstream TNoodle commit. Keep that matching source available with every distributed web build. The application's own source license still needs an explicit owner decision before public deployment; repository visibility alone does not grant one. Native store distribution will receive a separate licensing review when native packaging begins. This app is a training simulator and does not claim WCA approval.
 
 ## Local build
 

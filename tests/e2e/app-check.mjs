@@ -161,8 +161,9 @@ async function checkStoredSvgIsolation(page) {
   assert.equal(await page.locator('.drawing-area svg, .scramble-notation script').count(), 0, 'Untrusted save content was inserted as DOM markup.');
 }
 
-export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromium' } = {}) {
+export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromium', setConnectionAvailable } = {}) {
   assert.ok(['chromium', 'firefox', 'webkit'].includes(browserName), 'Unknown browser artifact directory.');
+  assert.equal(typeof setConnectionAvailable, 'function', 'The real preview server must support the connection failure fixture.');
   const artifacts = path.join(artifactRoot, browserName);
   await mkdir(artifacts, { recursive: true });
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
@@ -227,10 +228,14 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     const connectivity = page.getByRole('dialog', { name: 'Settings', exact: true });
     await connectivity.getByText('Online', { exact: true }).waitFor();
-    await context.route('**/connection-check.json', route => route.abort());
+    // Fail at the actual server: browser routing cannot reliably intercept
+    // service-worker-owned requests across all three browser engines.
+    setConnectionAvailable(false);
     await connectivity.getByRole('button', { name: 'Check connection', exact: true }).click();
     await connectivity.getByText('Connection unavailable', { exact: true }).waitFor();
-    await context.unroute('**/connection-check.json');
+    setConnectionAvailable(true);
+    await connectivity.getByRole('button', { name: 'Check connection', exact: true }).click();
+    await connectivity.getByText('Online', { exact: true }).waitFor();
     await connectivity.getByRole('button', { name: 'Close', exact: true }).click();
     await context.setOffline(true);
     await page.reload();
@@ -271,6 +276,7 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     await page.screenshot({ path: path.join(artifacts, 'failure.png'), fullPage: true }).catch(() => undefined);
     throw error;
   } finally {
+    setConnectionAvailable(true);
     await context.tracing.stop({ path: path.join(artifacts, 'trace.zip') });
     await context.close();
   }
