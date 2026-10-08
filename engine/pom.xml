@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.cubingcompsim</groupId>
+  <artifactId>offline-tnoodle</artifactId>
+  <version>0.1.0</version>
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>17</maven.compiler.release>
+    <teavm.version>0.16.0</teavm.version>
+  </properties>
+  <dependencies>
+    <dependency>
+      <groupId>org.teavm</groupId><artifactId>teavm-classlib</artifactId><version>${teavm.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.teavm</groupId><artifactId>teavm-jso</artifactId><version>${teavm.version}</version>
+    </dependency>
+  </dependencies>
+  <build>
+    <sourceDirectory>${project.build.directory}/generated-sources</sourceDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId><artifactId>maven-compiler-plugin</artifactId><version>3.14.1</version>
+      </plugin>
+      <plugin>
+        <groupId>org.teavm</groupId><artifactId>teavm-maven-plugin</artifactId><version>${teavm.version}</version>
+        <executions><execution>
+          <phase>process-classes</phase><goals><goal>compile</goal></goals>
+          <configuration>
+            <mainClass>com.cubingcompsim.engine.BrowserEngine</mainClass>
+            <targetType>JAVASCRIPT</targetType>
+            <jsModuleType>ES2015</jsModuleType>
+            <targetDirectory>${project.build.directory}/browser</targetDirectory>
+            <targetFileName>tnoodle.js</targetFileName>
+            <optimizationLevel>ADVANCED</optimizationLevel>
+            <minifying>true</minifying>
+            <sourceMapsGenerated>false</sourceMapsGenerated>
+            <debugInformationGenerated>false</debugInformationGenerated>
+            <strict>true</strict>
+          </configuration>
+        </execution></executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
