@@ -1,7 +1,7 @@
 name: Dependency security checks
 on:
   push:
-    branches: [feat/desktop-web-foundation]
+    branches: [main]
     paths: ['package*.json', 'server/package*.json', '.github/workflows/dependency-checks.yml']
   pull_request:
 permissions:
@@ -22,15 +22,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: |
-          if [ "${{ matrix.directory }}" = "." ]; then
-            npm install --ignore-scripts --no-fund --no-audit
-            npm update source-map-js esbuild --ignore-scripts --no-fund --no-audit
-            npm dedupe --ignore-scripts --no-fund --no-audit
-          else
-            npm ci --ignore-scripts --no-fund --no-audit
-          fi
-      - name: Review resolved lock
-        if: matrix.directory == '.'
-        run: node -e "console.log('CCS_ROOT_LOCK=' + require('node:zlib').gzipSync(require('node:fs').readFileSync('package-lock.json')).toString('base64'))"
+      - run: npm ci --ignore-scripts --no-fund --no-audit
       - run: npm audit --json --audit-level=high

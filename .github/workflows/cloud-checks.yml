@@ -1,7 +1,7 @@
 name: Cloud API checks
 on:
   push:
-    branches: [feat/desktop-web-foundation]
+    branches: [main]
     paths: ['server/**', 'src/core/**', 'src/storage/**', '.github/workflows/cloud-checks.yml']
   pull_request:
 permissions:
