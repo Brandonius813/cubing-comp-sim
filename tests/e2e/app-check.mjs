@@ -177,7 +177,7 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     await page.locator('button.event-selector').click();
     const eventPicker = page.getByRole('dialog', { name: 'Choose event', exact: true });
     assert.equal(await eventPicker.locator('.event-list button').count(), 16);
-    assert.equal(await eventPicker.locator('.event-list button').last().innerText(), 'Clock');
+    assert.equal((await eventPicker.locator('.event-list button').last().innerText()).trim(), 'Clock');
     await screenshots(page, 'events', artifacts);
     // The Figma event dropdown intentionally has no visible dialog header.
     await page.keyboard.press('Escape');
