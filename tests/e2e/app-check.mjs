@@ -52,6 +52,31 @@ async function configureInput(page, mode, captureDirectory) {
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
 }
 
+async function checkLanguagePersistence(page) {
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const english = page.getByRole('dialog', { name: 'Settings', exact: true });
+  await english.getByRole('tab', { name: 'Appearance', exact: true }).click();
+  await english.getByLabel('Language', { exact: true }).selectOption('es');
+  const spanish = page.getByRole('dialog', { name: 'Ajustes', exact: true });
+  await spanish.waitFor();
+  assert.equal(await spanish.getByLabel('Idioma', { exact: true }).inputValue(), 'es');
+  await spanish.getByRole('button', { name: 'Cerrar', exact: true }).click();
+  await page.getByRole('button', { name: 'Iniciar CompSim', exact: true }).waitFor();
+  await page.reload();
+  await page.getByRole('button', { name: 'Iniciar CompSim', exact: true }).waitFor();
+  assert.equal(await page.locator('html').getAttribute('lang'), 'es');
+  await page.getByRole('button', { name: 'Ajustes', exact: true }).click();
+  const restoredSpanish = page.getByRole('dialog', { name: 'Ajustes', exact: true });
+  await restoredSpanish.getByRole('tab', { name: 'Apariencia', exact: true }).click();
+  assert.equal(await restoredSpanish.getByLabel('Idioma', { exact: true }).inputValue(), 'es');
+  await restoredSpanish.getByLabel('Idioma', { exact: true }).selectOption('en');
+  await page.getByRole('dialog', { name: 'Settings', exact: true }).getByRole('button', { name: 'Close', exact: true }).click();
+  await page.reload();
+  await page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Settings', exact: true }).waitFor();
+  assert.equal(await page.locator('html').getAttribute('lang'), 'en');
+}
+
 async function checkStoredSvgIsolation(page) {
   await page.addInitScript(() => { window.svgTestExecuted = false; });
   await page.evaluate(async () => {
@@ -105,6 +130,7 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     assert.equal(await eventPicker.locator('.event-list button').last().innerText(), 'Clock');
     await screenshots(page, 'events', artifacts);
     await eventPicker.getByRole('button', { name: 'Close', exact: true }).click();
+    await checkLanguagePersistence(page);
     await configureInput(page, 'manual', artifacts);
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).click();
     for (let index = 0; index < 5; index++) {
@@ -176,7 +202,7 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     await savedAttemptCount(page, 0);
     await checkStoredSvgIsolation(page);
     assert.deepEqual(errors, [], 'The browser emitted an uncaught application error.');
-    return `Desktop browser: manual Ao5 and reload, keyboard start/stop, offline reload, and 16 offline event drawings passed. Generation milliseconds: ${JSON.stringify(timing)}`;
+    return `Desktop browser: Spanish settings persistence, manual Ao5 and reload, keyboard start/stop, offline reload, and 16 offline event drawings passed. Generation milliseconds: ${JSON.stringify(timing)}`;
   } catch (error) {
     await page.screenshot({ path: path.join(artifacts, 'failure.png'), fullPage: true }).catch(() => undefined);
     throw error;

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { checkStorageMigration } from './migration-check.mjs';
 
 /** Run against the Vite development server so the production storage module is used directly. */
 export async function checkBrowserStorage(browser, baseUrl) {
@@ -110,7 +111,8 @@ export async function checkBrowserStorage(browser, baseUrl) {
       if (Object.hasOwn(exported.rounds.find(round => round.id === historical.id).attempts[0].scramble, 'svg')) throw new Error('Export includes unnecessary archived SVG data.');
       store.close();
     }, name);
-    return 'Real IndexedDB: two-tab and same-instance CAS, draft reload, import rollback, replacement and recovery, and inactive history edits passed.';
+    await checkStorageMigration(first, name);
+    return 'Real IndexedDB: two-tab and same-instance CAS, draft reload, import rollback, replacement and recovery, inactive history edits, and version-1 migration/rollback passed.';
   } finally {
     await context.close();
   }

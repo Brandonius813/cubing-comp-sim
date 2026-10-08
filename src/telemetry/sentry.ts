@@ -34,6 +34,7 @@ export function toSentryEvent(event: TelemetryEvent, config: SentryConfig): Sent
   const properties = sanitizeProperties(event.name, event.properties);
   const code = typeof properties.code === 'string' ? properties.code : 'UNKNOWN';
   return {
+    type: undefined,
     event_id: event.id.replaceAll('-', ''),
     timestamp: occurred / 1_000,
     platform: 'javascript',
@@ -107,8 +108,10 @@ export function createSentrySink(config: SentryConfig, dependencies: SentryDepen
         attachStacktrace: false,
         maxBreadcrumbs: 0,
         sendClientReports: false,
-        enableLogs: false,
-        tracesSampleRate: 0,
+        // v11 has no enableLogs option. Deny both optional pipelines explicitly.
+        beforeSendLog: () => null,
+        beforeSendMetric: () => null,
+        // Leaving tracesSampleRate/tracesSampler unset keeps tracing disabled.
         replaysSessionSampleRate: 0,
         replaysOnErrorSampleRate: 0,
         dataCollection: {
