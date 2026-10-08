@@ -36,4 +36,29 @@ describe('optional cloud boundary', () => {
     await expect(auth.requestPasswordReset(' person@example.test ')).resolves.toBeUndefined();
     expect(resetPasswordForEmail).toHaveBeenCalledWith('person@example.test', { redirectTo: 'https://app.example.test/?account=recovery' });
   });
+  it('deletion sends confirmation without any caller-controlled account ID', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ status: 'pending' }), { status: 202 }));
+    await expect(new CloudSaves('https://api.example.test', fetcher).deleteAccount(session)).resolves.toEqual({ status: 'pending' });
+    expect(fetcher).toHaveBeenCalledWith('https://api.example.test/v1/account', expect.objectContaining({ method: 'DELETE', body: JSON.stringify({ confirmation: 'DELETE_ACCOUNT' }) }));
+  });
+  it('shows a recent-password requirement instead of an email-verification error', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: { code: 'reauth_required' } }), { status: 403 }));
+    await expect(new CloudSaves('https://api.example.test', fetcher).deleteAccount(session)).rejects.toMatchObject({ code: 'reauth_required' });
+  });
+  it('deletion reauthentication uses the current account and rejects an account change', async () => {
+    const sdkSession = { access_token: 'token', user: { id: 'a', email: 'a@example.test', email_confirmed_at: '2026-01-01' } };
+    const signInWithPassword = vi.fn().mockResolvedValue({ data: { session: { ...sdkSession, user: { ...sdkSession.user, id: 'b' } } }, error: null });
+    const client = { auth: { getSession: vi.fn().mockResolvedValue({ data: { session: sdkSession }, error: null }), signInWithPassword, startAutoRefresh: vi.fn().mockResolvedValue(undefined) } } as unknown as SupabaseClient;
+    await expect(new AccountAuth({}, client).reauthenticateForDeletion('password-test')).rejects.toMatchObject({ code: 'auth_required' });
+    expect(signInWithPassword).toHaveBeenCalledWith({ email: 'a@example.test', password: 'password-test' });
+  });
+  it('post-deletion signout clears only the auth cache, even if provider logout fails', async () => {
+    const removeItem = vi.fn();
+    vi.stubGlobal('localStorage', { removeItem });
+    const client = { auth: { signOut: vi.fn().mockResolvedValue({ error: new Error('Already deleted') }), stopAutoRefresh: vi.fn().mockResolvedValue(undefined) } } as unknown as SupabaseClient;
+    try {
+      await new AccountAuth({}, client).signOutAfterDeletion();
+      expect(removeItem.mock.calls).toEqual([['ccs-auth-session']]);
+    } finally { vi.unstubAllGlobals(); }
+  });
 });

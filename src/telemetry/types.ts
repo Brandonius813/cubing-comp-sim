@@ -39,6 +39,9 @@ export interface OutboxStore {
 
 export interface EventSink {
   send(events: readonly TelemetryEvent[], signal: AbortSignal): Promise<void>;
+  /** Optional provider lifecycle. Enabling alone must not capture user activity. */
+  setEnabled?(enabled: boolean): void;
+  dispose?(): void;
 }
 
 /** An error provider must be explicitly supplied. No placeholder reports success. */

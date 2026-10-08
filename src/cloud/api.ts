@@ -1,5 +1,5 @@
 import { validateHistorySnapshot, type HistorySnapshot } from '../storage';
-import { CloudError, type AccountSession, type SaveMetadata, type CloudErrorCode } from './types';
+import { CloudError, type AccountSession, type SaveMetadata, type CloudErrorCode, type DeletionResult } from './types';
 
 const messages: Record<CloudErrorCode, string> = {
   not_configured: 'Cloud saves are not configured yet. Your times remain on this device.',
@@ -14,6 +14,9 @@ const messages: Record<CloudErrorCode, string> = {
   auth_error: 'The account request failed. Please try again.',
   network_error: 'The cloud request could not finish. Your local times are unchanged.',
   server_error: 'The cloud service is unavailable. Your local times are unchanged.',
+  reauth_required: 'Enter your password again before deleting this account.',
+  account_deleting: 'Account deletion has been requested. Cloud access is disabled.',
+  deletion_not_configured: 'Account deletion is not configured on this server yet. No deletion was requested.',
 };
 
 export function validateMetadata(value: unknown): SaveMetadata {
@@ -48,8 +51,13 @@ export class CloudSaves {
       });
     } catch { throw new CloudError('network_error', messages.network_error); }
     if (!response.ok) {
-      const codes: Record<number, CloudErrorCode> = { 401: 'auth_required', 403: 'email_unverified', 404: 'no_save', 409: 'conflict', 413: 'too_large', 422: 'invalid_save', 429: 'rate_limited' };
-      const code = codes[response.status] ?? 'server_error';
+      const codes: Record<number, CloudErrorCode> = { 401: 'auth_required', 403: 'email_unverified', 404: 'no_save', 409: 'conflict', 410: 'account_deleting', 413: 'too_large', 422: 'invalid_save', 429: 'rate_limited' };
+      let code = codes[response.status] ?? 'server_error';
+      // Only recognize our explicit error codes; never display a raw server body.
+      try {
+        const body = await response.json() as { error?: { code?: string } };
+        if (body.error?.code === 'reauth_required' || body.error?.code === 'deletion_not_configured') code = body.error.code;
+      } catch { /* The status code still provides a safe fallback. */ }
       throw new CloudError(code, messages[code]);
     }
     try { return await response.json(); }
@@ -77,5 +85,13 @@ export class CloudSaves {
     const result = await this.request('/v1/save', session) as { save?: unknown; snapshot?: unknown };
     try { return { metadata: validateMetadata(result.save), snapshot: validateHistorySnapshot(result.snapshot) }; }
     catch { throw new CloudError('invalid_save', messages.invalid_save); }
+  }
+
+  async deleteAccount(session: AccountSession): Promise<DeletionResult> {
+    const result = await this.request('/v1/account', session, {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: 'DELETE_ACCOUNT' }),
+    }) as Partial<DeletionResult>;
+    if (result.status !== 'deleted' && result.status !== 'pending') throw new CloudError('server_error', messages.server_error);
+    return { status: result.status };
   }
 }

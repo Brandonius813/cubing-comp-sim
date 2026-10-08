@@ -8,7 +8,7 @@ From `server/`, run `npm install`, `npm run build`, and `npm test`. Commit the g
 
 Supabase must require email confirmation and use production SMTP before signup is enabled. Configure an exact site URL and allowlisted confirmation/recovery redirects for each environment. Browser public settings are `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_API_URL`, and `VITE_APP_URL`. No browser service-role key is needed. The API uses the public key to verify signed tokens and current user records with Supabase.
 
-The database and bucket must have separate development, staging, and production resources. Keep the bucket private and restrict its key to this bucket. The API uses parameterized queries and server-derived account IDs. Use a dedicated backend database role. If running inside a Supabase database, do not grant these tables to `anon` or `authenticated`; the table owner/backend role executes queries. Remote database TLS verifies certificates. Remove SSL URL parameters and configure `DATABASE_TLS` and, when necessary, `DATABASE_CA_FILE` explicitly.
+The database and bucket must have separate development, staging, and production resources. Keep the bucket private and restrict its key to this bucket. The API uses parameterized queries and server-derived account IDs. Use a dedicated backend database role. If running inside a Supabase database, do not grant these tables to `anon` or `authenticated`; the table owner/backend role executes queries. Remote database TLS verifies certificates. Remove SSL URL parameters and configure `DATABASE_TLS` and, when necessary, `DATABASE_CA_FILE` explicitly. Run all migrations, including `002_account_deletion.sql`, before starting the updated API.
 
 ## Save behavior
 
@@ -20,6 +20,20 @@ Previous objects are deleted after commit. Failed or interrupted operations may 
 
 The initial uncompressed save limit is 100 MiB, matching local import validation. The API caps concurrent uploads at two per process and rate-limits requests. One API instance is enough initially. Multiple instances require a shared rate limiter and measured memory/load limits. Set the hosting request limit to at least the API body limit and terminate HTTPS at the hosting gateway. Proxy trust is off by default; configure an explicit trusted proxy policy before depending on per-client-IP rate limits behind a proxy.
 
+## Account deletion
+
+`DELETE /v1/account` requires a verified Supabase session, an explicit `DELETE_ACCOUNT` confirmation, and password authentication within the previous five minutes. The browser asks for the account email as confirmation and the current password, then signs in with Supabase again. It sends the resulting access token to our API. The password never goes to the cloud-save API. The API uses the signed `amr` password timestamp; a newly refreshed token or account-recovery link is not sufficient. An unverified-email account can still delete itself after password authentication. The API derives the target solely from the authenticated user, ignoring any supplied user ID.
+
+Configure `SUPABASE_SERVICE_ROLE_KEY` only in the server secret store to enable identity deletion. Normal cloud requests continue to use the public verification client; a separate server admin client performs hard identity deletion. Never put this key in a `VITE_` variable, browser environment, logs, or source control. Without it, the deletion endpoint returns an explicit unavailable response without creating a deletion request. Account deletion must be configured and tested before public signup.
+
+Before external deletion begins, PostgreSQL records a durable request under the same per-account lock used by cloud uploads. The account is then blocked from cloud reads and writes. In-flight uploads cannot commit after the deletion marker. The server deletes the Supabase identity, atomically detaches its save/receipt metadata while preserving the object pointer in the cleanup job, deletes the current cloud object, then completes the job. Existing JWTs are also checked against the current Supabase user and the deletion marker; a signature alone does not restore access.
+
+A response of `deleted` means the identity, current cloud save and save metadata were removed. A response of `pending` means the request was recorded and access blocked, with cleanup still required. The browser signs out for either result while preserving every local time and setting. A retry after interrupted identity/object deletion is safe. Temporary uncommitted objects from interrupted uploads are removed by the existing orphan sweep. Completed jobs retain only the account ID and deletion timestamps for seven days, then are pruned. Independently managed disaster-recovery backups expire according to their configured retention and are not claimed to disappear immediately.
+
+Schedule `npm run cleanup:accounts` every five minutes, or `node dist/cleanup.js --accounts-only` in production, and alert on a nonzero exit. It retries up to 100 pending accounts per run. Monitor backlog and increase frequency/capacity if needed. Keep the daily full `cleanup` job for old orphan objects and receipts. If an admin key is removed while pending jobs exist, cleanup fails visibly instead of silently abandoning them. Run the deletion two-account and failure/retry cases against staging before enabling public accounts.
+
+Primary references: [Supabase deleteUser](https://supabase.com/docs/reference/javascript/auth-admin-deleteuser), [JWT AMR fields](https://supabase.com/docs/guides/auth/jwt-fields), [user deletion and token behavior](https://supabase.com/docs/guides/auth/managing-user-data).
+
 ## Required release checks
 
 - Run the backend unit/API tests. These use explicit test doubles; they do not prove a deployed provider integration.
@@ -28,7 +42,7 @@ The initial uncompressed save limit is 100 MiB, matching local import validation
 - Exercise a real R2 upload/download, failed object write, unavailable database, checksum corruption, cleanup, and concurrent upload/download.
 - Test verification and password recovery through real SMTP, including recovery in a different browser, expiry, repeated links, and signing out other sessions.
 - Inspect logs and HTTP error bodies for passwords, emails, tokens, histories and query strings. None should be present.
-- Configure account deletion and connected identity cleanup before public account signup. This backend does not yet expose a self-service account deletion endpoint.
+- Test self-service deletion with two accounts and provider/object failures, retries, stale/refreshed JWTs, and a simultaneous upload. Confirm deleting one account preserves the other account and all local history. Confirm the cleanup schedule is active before public account signup.
 - Configure TLS, independent backups and a restore drill, log retention, uptime/5xx/spending alerts, provider rate limits, and abuse controls before public launch.
 
 `/health` checks the process only. It is not proof that the identity service, database or bucket is healthy. Logs use stable codes, route templates and request IDs. Preserve the request ID when reporting a failed cloud operation; do not request users' passwords or access tokens.

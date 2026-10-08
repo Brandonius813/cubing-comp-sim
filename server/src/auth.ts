@@ -1,8 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 import { ApiError } from './errors.js';
 
-export interface VerifiedAccount { id: string; emailVerified: boolean }
+export interface VerifiedAccount { id: string; emailVerified: boolean; passwordAuthenticatedAt?: number }
 export type VerifyAccount = (authorization: string | undefined) => Promise<VerifiedAccount>;
+
+/** Only a signed password AMR proves password entry; a refreshed iat does not. */
+export function passwordAuthenticationTime(amr: unknown): number | undefined {
+  if (!Array.isArray(amr)) return undefined;
+  const times = amr.flatMap(entry => entry && typeof entry === 'object' && entry.method === 'password'
+    && typeof entry.timestamp === 'number' && Number.isSafeInteger(entry.timestamp) && entry.timestamp > 0
+    ? [entry.timestamp * 1000] : []);
+  return times.length ? Math.max(...times) : undefined;
+}
 
 export function bearerToken(authorization: string | undefined): string {
   if (!authorization || !/^Bearer [A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(authorization) || authorization.length > 16_384) {
@@ -25,6 +34,6 @@ export function createAccountVerifier(url: string, publicKey: string): VerifyAcc
     const { data, error } = await client.auth.getUser(token);
     if (error || !data.user || data.user.id !== claims.sub) throw new ApiError(401, 'auth_required');
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.user.id)) throw new ApiError(401, 'auth_required');
-    return { id: data.user.id, emailVerified: Boolean(data.user.email_confirmed_at) };
+    return { id: data.user.id, emailVerified: Boolean(data.user.email_confirmed_at), passwordAuthenticatedAt: passwordAuthenticationTime(claims.amr) };
   };
 }

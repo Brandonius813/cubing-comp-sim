@@ -1,6 +1,7 @@
 import { createTelemetry } from './client';
 import { createPostHogSink } from './posthog';
 import { createIndexedDbOutbox } from './store';
+import { createSentrySink } from './sentry';
 
 export { createTelemetry, MAX_AGE_MS, MAX_EVENTS } from './client';
 export type { TelemetryClient, TelemetryOptions } from './client';
@@ -11,7 +12,12 @@ export const telemetry = createTelemetry({
   store: createIndexedDbOutbox(),
   productSink: createPostHogSink({ key: import.meta.env.VITE_POSTHOG_KEY, host: import.meta.env.VITE_POSTHOG_HOST }),
   appVersion: import.meta.env.VITE_APP_VERSION ?? '0.1.0',
-  // No Sentry dependency is configured yet. Diagnostics must remain visibly unavailable.
+  diagnosticSink: createSentrySink({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    appVersion: import.meta.env.VITE_APP_VERSION ?? '0.1.0',
+    environment: import.meta.env.VITE_SENTRY_ENVIRONMENT === 'staging' ? 'staging' : import.meta.env.PROD ? 'production' : 'development',
+  }),
+  errorEvents: typeof window === 'undefined' ? undefined : window,
 });
 
 if (typeof window !== 'undefined') {

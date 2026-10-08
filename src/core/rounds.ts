@@ -1,10 +1,14 @@
 import { getEvent } from './events';
 import { attemptCount } from './scoring';
 import { inspectionPenalty, isValidTime } from './timing';
-import type { Attempt, EventId, InputMethod, InspectionPenalty, Penalty, Round, Scramble } from './types';
+import type { Attempt, EventId, InputMethod, InspectionPenalty, Penalty, Round, Scramble, StoredScramble } from './types';
 
 export function createId(): string {
   return crypto.randomUUID();
+}
+
+export function toStoredScramble(scramble: StoredScramble): StoredScramble {
+  return { eventId: scramble.eventId, notation: scramble.notation, engineVersion: scramble.engineVersion, generatedAt: scramble.generatedAt };
 }
 
 export function createRound(eventId: EventId, options: { goalMs?: number } = {}): Round {
@@ -26,7 +30,7 @@ export function createAttempt(round: Round, input: {
   const penalty = input.penalty ?? 'none';
   const inspection = input.inspectionMs !== undefined && getEvent(round.eventId).inspection ? inspectionPenalty(input.inspectionMs) : 'none';
   assertAttemptResult(input.rawMs, penalty, inspection);
-  return { id: createId(), roundId: round.id, index: round.attempts.length, ...input, penalty, inspectionPenalty: inspection, recordedAt: Date.now() };
+  return { id: createId(), roundId: round.id, index: round.attempts.length, ...input, scramble: toStoredScramble(input.scramble), penalty, inspectionPenalty: inspection, recordedAt: Date.now() };
 }
 
 export function addAttempt(round: Round, attempt: Attempt): Round {
@@ -34,7 +38,7 @@ export function addAttempt(round: Round, attempt: Attempt): Round {
   if (attempt.roundId !== round.id || attempt.index !== round.attempts.length || attempt.scramble.eventId !== round.eventId) throw new Error('Attempt does not belong in this position.');
   if (round.attempts.some(previous => previous.id === attempt.id)) throw new Error('Attempt already recorded.');
   assertAttemptResult(attempt.rawMs, attempt.penalty, attempt.inspectionPenalty);
-  const attempts = [...round.attempts, attempt];
+  const attempts = [...round.attempts, { ...attempt, scramble: toStoredScramble(attempt.scramble) }];
   const now = Date.now();
   return { ...round, attempts, updatedAt: now, ...(attempts.length === attemptCount(round.format) ? { completedAt: now } : {}) };
 }

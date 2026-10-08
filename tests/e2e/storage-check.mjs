@@ -98,11 +98,16 @@ export async function checkBrowserStorage(browser, baseUrl) {
       const active = core.createRound('clock');
       const draft = { roundId: active.id, scramble: fixture('clock'), stage: 'ready', savedAt: Date.now() };
       state = await store.saveRound(active, state.revision, draft);
+      const savedDraft = JSON.stringify(state.draft);
       const edited = core.editAttempt(historical, historical.attempts[0].id, { penalty: '+2' });
       state = await store.updateRound(edited, state.revision);
       const persisted = await store.load();
-      if (persisted.activeRoundId !== active.id || JSON.stringify(persisted.draft) !== JSON.stringify(draft)) throw new Error('Editing old history changed the current round or draft.');
+      if (persisted.activeRoundId !== active.id || JSON.stringify(persisted.draft) !== savedDraft) throw new Error('Editing old history changed the current round or draft.');
       if (persisted.rounds.find(round => round.id === historical.id).attempts[0].penalty !== '+2') throw new Error('Historical edit was not committed.');
+      const archivedScramble = persisted.rounds.find(round => round.id === historical.id).attempts[0].scramble;
+      if (Object.hasOwn(archivedScramble, 'svg')) throw new Error('Archived attempts retained unnecessary SVG data.');
+      const exported = JSON.parse(await store.exportJson());
+      if (Object.hasOwn(exported.rounds.find(round => round.id === historical.id).attempts[0].scramble, 'svg')) throw new Error('Export includes unnecessary archived SVG data.');
       store.close();
     }, name);
     return 'Real IndexedDB: two-tab and same-instance CAS, draft reload, import rollback, replacement and recovery, and inactive history edits passed.';

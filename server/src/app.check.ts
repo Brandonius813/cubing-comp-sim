@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createApi } from './app.js';
 import { ApiError } from './errors.js';
 import type { SaveService } from './saves.js';
+import type { AccountDeletion } from './deletion.js';
 
 test('API rejects unauthenticated/unverified access and uses verified ownership only', async () => {
   const requestedUsers: string[] = [];
@@ -26,5 +27,24 @@ test('API rejects unauthenticated/unverified access and uses verified ownership 
     const get = await app.inject({ url: '/v1/save', headers: { authorization: 'Bearer verified' } });
     assert.equal(get.statusCode, 200);
     assert.equal(get.headers['cache-control'], 'no-store');
+  } finally { await app.close(); }
+});
+
+test('deletion endpoint ignores a requested victim ID and blocks pending accounts from cloud access', async () => {
+  const received: string[] = [];
+  const deletions = {
+    isBlocked: async () => true,
+    request: async (account: { id: string }, confirmation: unknown) => {
+      assert.equal(confirmation, 'DELETE_ACCOUNT'); received.push(account.id); return { status: 'pending' };
+    },
+  } as unknown as AccountDeletion;
+  const app = await createApi({ saves: {} as SaveService, deletions, origins: ['https://example.test'], logging: false,
+    verifyAccount: async () => ({ id: 'verified-user', emailVerified: true, passwordAuthenticatedAt: Date.now() }),
+  });
+  try {
+    const response = await app.inject({ method: 'DELETE', url: '/v1/account', payload: { confirmation: 'DELETE_ACCOUNT', userId: 'victim' } });
+    assert.equal(response.statusCode, 202);
+    assert.deepEqual(received, ['verified-user']);
+    assert.equal((await app.inject({ url: '/v1/save/metadata' })).statusCode, 410);
   } finally { await app.close(); }
 });

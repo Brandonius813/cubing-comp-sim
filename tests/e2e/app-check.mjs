@@ -5,9 +5,9 @@ import path from 'node:path';
 import { checkOfflineWorker } from './engine-check.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
-const artifacts = process.env.CCS_BROWSER_ARTIFACT_DIR ?? path.join(root, 'test-results/browser');
+const artifactRoot = process.env.CCS_BROWSER_ARTIFACT_DIR ?? path.join(root, 'test-results/browser');
 
-async function screenshots(page, name) {
+async function screenshots(page, name, artifacts) {
   await page.evaluate(() => document.fonts.ready.then(() => true));
   for (const [width, height] of [[1440, 900], [2560, 1440]]) {
     await page.setViewportSize({ width, height });
@@ -40,10 +40,10 @@ async function savedAttemptCount(page, expected) {
   }, expected);
 }
 
-async function configureInput(page, mode, capture = false) {
+async function configureInput(page, mode, captureDirectory) {
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Settings', exact: true });
-  if (capture) await screenshots(page, 'settings');
+  if (captureDirectory) await screenshots(page, 'settings', captureDirectory);
   await dialog.getByLabel('Solve input', { exact: true }).selectOption(mode);
   const inspection = dialog.getByRole('switch', { name: 'Inspection', exact: true });
   if (await inspection.getAttribute('aria-checked') === 'true') await inspection.click();
@@ -86,7 +86,9 @@ async function checkStoredSvgIsolation(page) {
   assert.equal(await page.locator('.drawing-area svg, .scramble-notation script').count(), 0, 'Untrusted save content was inserted as DOM markup.');
 }
 
-export async function checkDesktopApp(browser, baseUrl) {
+export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromium' } = {}) {
+  assert.ok(['chromium', 'firefox', 'webkit'].includes(browserName), 'Unknown browser artifact directory.');
+  const artifacts = path.join(artifactRoot, browserName);
   await mkdir(artifacts, { recursive: true });
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 } });
   await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
@@ -96,18 +98,18 @@ export async function checkDesktopApp(browser, baseUrl) {
   try {
     await page.goto(baseUrl);
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
-    await screenshots(page, 'home');
+    await screenshots(page, 'home', artifacts);
     await page.locator('button.event-selector').click();
     const eventPicker = page.getByRole('dialog', { name: 'Choose event', exact: true });
     assert.equal(await eventPicker.locator('.event-list button').count(), 16);
     assert.equal(await eventPicker.locator('.event-list button').last().innerText(), 'Clock');
-    await screenshots(page, 'events');
+    await screenshots(page, 'events', artifacts);
     await eventPicker.getByRole('button', { name: 'Close', exact: true }).click();
-    await configureInput(page, 'manual', true);
+    await configureInput(page, 'manual', artifacts);
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).click();
     for (let index = 0; index < 5; index++) {
       await phase(page, 'scramble', 180_000);
-      if (index === 0) await screenshots(page, 'scramble');
+      if (index === 0) await screenshots(page, 'scramble', artifacts);
       await page.getByRole('button', { name: 'Scramble is good', exact: true }).click();
       await phase(page, 'ready');
       await page.getByRole('button', { name: 'Ready', exact: true }).click();
@@ -118,7 +120,7 @@ export async function checkDesktopApp(browser, baseUrl) {
     }
     await phase(page, 'complete');
     assert.equal(await page.locator('.scorecard-average strong').innerText(), '12.00');
-    await screenshots(page, 'completed-round');
+    await screenshots(page, 'completed-round', artifacts);
     await page.reload();
     await phase(page, 'home');
     assert.equal(await page.locator('.scorecard-average strong').innerText(), '12.00');

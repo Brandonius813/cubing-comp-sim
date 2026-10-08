@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import { ApiError } from './errors.js';
 import type { VerifyAccount, VerifiedAccount } from './auth.js';
 import { MAX_SAVE_BYTES, SaveService, uploadHeaders } from './saves.js';
+import type { AccountDeletion } from './deletion.js';
 
 declare module 'fastify' {
   interface FastifyRequest { account: VerifiedAccount | null; uploadSlot: boolean }
@@ -11,6 +12,8 @@ declare module 'fastify' {
 
 export async function createApi(options: {
   saves: SaveService; verifyAccount: VerifyAccount; origins: string[];
+  deletions?: AccountDeletion;
+  isAccountBlocked?: (userId: string) => Promise<boolean>;
   release?: string; logLevel?: string; logging?: boolean;
 }) {
   const app = Fastify({
@@ -24,7 +27,7 @@ export async function createApi(options: {
   });
   app.decorateRequest('account', null);
   app.decorateRequest('uploadSlot', false);
-  await app.register(cors, { origin: options.origins, credentials: false, methods: ['GET', 'PUT', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization', 'If-Match', 'Idempotency-Key'], exposedHeaders: ['ETag'], maxAge: 600 });
+  await app.register(cors, { origin: options.origins, credentials: false, methods: ['GET', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization', 'If-Match', 'Idempotency-Key'], exposedHeaders: ['ETag'], maxAge: 600 });
   await app.register(rateLimit, { max: 60, timeWindow: '1 minute' });
   let inFlightUploads = 0;
   const releaseSlot = (request: { uploadSlot: boolean }) => {
@@ -34,7 +37,11 @@ export async function createApi(options: {
   app.addHook('onRequest', async request => {
     if (request.routeOptions.url === '/health' || request.method === 'OPTIONS') return;
     request.account = await options.verifyAccount(request.headers.authorization);
-    if (!request.account.emailVerified) throw new ApiError(403, 'email_unverified');
+    if (request.routeOptions.url !== '/v1/account') {
+      if (!request.account.emailVerified) throw new ApiError(403, 'email_unverified');
+      const blocked = options.isAccountBlocked ? await options.isAccountBlocked(request.account.id) : await options.deletions?.isBlocked(request.account.id);
+      if (blocked) throw new ApiError(410, 'account_deleting');
+    }
     if (request.method === 'PUT' && request.routeOptions.url === '/v1/save') {
       if (inFlightUploads >= 2) throw new ApiError(429, 'upload_capacity');
       request.uploadSlot = true;
@@ -58,6 +65,12 @@ export async function createApi(options: {
   });
 
   app.get('/health', async () => ({ status: 'ok' }));
+  app.delete('/v1/account', { bodyLimit: 1024 }, async (request, reply) => {
+    if (!options.deletions) throw new ApiError(503, 'deletion_not_configured');
+    const body = request.body as { confirmation?: unknown } | null;
+    const result = await options.deletions.request(request.account!, body?.confirmation);
+    return reply.status(result.status === 'pending' ? 202 : 200).send(result);
+  });
   app.get('/v1/save/metadata', async request => ({ save: await options.saves.metadata(request.account!.id) }));
   app.get('/v1/save', async (request, reply) => {
     const result = await options.saves.download(request.account!.id);

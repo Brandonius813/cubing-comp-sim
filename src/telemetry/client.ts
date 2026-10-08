@@ -15,6 +15,8 @@ export interface TelemetryOptions {
   now?: () => number;
   randomId?: () => string;
   isOnline?: () => boolean;
+  /** Browser error events are classified only; messages, stacks, and reasons are never read. */
+  errorEvents?: EventTarget;
 }
 export interface TelemetryClient {
   setConsent(consent: TelemetryConsent): void;
@@ -44,6 +46,22 @@ export function createTelemetry(options: TelemetryOptions): TelemetryClient {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let active: { category: TelemetryCategory; controller: AbortController } | undefined;
   let failures = 0;
+  let listeningForErrors = false;
+  const onError = () => capture('client_error', { code: 'UNCAUGHT_ERROR' }, 'diagnostics');
+  const onRejection = () => capture('client_error', { code: 'UNHANDLED_REJECTION' }, 'diagnostics');
+
+  function updateErrorListeners() {
+    const shouldListen = enabled('diagnostics') && Boolean(options.errorEvents);
+    if (shouldListen === listeningForErrors) return;
+    listeningForErrors = shouldListen;
+    if (shouldListen) {
+      options.errorEvents?.addEventListener('error', onError);
+      options.errorEvents?.addEventListener('unhandledrejection', onRejection);
+    } else {
+      options.errorEvents?.removeEventListener('error', onError);
+      options.errorEvents?.removeEventListener('unhandledrejection', onRejection);
+    }
+  }
 
   const enabled = (category: TelemetryCategory) => !disposed && consent[category] && Boolean(sinks[category]);
   const serial = (work: () => Promise<void>) => {
@@ -198,6 +216,10 @@ export function createTelemetry(options: TelemetryOptions): TelemetryClient {
         }
       }
       consent = { product: next.product === true, diagnostics: next.diagnostics === true };
+      for (const category of CATEGORIES) {
+        try { sinks[category]?.setEnabled?.(enabled(category)); } catch { /* Optional provider failure. */ }
+      }
+      updateErrorListeners();
       void serial(drain).then(() => schedule());
     },
     getStatus() {
@@ -210,6 +232,13 @@ export function createTelemetry(options: TelemetryOptions): TelemetryClient {
       disposed = true;
       if (timer) clearTimeout(timer);
       active?.controller.abort();
+      updateErrorListeners();
+      for (const category of CATEGORIES) {
+        try {
+          sinks[category]?.setEnabled?.(false);
+          sinks[category]?.dispose?.();
+        } catch { /* Shutdown must not interfere with leaving the application. */ }
+      }
       // Committed outbox entries survive a normal close. No last-second network send.
     },
   };

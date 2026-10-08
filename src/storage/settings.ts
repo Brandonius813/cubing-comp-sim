@@ -12,7 +12,7 @@ export interface Settings {
   audioCallouts: boolean;
   ambience: boolean;
   showScorecard: boolean;
-  language: 'en';
+  language: 'en' | 'es';
 }
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = {
@@ -31,7 +31,7 @@ export function validateSettings(value: Settings): Settings {
   if (!value || !isEventId(value.eventId) || !['timer', 'manual'].includes(value.inputMethod)
     || !Number.isInteger(value.waitSeconds) || value.waitSeconds < 0 || value.waitSeconds > 600
     || !Number.isInteger(value.holdMs) || value.holdMs < 0 || value.holdMs > 5_000
-    || (value.goalMs !== null && !isValidTime(value.goalMs)) || value.language !== 'en'
+    || (value.goalMs !== null && !isValidTime(value.goalMs)) || !['en', 'es'].includes(value.language)
     || ['inspection', 'audioCallouts', 'ambience', 'showScorecard'].some(key => typeof value[key as keyof Settings] !== 'boolean')) {
     throw new InvalidSaveError('Invalid settings.');
   }

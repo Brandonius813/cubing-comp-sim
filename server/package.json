@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json && esbuild src/index.ts src/cleanup.ts src/migrate.ts --bundle --platform=node --packages=external --format=esm --outdir=dist",
     "migrate": "tsx --env-file=.env src/migrate.ts",
     "cleanup": "tsx --env-file=.env src/cleanup.ts",
+    "cleanup:accounts": "tsx --env-file=.env src/cleanup.ts --accounts-only",
     "test": "tsx --test src/*.check.ts"
   },
   "dependencies": {

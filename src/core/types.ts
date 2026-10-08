@@ -12,12 +12,17 @@ export interface EventDefinition {
   inspection: boolean;
 }
 
-export interface Scramble {
+/** Portable history stores the exact notation and engine identity, not drawings. */
+export interface StoredScramble {
   eventId: EventId;
   notation: string;
-  svg: string;
   engineVersion: string;
   generatedAt: number;
+}
+
+/** Active scrambles retain their drawing while the solve is in progress. */
+export interface Scramble extends StoredScramble {
+  svg: string;
 }
 
 export interface Attempt {
@@ -31,7 +36,7 @@ export interface Attempt {
   penalty: Penalty;
   inspectionPenalty: InspectionPenalty;
   inputMethod: InputMethod;
-  scramble: Scramble;
+  scramble: StoredScramble;
   recordedAt: number;
   inspectionMs?: number;
 }

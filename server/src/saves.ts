@@ -41,10 +41,20 @@ export class SaveService {
     // Every upload gets a new object. It cannot damage the currently committed
     // save. If commit outcome is unknown, leave cleanup to the age-based sweep.
     await this.objects.put(objectKey, await gzip(bytes));
-    const result = await this.repository.replace(userId, expectedRevision, operationId, {
-      objectKey, sha256, bytes: bytes.length, roundCount: snapshot.rounds.length,
-      attemptCount: snapshot.rounds.reduce((sum, round) => sum + round.attempts.length, 0),
-    });
+    let result;
+    try {
+      result = await this.repository.replace(userId, expectedRevision, operationId, {
+        objectKey, sha256, bytes: bytes.length, roundCount: snapshot.rounds.length,
+        attemptCount: snapshot.rounds.reduce((sum, round) => sum + round.attempts.length, 0),
+      });
+    } catch (error) {
+      // These explicit transaction rejections prove this object was not committed.
+      // Other failures may have an unknown commit outcome, so keep them for GC.
+      if (error instanceof ApiError && [409, 410].includes(error.status)) {
+        try { await this.objects.delete(objectKey); } catch { this.reportCleanupFailure(); }
+      }
+      throw error;
+    }
     const obsolete = result.replay ? objectKey : result.previousKey;
     if (obsolete) { try { await this.objects.delete(obsolete); } catch { this.reportCleanupFailure(); } }
     return result.save;

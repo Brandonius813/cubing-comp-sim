@@ -65,12 +65,33 @@ export class AccountAuth {
   async signIn(email: string, password: string): Promise<AccountSession> {
     const { data, error } = await this.sdk().auth.signInWithPassword({ email: email.trim(), password });
     if (error || !data.session) throw new CloudError('auth_error', 'Could not sign in. Check your email and password, and verify your email if needed.');
+    // A prior account deletion may have stopped refresh while clearing its cache.
+    await this.sdk().auth.startAutoRefresh();
     return mapSession(data.session)!;
   }
 
   async signOut(): Promise<void> {
     const { error } = await this.sdk().auth.signOut({ scope: 'local' });
     if (error) throw new CloudError('auth_error', 'Could not sign out. Please try again.');
+  }
+
+  async reauthenticateForDeletion(password: string): Promise<AccountSession> {
+    const current = await this.getSession();
+    if (!current?.user.email) throw new CloudError('auth_required', 'Sign in before deleting your account.');
+    const session = await this.signIn(current.user.email, password);
+    if (session.user.id !== current.user.id) throw new CloudError('auth_required', 'The account changed. Sign in again before deleting it.');
+    return session;
+  }
+
+  async signOutAfterDeletion(): Promise<void> {
+    const client = this.sdk();
+    try { await client.auth.signOut({ scope: 'local' }); }
+    finally {
+      await client.auth.stopAutoRefresh();
+      // Auth deletion can make the provider reject logout, or its response can
+      // be lost. Remove only the auth credential cache, never history/settings.
+      if (typeof localStorage !== 'undefined') localStorage.removeItem('ccs-auth-session');
+    }
   }
 
   async requestPasswordReset(email: string): Promise<void> {

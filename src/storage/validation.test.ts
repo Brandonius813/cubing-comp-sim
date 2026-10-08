@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { addAttempt, attemptTimeMs, createAttempt, createRound } from '../core';
 import { InvalidSaveError, parseHistoryJson, validateHistorySnapshot } from './validation';
 import type { HistorySnapshot } from './validation';
-import { DEFAULT_SETTINGS, validateSettings } from './settings';
+import { DEFAULT_SETTINGS, validateDraft, validateSettings } from './settings';
 
 function validSnapshot(): HistorySnapshot {
   let round = createRound('333');
@@ -74,6 +74,15 @@ describe('portable save validation', () => {
     invalid.rounds[0].attempts[0].inspectionPenalty = '+4';
     expect(() => validateHistorySnapshot(invalid)).toThrow(/inspection penalty/);
   });
+  it('removes historical SVG from legacy imports and keeps active-draft drawings', () => {
+    const data = JSON.parse(JSON.stringify(validSnapshot()));
+    data.rounds[0].attempts[0].scramble.svg = '<svg><script>untrusted()</script></svg>';
+    const normalized = validateHistorySnapshot(data);
+    expect('svg' in normalized.rounds[0].attempts[0].scramble).toBe(false);
+    expect(JSON.stringify(normalized)).not.toContain('untrusted');
+    const draft = validateDraft({ roundId: data.rounds[0].id, scramble: data.rounds[0].attempts[0].scramble, stage: 'ready', savedAt: 200 }, '333');
+    expect(draft.scramble.svg).toContain('<svg>');
+  });
 });
 
 describe('device settings validation', () => {
@@ -82,5 +91,6 @@ describe('device settings validation', () => {
     expect(() => validateSettings({ ...DEFAULT_SETTINGS, holdMs: -1 })).toThrow();
     expect(() => validateSettings({ ...DEFAULT_SETTINGS, waitSeconds: Infinity })).toThrow();
     expect(() => validateSettings({ ...DEFAULT_SETTINGS, goalMs: 1.5 })).toThrow();
+    expect(validateSettings({ ...DEFAULT_SETTINGS, language: 'es' }).language).toBe('es');
   });
 });

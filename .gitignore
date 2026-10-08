@@ -12,3 +12,6 @@ coverage/
 *.tsbuildinfo
 test-results/
 public/engine/
+
+# Generated Java reference and compiler artifacts
+engine/target/

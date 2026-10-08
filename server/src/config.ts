@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 
 export interface ServerConfig {
   port: number; host: string; origins: string[]; release: string; logLevel: string;
-  supabaseUrl: string; supabasePublicKey: string; databaseUrl: string;
+  supabaseUrl: string; supabasePublicKey: string; supabaseServiceRoleKey?: string; databaseUrl: string;
   databaseSsl: false | { rejectUnauthorized: true; ca?: string };
   s3: { endpoint: string; bucket: string; accessKeyId: string; secretAccessKey: string; forcePathStyle: boolean };
 }
@@ -31,6 +31,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   return {
     port, host: env.HOST || '127.0.0.1', origins, release: env.RELEASE || 'development', logLevel: env.LOG_LEVEL || 'info',
     supabaseUrl, supabasePublicKey: required(env, 'SUPABASE_PUBLISHABLE_KEY'), databaseUrl,
+    ...(env.SUPABASE_SERVICE_ROLE_KEY && !env.SUPABASE_SERVICE_ROLE_KEY.includes('replace-with') ? { supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY } : {}),
     databaseSsl: env.DATABASE_TLS === 'false' ? false : { rejectUnauthorized: true, ...(env.DATABASE_CA_FILE ? { ca: readFileSync(env.DATABASE_CA_FILE, 'utf8') } : {}) },
     s3: { endpoint: required(env, 'R2_ENDPOINT'), bucket: required(env, 'R2_BUCKET'), accessKeyId: required(env, 'R2_ACCESS_KEY_ID'), secretAccessKey: required(env, 'R2_SECRET_ACCESS_KEY'), forcePathStyle: env.R2_FORCE_PATH_STYLE === 'true' },
   };

@@ -17,7 +17,8 @@
   "dependencies": {
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "@supabase/supabase-js": "2.103.0"
+    "@supabase/supabase-js": "2.103.0",
+    "@sentry/browser": "11.6.0"
   },
   "devDependencies": {
     "@types/react": "19.2.14",

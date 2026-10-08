@@ -24,6 +24,8 @@ export class PostgresSaves implements SaveRepository {
       // A per-account transaction lock also covers the first upload, where no
       // cloud_saves row exists to SELECT FOR UPDATE. Hash collisions only serialize.
       await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [userId]);
+      const deletion = await db.query('SELECT 1 FROM account_deletions WHERE user_id=$1', [userId]);
+      if (deletion.rows[0]) throw new ApiError(410, 'account_deleting');
       const receipts = await db.query('SELECT expected_revision, sha256, result FROM cloud_upload_receipts WHERE user_id=$1 AND operation_id=$2', [userId, operationId]);
       if (receipts.rows[0]) {
         const receipt = receipts.rows[0];

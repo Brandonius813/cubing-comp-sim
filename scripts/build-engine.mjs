@@ -26,6 +26,7 @@ await writeFile(path.join(out, 'manifest.json'), JSON.stringify({
   schemaVersion: 1,
   engineVersion: `tnoodle-lib@${lock.commit}+webcrypto.2`,
   upstreamCommit: lock.commit,
+  sourceCommit: process.env.GITHUB_SHA || null,
   compiler: 'TeaVM 0.16.0',
   sha256: createHash('sha256').update(bytes).digest('hex'),
   source: `https://github.com/Brandonius813/cubing-comp-sim/tree/${process.env.GITHUB_SHA || 'feat/desktop-web-foundation'}/engine`,

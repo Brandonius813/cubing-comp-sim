@@ -8,7 +8,7 @@ The `vendor/tnoodle-lib` directory contains 72 byte-for-byte upstream source/ref
 
 Supported event identifiers: `222 333 444 555 666 777 333oh 333bf 444bf 555bf minx pyram skewb sq1 fto clock`. FMC and Multi-Blind are not exposed. The 4×4 mapping uses `FourByFourCubePuzzle`, never the fast random-turn variant. Clock has the same status in the app as other events.
 
-The repository is GPL-3.0 licensed. Its license is retained under `vendor/tnoodle-lib/LICENSE`; the browser build copies it beside the generated module. Corresponding source includes the complete vendored algorithms, adapters, and build scripts here. The application publisher must provide the corresponding application source as required by its chosen distribution and licenses. This app is a training simulator and does not claim WCA approval.
+The repository is GPL-3.0 licensed. Its license is retained under `vendor/tnoodle-lib/LICENSE`; the browser build copies it beside the generated module. The public application repository supplies the complete vendored algorithms, adapters, and build scripts. Each CI engine manifest links to its exact application source commit, separately from the pinned upstream TNoodle commit. Keep that matching source available with every distributed web build. Native store distribution will receive a separate licensing review when native packaging begins. This app is a training simulator and does not claim WCA approval.
 
 ## Local build
 
@@ -20,11 +20,12 @@ From the repository root:
 node engine/scripts/reference.mjs 2
 node scripts/build-engine.mjs
 node engine/scripts/conformance.mjs
+node --test engine/scripts/svg-conformance.test.mjs
 ```
 
 The reference command compiles and runs the original upstream code on the JVM with assertions enabled. It generates deterministic input fixtures for every event and checks parsing, minimum distance, and SVG generation. It writes under ignored `engine/target/`.
 
-The browser command compiles through TeaVM 0.16.0 into an ES2015 JavaScript module. It places `tnoodle.js`, `manifest.json`, and `LICENSE.txt` in `public/engine/`. The manifest records the exact source version and output checksum.
+The browser command compiles through TeaVM 0.16.0 into an ES2015 JavaScript module. It places `tnoodle.js`, `manifest.json`, and `LICENSE.txt` in `public/engine/`. The manifest records the exact application source commit, upstream TNoodle source version, and output checksum. Compilation clears any earlier conformance proof. Successful conformance checks that the published module is exactly the tested module, then writes `public/engine/conformance.json` with its checksum, source identities, and per-event results. The production build must require a matching passed proof.
 
 The conformance command compares the compiled JavaScript's seeded puzzle states and drawings against the JVM reference. SVG attribute/style ordering is normalized and geometric coordinates are rounded to 1e-6 pixels. Colors and paint ordering must match. Megaminx alone traverses an upstream enum-keyed HashMap when drawing whole faces, so those face groups can appear in a different serialization order. The comparator requires exactly twelve convex, disjoint pentagons, eleven stickers per face, opaque fills, and common black borders before sorting intact face groups. Every sticker position/color and within-face paint order remains significant. A separate exact Megaminx move-sequence assertion also applies. A search using a time budget can find different valid move sequences for the same sampled state, so equality of scramble strings is not required for search-based events. The test also generates fresh WebCrypto scrambles for every event and checks minimum distance.
 
@@ -51,23 +52,27 @@ engine.dispose();
 
 Generation runs in a module Web Worker. Initialization and generation never occupy the timer/UI thread. The worker loads only a same-origin local engine module and checks its exact version. A missing module, unsupported event, secure randomness failure, or generator failure rejects the request. No solve can start without a complete notation/SVG pair.
 
+An active draft retains the generated SVG so a reload can resume the current solve. Completed attempts persist notation, event, generation time, and engine version without duplicating SVG markup for every solve. Historical drawings, when needed, must be reconstructed with the recorded engine version or clearly unavailable if that renderer is no longer present. Never silently redraw an old attempt with a different engine.
+
 The engine can initialize tables at runtime. The first request for large puzzles may take materially longer. The service currently allows 180 seconds, terminates a stuck worker, and supports retry. Real device profiling must set the final performance budget. Do not describe the engine as ready before that first compile and runtime check has completed.
 
 The website's service worker must cache the complete generated module and worker along with the app shell. An offline readiness indicator may only report ready after every required asset is present. The internet indicator itself must never disable local generation.
 
 ## Current evidence and remaining gates
 
-On 2026-10-08, local source verification passed for all 72 upstream files. This Mac environment cannot compile Java because it has only a Java 8 runtime and no JDK compiler. Networked GitHub Actions subsequently compiled and ran the original JVM reference successfully and compiled the browser engine with TeaVM successfully in run `37850793623`, job `113562901361`.
+On 2026-10-08, source verification passed for all 72 upstream files. GitHub Actions successfully compiled and ran the original JVM reference and compiled the browser engine with TeaVM. The first strict checks exposed and corrected the bounded-random runtime difference and Megaminx face-serialization difference documented above.
 
-That first conformance run exposed the bounded-random difference described above at the 2×2 seeded-state assertion. It failed closed. Run `37851219759` then passed all twenty seeded cube cases through 5×5 blindfolded and all associated random-vector comparisons with the `webcrypto.2` adapter. It exposed Megaminx's irrelevant whole-face serialization ordering, addressed by the geometry-checked comparator described above. Three local comparator regression tests pass, including rejection of overlapping/missing faces and sensitivity to color/geometry/within-face paint changes. Full JVM/JavaScript conformance and real browser offline generation remain release gates until those checks pass. No compiled artifact has been fabricated.
+Runs [37852096123](https://github.com/Brandonius813/cubing-comp-sim/actions/runs/37852096123) and [37852467665](https://github.com/Brandonius813/cubing-comp-sim/actions/runs/37852467665) both passed the complete engine checks: 32 seeded fixtures across all sixteen events, JVM bounded-random vector comparisons, same-state and SVG comparisons, minimum-distance checks, sixteen fresh WebCrypto-generated scrambles, and rejection of excluded events. Run `37852467665`, job `113568559682`, also published the compiled engine artifact and corresponding conformance evidence.
 
-After successful compilation/conformance, run a browser acceptance job in Chromium, Firefox, and WebKit that:
+Three local SVG comparator regression tests pass, including rejection of overlapping/missing faces and sensitivity to color, geometry, and within-face paint changes. The local Mac still lacks a JDK/Maven toolchain; the successful compilation evidence comes from the networked CI jobs.
 
-- Loads every event's engine while online, then switches the browser context offline.
-- Reloads the website offline and generates more fresh scrambles for every event.
-- Confirms notation and drawings persist with saved attempts after reload.
-- Exercises first initialization and repeated generation, measures memory and latency.
-- Confirms no scramble-generation requests leave the device.
-- Checks a failed engine update cannot leave app and engine versions mismatched.
+Browser acceptance run `37853046752` is in progress at this evidence checkpoint. Engine conformance is green; actual browser offline behavior and application storage remain separate checks. Browser acceptance in Chromium, Firefox, and WebKit must:
+
+- Load every event's engine while online, then switch the browser context offline.
+- Reload the website offline and generate more fresh scrambles for every event.
+- Confirm completed attempt notation and engine version persist after reload, and active draft notation/SVG pairs resume together.
+- Exercise first initialization and repeated generation, and measure memory and latency.
+- Confirm no scramble-generation requests leave the device.
+- Check a failed engine update cannot leave app and engine versions mismatched.
 
 Then smoke test actual Safari and ordinary desktop/laptop hardware. Passing tests provides evidence for this pinned release; it is not mathematical proof that a compiler or upstream software can never contain a defect.

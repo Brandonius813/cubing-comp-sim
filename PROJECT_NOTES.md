@@ -19,7 +19,7 @@ This section supersedes all older product/stack/checkpoint statements below. Bra
 
 Work is on feat/desktop-web-foundation, with separate reviewable commits. No production deployment or native release has occurred. Local shell network access is restricted. The connected GitHub API is used for branch updates and CI. The actual local checkout is a task-specific checkout; the existing Documents/Codex checkout is unchanged.
 
-TNoodle Java reference and TeaVM compilation have both succeeded in GitHub Actions. Conformance checks and browser acceptance remain in progress. No release claim is made before these gates pass. App code, test evidence, and outstanding work will be recorded in the implementation handoff.
+TNoodle Java reference and TeaVM compilation succeeded in GitHub Actions. Two complete engine proof runs passed all 32 seeded fixtures and fresh WebCrypto generation for all 16 events. API build/tests also passed. Cross-browser acceptance is being run on the production build. See docs/implementation-handoff.md and the branch CI checks for verified evidence and remaining release gates. This is not a production release.
 
 ## Historical planning record
 

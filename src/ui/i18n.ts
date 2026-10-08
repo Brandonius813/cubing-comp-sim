@@ -1,39 +1,43 @@
-/** Every interface string has a stable key. Add reviewed catalogs before exposing a language. */
-const en = {
-  app: 'Cubing CompSim', start: 'Start CompSim', resume: 'Resume round', next: 'Next scramble',
-  settings: 'Settings', account: 'Account', help: 'Help', close: 'Close', event: 'Event', round: 'Round',
-  result: 'Result', bestPossible: 'Best Possible', worstPossible: 'Worst Possible', stats: 'View all stats',
-  scorecard: 'Scorecard', hideScorecard: 'Hide scorecard', showScorecard: 'Show scorecard',
-  scrambleGood: 'Scramble is good', generating: 'Generating scramble…', waiting: 'Waiting', ready: 'Ready',
-  inspection: 'Inspection', hold: 'Hold Space to start', release: 'Release to start', stop: 'Press any key to stop',
-  startSolve: 'Start solve', time: 'Time', submit: 'Submit', confirmSolve: 'Confirm solve', invalid: 'Enter a valid time',
-  retry: 'Try again', home: 'Back to home', saved: 'Saved on this device', saving: 'Saving…',
-  saveError: 'Your changes could not be saved. Keep this page open and try again.',
-  loadError: 'Your local history could not be opened. Your data has not been replaced.',
-  engineError: 'The offline scramble engine is unavailable in this build. A scramble cannot be generated yet.',
-  generationError: 'The scramble could not be generated. Try again.',
-  recovered: 'Your unfinished round was recovered. Check the scramble before continuing.',
-  interrupted: 'This solve was interrupted. Review the result before confirming it.',
-  simulation: 'Simulation', appearance: 'Appearance', shortcuts: 'Shortcuts',
-  wait: 'Wait between solves', waitDuration: 'Wait duration', input: 'Solve input', keyboard: 'Spacebar timer', manual: 'Manual entry',
-  holdDuration: 'Hold to start', alerts: 'Inspection alerts', alertsDescription: 'Beeps at 8 and 12 seconds.',
-  language: 'Language', theme: 'Theme', dark: 'Dark', goal: 'Round goal', noGoal: 'No goal',
-  online: 'Online', offline: 'Offline', connectionUnknown: 'Connection unavailable', connection: 'Connection',
-  localAlways: 'Scrambling and timing work offline.', checkConnection: 'Check connection',
-  advance: 'Advance', outsideFields: 'Outside text fields', startTimer: 'Start timer', stopTimer: 'Stop timer',
-  anyKey: 'Any key', submitSolve: 'Submit solve', resetSettings: 'Reset defaults',
-  export: 'Export history', import: 'Import history', importTitle: 'Replace this device’s history?',
-  importDescription: 'Import replaces all rounds on this device with the selected file. Export your current history first if you want to keep it.',
-  replace: 'Replace history', cancel: 'Cancel', editTime: 'Edit time', save: 'Save changes',
-  noHistory: 'No rounds yet.', rounds: 'Rounds', solves: 'Solves', bestSingle: 'Best single',
-  completedRounds: 'Completed rounds', history: 'History', allEvents: 'All events',
-  helpIntro: 'Simulate a competition round, one solve at a time.',
-  helpScramble: 'Apply the scramble, check the drawing, then choose “Scramble is good.”',
-  helpTimer: 'Start inspection when ready. Hold Space until the timer is ready, release to start, and press any key to stop.',
-  helpManual: 'Choose Manual entry in Settings if you use a separate timer. Enter your result in seconds or minutes:seconds.',
-  helpStorage: 'Your times are saved on this device. Clearing browser data deletes them. Export a file or upload to your account to keep a backup.',
-  helpCloud: 'Cloud saves are manual. Upload replaces your cloud save. Download replaces this device’s history.',
-  roundComplete: 'Round complete', fastest: 'Fastest', slowest: 'Slowest',
-} as const;
-export type MessageKey = keyof typeof en;
-export const t = (key: MessageKey): string => en[key];
+import { useSyncExternalStore } from 'react';
+import type { EventId } from '../core';
+import { en, type MessageKey } from './locales/en';
+import { es } from './locales/es';
+
+export type Locale = 'en' | 'es';
+export type { MessageKey };
+let locale: Locale = 'en';
+const listeners = new Set<() => void>();
+const catalogs = { en, es };
+export function setLocale(next: Locale) {
+  if (locale === next) return;
+  locale = next;
+  if (typeof document !== 'undefined') document.documentElement.lang = next;
+  for (const listener of listeners) listener();
+}
+export function useLocale() {
+  return useSyncExternalStore(listener => { listeners.add(listener); return () => listeners.delete(listener); }, () => locale, () => 'en' as Locale);
+}
+export function t(key: MessageKey, values: Record<string, string | number> = {}): string {
+  return catalogs[locale][key].replace(/\{(\w+)\}/g, (token, name: string) => name in values ? String(values[name]) : token);
+}
+export const localizedDate = (date: string | number) => new Date(date).toLocaleString(locale);
+const names: Record<Locale, Record<EventId, string>> = {
+  en: { '222': '2×2 Cube', '333': '3×3 Cube', '444': '4×4 Cube', '555': '5×5 Cube', '666': '6×6 Cube', '777': '7×7 Cube', '333oh': '3×3 One-Handed', '333bf': '3×3 Blindfolded', '444bf': '4×4 Blindfolded', '555bf': '5×5 Blindfolded', minx: 'Megaminx', pyram: 'Pyraminx', skewb: 'Skewb', sq1: 'Square-1', fto: 'FTO', clock: 'Clock' },
+  es: { '222': 'Cubo 2×2', '333': 'Cubo 3×3', '444': 'Cubo 4×4', '555': 'Cubo 5×5', '666': 'Cubo 6×6', '777': 'Cubo 7×7', '333oh': '3×3 a una mano', '333bf': '3×3 a ciegas', '444bf': '4×4 a ciegas', '555bf': '5×5 a ciegas', minx: 'Megaminx', pyram: 'Pyraminx', skewb: 'Skewb', sq1: 'Square-1', fto: 'FTO', clock: 'Clock' },
+};
+export const localizedEventName = (eventId: EventId) => names[locale][eventId];
+const errorKeys: Record<string, MessageKey> = {
+  not_configured: 'cloudNotConfigured', offline: 'cloudOffline', auth_required: 'cloudAuthRequired',
+  email_unverified: 'cloudEmailUnverified', conflict: 'cloudConflict', no_save: 'cloudNoSave',
+  invalid_save: 'cloudInvalid', too_large: 'cloudTooLarge', rate_limited: 'cloudRateLimited',
+  auth_error: 'cloudAuthError', network_error: 'cloudNetworkError', server_error: 'cloudServerError',
+  reauthentication_required: 'cloudReauth', reauth_required: 'cloudReauth',
+  account_deleting: 'cloudAccountDeleting', deletion_not_configured: 'cloudDeletionUnavailable',
+};
+export function errorMessage(cause: unknown, fallback: MessageKey = 'requestError') {
+  if (cause && typeof cause === 'object') {
+    if ('name' in cause && cause.name === 'StorageConflictError') return t('storageConflict');
+    if ('code' in cause && typeof cause.code === 'string' && errorKeys[cause.code]) return t(errorKeys[cause.code]);
+  }
+  return t(fallback);
+}

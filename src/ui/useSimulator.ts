@@ -45,7 +45,7 @@ export function useSimulator(blockKeyboard: boolean) {
       ownMutation.current = true;
       setSaving(true);
       try { const next = await operation(current.current); apply(next); setError(null); return next; }
-      catch (cause) { setError(cause instanceof StorageConflictError ? cause.message : t('saveError')); telemetry.reportError('local_save_failed', { code: cause instanceof StorageConflictError ? 'conflict' : 'storage_failed' }); throw cause; }
+      catch (cause) { setError(cause instanceof StorageConflictError ? t('storageConflict') : t('saveError')); telemetry.reportError('local_save_failed', { code: cause instanceof StorageConflictError ? 'REVISION_CONFLICT' : 'TRANSACTION_FAILED' }); throw cause; }
       finally { ownMutation.current = false; setSaving(false); }
     });
     serial.current = task.then(() => undefined, () => undefined);
@@ -65,7 +65,7 @@ export function useSimulator(blockKeyboard: boolean) {
   useEffect(() => browserStore.subscribe(() => {
     if (ownMutation.current) return;
     void browserStore.load().then(next => {
-      if (next.revision > current.current.revision && !saving) setNotice('History changed in another tab. Reload before making further changes.');
+      if (next.revision > current.current.revision && !saving) setNotice(t('otherTab'));
     }).catch(() => undefined);
   }), [saving]);
 
@@ -99,8 +99,8 @@ export function useSimulator(blockKeyboard: boolean) {
       setScramble(value); scrambleRef.current = value; setPhase('scramble');
     } catch (cause) {
       if (request !== generation.current) return;
-      setError(cause && typeof cause === 'object' && 'code' in cause && cause.code === 'ENGINE_UNAVAILABLE' ? t('engineError') : cause instanceof StorageConflictError ? cause.message : t('generationError'));
-      telemetry.reportError('scramble_failed', { eventId: round.eventId, code: 'generation_failed' });
+      setError(cause && typeof cause === 'object' && 'code' in cause && cause.code === 'ENGINE_UNAVAILABLE' ? t('engineError') : cause instanceof StorageConflictError ? t('storageConflict') : t('generationError'));
+      telemetry.reportError('scramble_failed', { eventId: round.eventId, code: 'GENERATION_FAILED' });
       setPhase('engine-error');
     }
   };
@@ -155,7 +155,7 @@ export function useSimulator(blockKeyboard: boolean) {
       if (updated.completedAt !== undefined) telemetry.track('round_completed', { eventId: round.eventId, format: round.format, attemptCount: updated.attempts.length, roundToken: round.id });
       return true;
     }
-    catch (cause) { setError(cause instanceof StorageConflictError ? cause.message : t('saveError')); return false; }
+    catch (cause) { setError(cause instanceof StorageConflictError ? t('storageConflict') : t('saveError')); return false; }
     finally { recordBusy.current = false; }
   };
   const stop = (interrupted = false) => {

@@ -1,5 +1,5 @@
 import { assertAttemptResult, attemptCount, getEvent, isEventId, isValidTime } from '../core';
-import type { Attempt, EventId, Round, Scramble } from '../core';
+import type { Attempt, EventId, Round, Scramble, StoredScramble } from '../core';
 
 export interface HistorySnapshot {
   app: 'cubing-comp-sim';
@@ -36,16 +36,23 @@ function time(value: unknown, name: string): number {
   return value;
 }
 
-export function validateScramble(value: unknown, eventId: EventId): Scramble {
+export function validateStoredScramble(value: unknown, eventId: EventId): StoredScramble {
   const source = record(value, 'scramble');
   if (source.eventId !== eventId) fail('Scramble event does not match its round.');
   return {
     eventId,
     notation: text(source.notation, 'scramble notation', 20_000),
-    // SVG is data, never trusted markup. UI must render it through an img element.
-    svg: text(source.svg, 'scramble drawing', 1_048_576, true),
     engineVersion: text(source.engineVersion, 'scramble engine version'),
     generatedAt: timestamp(source.generatedAt, 'scramble timestamp'),
+  };
+}
+
+export function validateScramble(value: unknown, eventId: EventId): Scramble {
+  const source = record(value, 'scramble');
+  return {
+    ...validateStoredScramble(value, eventId),
+    // Only an active draft retains SVG. Never trust it as inline markup.
+    svg: text(source.svg, 'scramble drawing', 1_048_576, true),
   };
 }
 
@@ -76,7 +83,8 @@ export function validateRound(value: unknown): Round {
     if (attempt.inputMethod !== 'timer' && attempt.inputMethod !== 'manual') fail('Invalid input method.');
     return {
       id: attemptId, roundId: id, index, rawMs, penalty, inspectionPenalty, inputMethod: attempt.inputMethod,
-      scramble: validateScramble(attempt.scramble, eventId),
+      // Legacy v1 drawings are intentionally discarded from historical records.
+      scramble: validateStoredScramble(attempt.scramble, eventId),
       recordedAt: timestamp(attempt.recordedAt, 'attempt timestamp'),
       ...(attempt.inspectionMs !== undefined ? { inspectionMs: time(attempt.inspectionMs, 'inspection time') } : {}),
     };

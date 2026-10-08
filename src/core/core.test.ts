@@ -85,6 +85,14 @@ describe('round mutations', () => {
     expect(revised.attempts[0].rawMs).toBe(12_349);
     expect(revised.attempts[0].scramble).toEqual(original.attempts[0].scramble);
   });
+  it('stores notation and engine identity without retaining the active drawing', () => {
+    const round = createRound('333');
+    const scramble = fixtureScramble('333');
+    const attempt = createAttempt(round, { rawMs: 12_340, inputMethod: 'timer', scramble });
+    expect('svg' in attempt.scramble).toBe(false);
+    expect(attempt.scramble).toEqual({ eventId: scramble.eventId, notation: scramble.notation, engineVersion: scramble.engineVersion, generatedAt: scramble.generatedAt });
+    expect(scramble.svg).toBe('<svg/>');
+  });
   it('rejects the wrong event, reused attempts and extra solves', () => {
     const round = createRound('333');
     expect(() => createAttempt(round, { rawMs: 1_000, inputMethod: 'timer', scramble: fixtureScramble('222') })).toThrow();

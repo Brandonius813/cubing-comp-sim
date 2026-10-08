@@ -4,7 +4,7 @@ import type { Settings, SolveDraft } from './settings';
 import { InvalidSaveError, parseHistoryJson, validateHistorySnapshot, validateRound } from './validation';
 import type { HistorySnapshot } from './validation';
 
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const STORES = ['meta', 'rounds', 'recovery'];
 
 export interface LocalState {
@@ -93,6 +93,7 @@ export class BrowserStore {
     this.database = new Promise((resolve, reject) => {
       const request = this.factory!.open(this.name, DATABASE_VERSION);
       let rejected = false;
+      let migrationError: unknown;
       request.onupgradeneeded = event => {
         const db = request.result;
         if (event.oldVersion === 0) {
@@ -101,14 +102,42 @@ export class BrowserStore {
           db.createObjectStore('recovery', { keyPath: 'key' });
           meta.put({ key: 'state', revision: 0, activeRoundId: null, settings: { ...DEFAULT_SETTINGS }, draft: null } satisfies Metadata);
         }
-        // Future schema migrations belong here, in the upgrade transaction.
+        if (event.oldVersion === 1) {
+          // Remove old historical drawings physically, not just from exports.
+          // Upgrade transactions either commit the entire migration or roll back.
+          const transaction = request.transaction!;
+          const abortMigration = (error: unknown) => { migrationError = error; transaction.abort(); };
+          const rounds = transaction.objectStore('rounds').openCursor();
+          rounds.onsuccess = () => {
+            const cursor = rounds.result;
+            if (!cursor) return;
+            try { cursor.update(validateRound(cursor.value)); cursor.continue(); }
+            catch (error) { abortMigration(error); }
+          };
+          const recovery = transaction.objectStore('recovery').get('previous');
+          recovery.onsuccess = () => {
+            if (!recovery.result) return;
+            try {
+              transaction.objectStore('recovery').put({ key: 'previous', snapshot: validateHistorySnapshot((recovery.result as RecoveryRecord).snapshot) } satisfies RecoveryRecord);
+            } catch (error) { abortMigration(error); }
+          };
+          const meta = transaction.objectStore('meta').get('state');
+          meta.onsuccess = () => {
+            const previous = meta.result as Metadata | undefined;
+            if (!previous || !Number.isSafeInteger(previous.revision) || previous.revision < 0) {
+              abortMigration(new StorageError('History metadata could not be upgraded. It has not been reset.'));
+              return;
+            }
+            transaction.objectStore('meta').put({ ...previous, revision: previous.revision + 1 });
+          };
+        }
         // Never delete a database to recover from an upgrade error.
       };
       request.onblocked = () => {
         rejected = true;
         reject(new StorageError('Close other Cubing Comp Sim tabs so local history can be opened.'));
       };
-      request.onerror = () => reject(storageError(request.error));
+      request.onerror = () => reject(storageError(migrationError ?? request.error));
       request.onsuccess = () => {
         const db = request.result;
         if (rejected) { db.close(); return; }

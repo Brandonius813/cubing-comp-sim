@@ -59,6 +59,7 @@ const proof = JSON.stringify({
   engineSha256: createHash('sha256').update(engineBytes).digest('hex'),
   referenceSha256: createHash('sha256').update(await readFile(path.join(root, 'target/reference-fixtures.jsonl'))).digest('hex'),
   sourceCommit: process.env.GITHUB_SHA || null,
+  upstreamCommit: lock.commit,
   liveEvents: required,
   cases: results,
   outcome: 'passed',
