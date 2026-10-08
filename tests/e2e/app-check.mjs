@@ -198,10 +198,12 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     }
     await phase(page, 'complete');
     assert.equal(await page.locator('.scorecard-average strong').innerText(), '12.00');
+    assert.deepEqual(await page.locator('.possible-results > div > span:last-child').allTextContents(), ['11.00', '12.00'], 'Completed rounds retain their pre-final-attempt bounds.');
     await screenshots(page, 'completed-round', artifacts);
     await page.reload();
     await phase(page, 'home');
     assert.equal(await page.locator('.scorecard-average strong').innerText(), '12.00');
+    assert.deepEqual(await page.locator('.possible-results > div > span:last-child').allTextContents(), ['11.00', '12.00'], 'Completed rounds retain their pre-final-attempt bounds.');
     await savedAttemptCount(page, 5);
 
     await configureInput(page, 'timer');

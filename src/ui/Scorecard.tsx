@@ -11,7 +11,11 @@ export function Scorecard({ round, eventId, roundNumber, onHide, onEdit, onStats
 }) {
   const definition = getEvent(round?.eventId ?? eventId);
   const score = round ? scoreRound(round) : null;
-  const possible = round && round.attempts.length > 0 && round.completedAt === undefined ? possibleResults(round) : null;
+  // Completed scorecards retain the bounds that preceded the final attempt.
+  const boundsRound = round && round.attempts.length === definition.attemptCount
+    ? { format: round.format, attempts: round.attempts.slice(0, -1) }
+    : round;
+  const possible = boundsRound && boundsRound.attempts.length > 0 ? possibleResults(boundsRound) : null;
   return <aside className="scorecard-wrap" aria-label={t('scorecard')}>
     <div className={`scorecard ${definition.attemptCount === 3 ? 'three-solves' : ''}`}>
       <button className="minimize-scorecard" type="button" onClick={onHide} title={t('hideScorecard')} aria-label={t('hideScorecard')}><Icon name="minus" /></button>
