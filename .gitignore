@@ -9,3 +9,6 @@ node_modules/
 dist/
 build/
 coverage/
+*.tsbuildinfo
+test-results/
+public/engine/

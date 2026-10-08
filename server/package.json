@@ -1,0 +1,29 @@
+{
+  "name": "cubing-comp-sim-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.json && esbuild src/index.ts src/cleanup.ts src/migrate.ts --bundle --platform=node --packages=external --format=esm --outdir=dist",
+    "migrate": "tsx --env-file=.env src/migrate.ts",
+    "cleanup": "tsx --env-file=.env src/cleanup.ts",
+    "test": "tsx --test src/*.check.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.900.0",
+    "@fastify/cors": "^11.0.0",
+    "@fastify/rate-limit": "^10.3.0",
+    "@supabase/supabase-js": "2.103.0",
+    "fastify": "^5.6.0",
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "@types/pg": "^8.15.0",
+    "tsx": "^4.20.0",
+    "esbuild": "^0.25.0",
+    "typescript": "5.9.3"
+  }
+}

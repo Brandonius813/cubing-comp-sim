@@ -1,4 +1,30 @@
-# Competition Cubing Simulator: project notes
+# Cubing Comp Sim: project notes
+
+## Approved implementation checkpoint (October 8, 2026)
+
+This section supersedes all older product/stack/checkpoint statements below. Brandon approved the architecture specification with the following amendments and explicitly authorized implementation, parallel agents, and as much progress as possible. The earlier planning-only boundary is no longer active.
+
+- Website first: React, TypeScript, Vite, custom CSS from the approved Figma. Native Mac/Windows/mobile work begins after the web version is stable. React Native is acceptable; platform languages are not required.
+- Guest use needs no account. Local browser data clearing/loss is acceptable; normal app saves, imports, and transfers must remain transactional.
+- Unlimited fresh OFFLINE TNoodle generation and TNoodle drawings are mandatory. Reuse pinned upstream source including the accepted unapproved FTO implementation. Do not substitute another algorithm or online service.
+- Events: 2–7 cubes, OH, 3/4/5 BLD, Megaminx, Pyraminx, Skewb, Square-1, FTO, Clock. Exclude FMC/Multi-Blind. Clock last, ordinary label. No user-facing event approval/retirement badges or regulations-sync feature.
+- Inputs: Space only starts keyboard timing; any key received by the active timer stops. Manual entry also supported. Ignore repeats and editable-field shortcuts.
+- Cloud: explicit upload/download replacement, never merge. ONE current save per user. Temporary objects needed for atomic replacement and ordinary infrastructure backups are separate from a user-facing history feature.
+- Settings: online/offline connection indicator; distinguish browser network hint from cloud reachability. Connection never gates local scrambling.
+- Auth: Supabase Auth with production SMTP is the recommended initial implementation. Account login never implicitly transfers or deletes local history.
+- Observability: explicit consent-based product events, separate opt-in client diagnostics, redacted server logs. No solve contents, passwords, reset links, or emails in telemetry.
+- Full public implementation specification: docs/architecture-spec.md. Auth alternatives and metric definitions: docs/auth-and-observability.md. Required provider access: docs/access-setup.md.
+
+## Current implementation status
+
+Work is on feat/desktop-web-foundation, with separate reviewable commits. No production deployment or native release has occurred. Local shell network access is restricted. The connected GitHub API is used for branch updates and CI. The actual local checkout is a task-specific checkout; the existing Documents/Codex checkout is unchanged.
+
+TNoodle Java reference and TeaVM compilation have both succeeded in GitHub Actions. Conformance checks and browser acceptance remain in progress. No release claim is made before these gates pass. App code, test evidence, and outstanding work will be recorded in the implementation handoff.
+
+## Historical planning record
+
+The following sections describe the earlier setup and are retained for context. They do not override the approved implementation scope above.
+
 
 ## Current setup status (verified 2026-10-06)
 
