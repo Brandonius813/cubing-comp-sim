@@ -66,13 +66,14 @@ Runs [37852096123](https://github.com/Brandonius813/cubing-comp-sim/actions/runs
 
 Three local SVG comparator regression tests pass, including rejection of overlapping/missing faces and sensitivity to color, geometry, and within-face paint changes. The local Mac still lacks a JDK/Maven toolchain; the successful compilation evidence comes from the networked CI jobs.
 
-Browser acceptance run `37853046752` is in progress at this evidence checkpoint. Engine conformance is green; actual browser offline behavior and application storage remain separate checks. Browser acceptance in Chromium, Firefox, and WebKit must:
+Actual browser offline behavior and application storage are separate from JVM/JavaScript conformance. See [the implementation handoff](../docs/implementation-handoff.md) and the PR checks for the latest completed browser evidence. Browser acceptance uses Playwright 1.64.0, including its WebKit offline-service-worker fix, with no event or browser skipped. The release checks cover:
 
-- Load every event's engine while online, then switch the browser context offline.
-- Reload the website offline and generate more fresh scrambles for every event.
+- Prepare the website online, switch the browser context offline, and reload the cached website.
+- Initialize a new worker while offline and generate fresh scrambles and browser-decodable drawings for every event, plus repeated 3×3 generation.
 - Confirm completed attempt notation and engine version persist after reload, and active draft notation/SVG pairs resume together.
-- Exercise first initialization and repeated generation, and measure memory and latency.
+- Exercise first initialization and repeated generation, and record generation latency.
 - Confirm no scramble-generation requests leave the device.
-- Check a failed engine update cannot leave app and engine versions mismatched.
+
+Remaining device/release checks include memory profiling, sleep/wake behavior, and deliberately interrupted app/engine updates to verify that a failed update cannot leave versions mismatched.
 
 Then smoke test actual Safari and ordinary desktop/laptop hardware. Passing tests provides evidence for this pinned release; it is not mathematical proof that a compiler or upstream software can never contain a defect.
