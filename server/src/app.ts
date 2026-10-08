@@ -48,7 +48,8 @@ export async function createApi(options: {
   });
   app.addHook('onSend', async (_request, reply, payload) => { reply.header('Cache-Control', 'no-store'); reply.header('X-Content-Type-Options', 'nosniff'); return payload; });
   app.setErrorHandler((error, request, reply) => {
-    const status = error instanceof ApiError ? error.status : error.statusCode === 413 ? 413 : error.statusCode === 429 ? 429 : error.statusCode === 400 ? 400 : 500;
+    const nativeStatus = error instanceof Error && 'statusCode' in error && typeof error.statusCode === 'number' ? error.statusCode : undefined;
+    const status = error instanceof ApiError ? error.status : nativeStatus === 413 ? 413 : nativeStatus === 429 ? 429 : nativeStatus === 400 ? 400 : 500;
     const code = error instanceof ApiError ? error.code : status === 413 ? 'too_large' : status === 429 ? 'rate_limited' : status === 400 ? 'invalid_request' : 'server_error';
     // Provider errors and body-parser errors can contain private data. Emit only
     // a stable code, request ID and route, never the raw exception or URL.

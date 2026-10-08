@@ -1,0 +1,39 @@
+name: Desktop web checks
+on:
+  push:
+    branches: [feat/desktop-web-foundation]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: engine/pom.xml
+      - run: npm install --include=optional --no-fund
+      - run: npm run typecheck
+      - run: npm test
+      - run: node --test engine/scripts/svg-conformance.test.mjs
+      - run: npm run engine:verify
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-web-evidence
+          path: |
+            test-results/
+            package-lock.json
+            dist/
+          retention-days: 7

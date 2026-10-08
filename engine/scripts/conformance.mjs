@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
-import { readFile, copyFile, writeFile } from 'node:fs/promises';
+import { readFile, copyFile, writeFile, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { canonicalSvg } from './svg-conformance.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const publishedProof = path.join(root, '../public/engine/conformance.json');
+await rm(publishedProof, {force: true});
 const compiled = path.join(root, 'target/browser/tnoodle.js');
 const modulePath = path.join(root, 'target/browser/tnoodle.mjs');
 await copyFile(compiled, modulePath);
@@ -47,10 +50,20 @@ for (const event of required) {
 for (const event of ['333fm', '333mbf', 'unknown']) {
   assert.throws(() => engine.generate(event));
 }
-await writeFile(path.join(root, 'target/conformance-results.json'), JSON.stringify({
+const engineBytes = await readFile(compiled);
+const publishedBytes = await readFile(path.join(root, '../public/engine/tnoodle.js'));
+assert.deepEqual(publishedBytes, engineBytes, 'Published engine differs from the tested engine');
+const proof = JSON.stringify({
+  schemaVersion: 1,
   engineVersion: engine.engineVersion(),
+  engineSha256: createHash('sha256').update(engineBytes).digest('hex'),
+  referenceSha256: createHash('sha256').update(await readFile(path.join(root, 'target/reference-fixtures.jsonl'))).digest('hex'),
+  sourceCommit: process.env.GITHUB_SHA || null,
+  liveEvents: required,
   cases: results,
   outcome: 'passed',
   scope: 'Node JavaScript runtime against JVM reference. Browser offline/worker tests still required.',
-}, null, 2) + '\n');
+}, null, 2) + '\n';
+await writeFile(path.join(root, 'target/conformance-results.json'), proof);
+await writeFile(publishedProof, proof);
 console.log(`Conformance passed: ${fixtures.length} seeded fixtures and all ${required.length} live generators.`);
