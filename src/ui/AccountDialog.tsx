@@ -16,7 +16,9 @@ export function AccountDialog({ session, recovery, onClose, onExport, onReplace,
   const [transfer, setTransfer] = useState<'upload' | 'download' | null>(null);
   const [transferRevision, setTransferRevision] = useState(0);
   const pendingUpload = useRef<{ snapshot: HistorySnapshot; revision: number; operationId: string } | null>(null);
-  const action = async (work: () => Promise<void>) => { if (busy) return; setBusy(true); setError(''); setMessage(''); try { await work(); } catch (cause) { setError(cause instanceof Error ? cause.message : 'The request could not be completed.'); } finally { setBusy(false); } };
+  const requestBusy = useRef(false);
+  const action = async (work: () => Promise<void>) => { if (requestBusy.current) return; requestBusy.current = true; setBusy(true); setError(''); setMessage(''); try { await work(); } catch (cause) { setError(cause instanceof Error ? cause.message : 'The request could not be completed.'); } finally { requestBusy.current = false; setBusy(false); } };
+  useEffect(() => { if (recovery) setMode('password'); }, [recovery]);
   useEffect(() => {
     if (!session || !cloudConfigured) return;
     let mounted = true;

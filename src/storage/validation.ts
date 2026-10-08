@@ -66,11 +66,16 @@ export function validateRound(value: unknown): Round {
     if (attempt.roundId !== id || attempt.index !== index) fail('Attempt order or round reference is invalid.');
     if (!['none', '+2', 'DNF', 'DNS'].includes(String(attempt.penalty))) fail('Invalid attempt penalty.');
     const penalty = attempt.penalty as Attempt['penalty'];
+    // Earlier unreleased v1 saves stored the entire penalty in `penalty`.
+    // Do not infer another +2 from inspectionMs and double their old results.
+    const inspectionPenalty = attempt.inspectionPenalty === undefined ? 'none' : attempt.inspectionPenalty;
+    if (inspectionPenalty !== 'none' && inspectionPenalty !== '+2' && inspectionPenalty !== 'DNF') fail('Invalid inspection penalty.');
+    if (!event.inspection && inspectionPenalty !== 'none') fail('This event does not use inspection penalties.');
     const rawMs = attempt.rawMs === null ? null : time(attempt.rawMs, 'solve time');
-    try { assertAttemptResult(rawMs, penalty); } catch { fail('Attempt result is invalid.'); }
+    try { assertAttemptResult(rawMs, penalty, inspectionPenalty); } catch { fail('Attempt result is invalid.'); }
     if (attempt.inputMethod !== 'timer' && attempt.inputMethod !== 'manual') fail('Invalid input method.');
     return {
-      id: attemptId, roundId: id, index, rawMs, penalty, inputMethod: attempt.inputMethod,
+      id: attemptId, roundId: id, index, rawMs, penalty, inspectionPenalty, inputMethod: attempt.inputMethod,
       scramble: validateScramble(attempt.scramble, eventId),
       recordedAt: timestamp(attempt.recordedAt, 'attempt timestamp'),
       ...(attempt.inspectionMs !== undefined ? { inspectionMs: time(attempt.inspectionMs, 'inspection time') } : {}),

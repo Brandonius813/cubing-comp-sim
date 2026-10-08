@@ -1,4 +1,4 @@
-import { formatAttempt, formatTime, getEvent, possibleResults, scoreRound, type Round, type Score } from '../core';
+import { attemptStatus, totalPenaltyMs, formatAttempt, formatTime, getEvent, possibleResults, scoreRound, type Round, type Score } from '../core';
 import { Icon } from './primitives';
 import { t } from './i18n';
 
@@ -23,7 +23,7 @@ export function Scorecard({ round, eventId, roundNumber, onHide, onEdit, onStats
       <ol className="scorecard-results">{Array.from({ length: definition.attemptCount }, (_, index) => {
         const attempt = round?.attempts[index];
         return <li key={index}><span>{index + 1}</span><button type="button" className={score?.discardedIndices.includes(index) ? 'discarded' : ''} disabled={!attempt} onClick={() => attempt && onEdit(attempt.id)} aria-label={attempt ? `Edit solve ${index + 1}, ${formatAttempt(attempt)}` : `Solve ${index + 1}, not recorded`}>
-          {attempt ? <>{formatAttempt(attempt)}{attempt.penalty === '+2' && <small>({formatTime(attempt.rawMs)} + 2)</small>}{attempt.penalty === 'DNF' && attempt.rawMs !== null && <small>({formatTime(attempt.rawMs)})</small>}</> : <span className="empty-result">—</span>}
+          {attempt ? <>{formatAttempt(attempt)}{attemptStatus(attempt) === 'ok' && totalPenaltyMs(attempt) > 0 && <small>({formatTime(attempt.rawMs)} + {totalPenaltyMs(attempt) / 1000})</small>}{attemptStatus(attempt) === 'DNF' && attempt.rawMs !== null && <small>({formatTime(attempt.rawMs)})</small>}</> : <span className="empty-result">—</span>}
         </button></li>;
       })}</ol>
       <div className="scorecard-average"><span>{formatLabel(definition.format)}</span><strong>{score ? scoreText(score) : '—'}</strong></div>

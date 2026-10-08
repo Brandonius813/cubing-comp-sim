@@ -86,7 +86,26 @@ export async function checkBrowserStorage(browser, baseUrl) {
     assert.equal(recovery.revisionBeforeReplace, result.revision);
     assert.equal(recovery.finalCount, 1);
     assert.equal(recovery.finalEvent, 'fto');
-    return 'Real IndexedDB: two-tab CAS, interrupted draft reload, invalid-import rollback, replacement and recovery passed.';
+    await first.evaluate(async databaseName => {
+      const { BrowserStore } = await import('/src/storage/index.ts');
+      const core = await import('/src/core/index.ts');
+      const store = new BrowserStore({ databaseName: `${databaseName}-edit`, broadcast: false });
+      const fixture = eventId => ({ eventId, notation: 'test-only fixture', svg: '<svg/>', engineVersion: 'test-only', generatedAt: Date.now() });
+      let state = await store.load();
+      let historical = core.createRound('333');
+      historical = core.addAttempt(historical, core.createAttempt(historical, { rawMs: 12_000, inputMethod: 'manual', scramble: fixture('333') }));
+      state = await store.saveRound(historical, state.revision);
+      const active = core.createRound('clock');
+      const draft = { roundId: active.id, scramble: fixture('clock'), stage: 'ready', savedAt: Date.now() };
+      state = await store.saveRound(active, state.revision, draft);
+      const edited = core.editAttempt(historical, historical.attempts[0].id, { penalty: '+2' });
+      state = await store.updateRound(edited, state.revision);
+      const persisted = await store.load();
+      if (persisted.activeRoundId !== active.id || JSON.stringify(persisted.draft) !== JSON.stringify(draft)) throw new Error('Editing old history changed the current round or draft.');
+      if (persisted.rounds.find(round => round.id === historical.id).attempts[0].penalty !== '+2') throw new Error('Historical edit was not committed.');
+      store.close();
+    }, name);
+    return 'Real IndexedDB: two-tab and same-instance CAS, draft reload, import rollback, replacement and recovery, and inactive history edits passed.';
   } finally {
     await context.close();
   }

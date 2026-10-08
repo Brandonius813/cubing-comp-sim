@@ -1,4 +1,4 @@
-import type { Attempt, ParsedTime, Penalty } from './types';
+import type { Attempt, InspectionPenalty, ParsedTime, Penalty } from './types';
 
 export const TEN_MINUTES_MS = 600_000;
 export const MAX_TIME_MS = 86_399_999;
@@ -8,7 +8,7 @@ export function isValidTime(value: unknown): value is number {
 }
 
 /** WCA A4d1/A4d2: exact 15.00 is +2, exact 17.00 is DNF. */
-export function inspectionPenalty(elapsedMs: number): Penalty {
+export function inspectionPenalty(elapsedMs: number): InspectionPenalty {
   if (!Number.isFinite(elapsedMs) || elapsedMs < 0) throw new Error('Invalid inspection time.');
   if (elapsedMs >= 17_000) return 'DNF';
   if (elapsedMs >= 15_000) return '+2';
@@ -16,17 +16,30 @@ export function inspectionPenalty(elapsedMs: number): Penalty {
 }
 
 /** WCA 9f1/9f2: truncate singles; round means separately in scoring.ts. */
-export function recordedTimeMs(rawMs: number, penalty: Penalty = 'none'): number | null {
+export function recordedTimeMs(rawMs: number, penalty: Penalty = 'none', inspection: InspectionPenalty = 'none'): number | null {
   if (!isValidTime(rawMs)) throw new Error('Invalid solve time.');
-  if (penalty === 'DNF' || penalty === 'DNS') return null;
-  const total = rawMs + (penalty === '+2' ? 2_000 : 0);
+  if (penalty === 'DNF' || penalty === 'DNS' || inspection === 'DNF') return null;
+  const total = rawMs + totalPenaltyMs({ penalty, inspectionPenalty: inspection });
   const unit = total >= TEN_MINUTES_MS ? 1_000 : 10;
   return Math.floor(total / unit) * unit;
 }
 
-export function attemptTimeMs(attempt: Pick<Attempt, 'rawMs' | 'penalty'>): number | null {
+type AttemptResult = Pick<Attempt, 'rawMs' | 'penalty'> & Partial<Pick<Attempt, 'inspectionPenalty'>>;
+
+/** WCA A7b4: inspection and additional time penalties add to the original time. */
+export function totalPenaltyMs(attempt: Pick<Attempt, 'penalty'> & Partial<Pick<Attempt, 'inspectionPenalty'>>): number {
+  return (attempt.penalty === '+2' ? 2_000 : 0) + (attempt.inspectionPenalty === '+2' ? 2_000 : 0);
+}
+
+export function attemptStatus(attempt: Pick<Attempt, 'penalty'> & Partial<Pick<Attempt, 'inspectionPenalty'>>): 'ok' | 'DNF' | 'DNS' {
+  if (attempt.penalty === 'DNF' || attempt.inspectionPenalty === 'DNF') return 'DNF';
+  if (attempt.penalty === 'DNS') return 'DNS';
+  return 'ok';
+}
+
+export function attemptTimeMs(attempt: AttemptResult): number | null {
   if (attempt.rawMs === null) return null;
-  return recordedTimeMs(attempt.rawMs, attempt.penalty);
+  return recordedTimeMs(attempt.rawMs, attempt.penalty, attempt.inspectionPenalty);
 }
 
 /** Seconds, m:ss, or h:mm:ss, with an optional decimal fraction of up to 3 digits. */
@@ -73,7 +86,9 @@ export function formatTime(ms: number | null, options: { precision?: 'hundredths
   return `${whole}.${String(Math.floor(value % 1_000 / 10)).padStart(2, '0')}`;
 }
 
-export function formatAttempt(attempt: Pick<Attempt, 'rawMs' | 'penalty'>): string {
-  if (attempt.penalty === 'DNF' || attempt.penalty === 'DNS') return attempt.penalty;
-  return `${formatTime(attemptTimeMs(attempt))}${attempt.penalty === '+2' ? '+' : ''}`;
+export function formatAttempt(attempt: AttemptResult): string {
+  const status = attemptStatus(attempt);
+  if (status !== 'ok') return status;
+  const added = totalPenaltyMs(attempt);
+  return `${formatTime(attemptTimeMs(attempt))}${added > 2_000 ? `+${added / 1_000}` : added ? '+' : ''}`;
 }

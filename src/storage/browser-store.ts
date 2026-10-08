@@ -201,6 +201,21 @@ export class BrowserStore {
     return this.mutate(expectedRevision, state => ({ ...state, settings: checked }));
   }
 
+  /** Edit recorded results without replacing the active round or its draft. */
+  updateRound(round: Round, expectedRevision: number): Promise<LocalState> {
+    const checked = validateRound(round);
+    return this.mutate(expectedRevision, (state, stores) => {
+      const previous = state.rounds.find(candidate => candidate.id === checked.id);
+      if (!previous) throw new InvalidSaveError('The round to edit was not found.');
+      if (previous.eventId !== checked.eventId || previous.attempts.length !== checked.attempts.length
+        || previous.attempts.some((attempt, index) => attempt.id !== checked.attempts[index]?.id)) {
+        throw new InvalidSaveError('A result edit cannot change the event or replace its attempts.');
+      }
+      stores.rounds.put(checked);
+      return { ...state, rounds: state.rounds.map(candidate => candidate.id === checked.id ? checked : candidate) };
+    });
+  }
+
   saveDraft(draft: SolveDraft | null, expectedRevision: number): Promise<LocalState> {
     return this.mutate(expectedRevision, state => {
       if (draft === null) return { ...state, draft: null };

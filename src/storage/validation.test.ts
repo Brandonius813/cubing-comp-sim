@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addAttempt, createAttempt, createRound } from '../core';
+import { addAttempt, attemptTimeMs, createAttempt, createRound } from '../core';
 import { InvalidSaveError, parseHistoryJson, validateHistorySnapshot } from './validation';
 import type { HistorySnapshot } from './validation';
 import { DEFAULT_SETTINGS, validateSettings } from './settings';
@@ -46,6 +46,33 @@ describe('portable save validation', () => {
   });
   it('accepts an explicitly empty history', () => {
     expect(validateHistorySnapshot({ app: 'cubing-comp-sim', schemaVersion: 1, exportedAt: 0, activeRoundId: null, rounds: [] }).rounds).toEqual([]);
+  });
+  it('round-trips cumulative penalties as separate values', () => {
+    const data = validSnapshot();
+    const attempt = data.rounds[0].attempts[0];
+    attempt.penalty = '+2';
+    attempt.inspectionPenalty = '+2';
+    attempt.inspectionMs = 15_000;
+    const restored = parseHistoryJson(JSON.stringify(data)).rounds[0].attempts[0];
+    expect(restored.penalty).toBe('+2');
+    expect(restored.inspectionPenalty).toBe('+2');
+    expect(attemptTimeMs(restored)).toBe(16_340);
+  });
+  it('preserves old v1 totals without inferring a second inspection penalty', () => {
+    const data = validSnapshot();
+    const legacy = JSON.parse(JSON.stringify(data));
+    legacy.rounds[0].attempts[0].penalty = '+2';
+    legacy.rounds[0].attempts[0].inspectionMs = 15_000;
+    delete legacy.rounds[0].attempts[0].inspectionPenalty;
+    const restored = validateHistorySnapshot(legacy).rounds[0].attempts[0];
+    expect(restored.inspectionPenalty).toBe('none');
+    expect(attemptTimeMs(restored)).toBe(14_340);
+  });
+  it('rejects unsupported inspection penalty values', () => {
+    const data = validSnapshot();
+    const invalid = JSON.parse(JSON.stringify(data));
+    invalid.rounds[0].attempts[0].inspectionPenalty = '+4';
+    expect(() => validateHistorySnapshot(invalid)).toThrow(/inspection penalty/);
   });
 });
 

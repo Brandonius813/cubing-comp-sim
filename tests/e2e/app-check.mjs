@@ -40,15 +40,50 @@ async function savedAttemptCount(page, expected) {
   }, expected);
 }
 
-async function configureInput(page, mode) {
+async function configureInput(page, mode, capture = false) {
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Settings', exact: true });
+  if (capture) await screenshots(page, 'settings');
   await dialog.getByLabel('Solve input', { exact: true }).selectOption(mode);
   const inspection = dialog.getByRole('switch', { name: 'Inspection', exact: true });
   if (await inspection.getAttribute('aria-checked') === 'true') await inspection.click();
   await page.waitForFunction(() => document.querySelector('[role="switch"][aria-label="Inspection"]')?.getAttribute('aria-checked') === 'false');
   if (mode === 'timer') await dialog.getByLabel('Hold to start', { exact: true }).fill('0');
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+}
+
+async function checkStoredSvgIsolation(page) {
+  await page.addInitScript(() => { window.svgTestExecuted = false; });
+  await page.evaluate(async () => {
+    const now = Date.now();
+    const id = crypto.randomUUID();
+    const database = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('cubing-comp-sim');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      // Adversarial stored-data fixture only. This is never used as a scramble engine.
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" onload="parent.svgTestExecuted=true"><script>parent.svgTestExecuted=true</script><rect width="10" height="10" fill="red"/></svg>';
+      await new Promise((resolve, reject) => {
+        const tx = database.transaction(['meta', 'rounds'], 'readwrite');
+        const metaStore = tx.objectStore('meta');
+        const request = metaStore.get('state');
+        request.onsuccess = () => {
+          const meta = request.result;
+          tx.objectStore('rounds').put({ id, eventId: '333', format: 'ao5', attempts: [], createdAt: now, updatedAt: now });
+          metaStore.put({ ...meta, revision: meta.revision + 1, activeRoundId: id, draft: { roundId: id, stage: 'scramble', savedAt: now, scramble: { eventId: '333', notation: '<script>window.svgTestExecuted=true</script>', svg, engineVersion: 'adversarial-test-only', generatedAt: now } } });
+        };
+        tx.oncomplete = resolve;
+        tx.onabort = () => reject(tx.error);
+      });
+    } finally { database.close(); }
+  });
+  await page.reload();
+  await phase(page, 'scramble');
+  await page.locator('img.scramble-drawing').evaluate(image => image.decode());
+  assert.equal(await page.evaluate(() => window.svgTestExecuted), false, 'Stored SVG executed script in the application.');
+  assert.equal(await page.locator('.drawing-area svg, .scramble-notation script').count(), 0, 'Untrusted save content was inserted as DOM markup.');
 }
 
 export async function checkDesktopApp(browser, baseUrl) {
@@ -62,7 +97,13 @@ export async function checkDesktopApp(browser, baseUrl) {
     await page.goto(baseUrl);
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
     await screenshots(page, 'home');
-    await configureInput(page, 'manual');
+    await page.locator('button.event-selector').click();
+    const eventPicker = page.getByRole('dialog', { name: 'Choose event', exact: true });
+    assert.equal(await eventPicker.locator('.event-list button').count(), 16);
+    assert.equal(await eventPicker.locator('.event-list button').last().innerText(), 'Clock');
+    await screenshots(page, 'events');
+    await eventPicker.getByRole('button', { name: 'Close', exact: true }).click();
+    await configureInput(page, 'manual', true);
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).click();
     for (let index = 0; index < 5; index++) {
       await phase(page, 'scramble', 180_000);
@@ -100,6 +141,14 @@ export async function checkDesktopApp(browser, baseUrl) {
 
     // This is the built service worker, not browser HTTP cache alone.
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller), undefined, { timeout: 180_000 });
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    const connectivity = page.getByRole('dialog', { name: 'Settings', exact: true });
+    await connectivity.getByText('Online', { exact: true }).waitFor();
+    await context.route('**/connection-check.json', route => route.abort());
+    await connectivity.getByRole('button', { name: 'Check connection', exact: true }).click();
+    await connectivity.getByText('Connection unavailable', { exact: true }).waitFor();
+    await context.unroute('**/connection-check.json');
+    await connectivity.getByRole('button', { name: 'Close', exact: true }).click();
     await context.setOffline(true);
     await page.reload();
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
@@ -123,6 +172,7 @@ export async function checkDesktopApp(browser, baseUrl) {
     await page.getByRole('button', { name: 'Replace history', exact: true }).click();
     await page.getByRole('dialog').waitFor({ state: 'hidden' });
     await savedAttemptCount(page, 0);
+    await checkStoredSvgIsolation(page);
     assert.deepEqual(errors, [], 'The browser emitted an uncaught application error.');
     return `Desktop browser: manual Ao5 and reload, keyboard start/stop, offline reload, and 16 offline event drawings passed. Generation milliseconds: ${JSON.stringify(timing)}`;
   } catch (error) {

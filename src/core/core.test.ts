@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addAttempt, createAttempt, createRound, editAttempt, EVENTS, formatAttempt, formatTime, getEvent, inspectionPenalty, parseTimeInput, possibleResults, recordedTimeMs, scoreRound } from './index';
+import { addAttempt, attemptStatus, attemptTimeMs, createAttempt, createRound, editAttempt, EVENTS, formatAttempt, formatTime, getEvent, inspectionPenalty, parseTimeInput, possibleResults, recordedTimeMs, scoreRound, totalPenaltyMs } from './index';
 import type { EventId, Penalty, Round, Scramble } from './types';
 
 function fixtureScramble(eventId: EventId): Scramble {
@@ -96,7 +96,41 @@ describe('round mutations', () => {
   it('applies inspection only for sighted events', () => {
     for (const [eventId, expected] of [['333', '+2'], ['333bf', 'none']] as Array<[EventId, Penalty]>) {
       const round = createRound(eventId);
-      expect(createAttempt(round, { rawMs: 10_000, inputMethod: 'timer', scramble: fixtureScramble(eventId), inspectionMs: 15_000 }).penalty).toBe(expected);
+      const attempt = createAttempt(round, { rawMs: 10_000, inputMethod: 'timer', scramble: fixtureScramble(eventId), inspectionMs: 15_000 });
+      expect(attempt.penalty).toBe('none');
+      expect(attempt.inspectionPenalty).toBe(expected);
     }
+  });
+  it('adds inspection and manual penalties without modifying the raw time', () => {
+    const round = createRound('333');
+    const attempt = createAttempt(round, { rawMs: 12_345, penalty: '+2', inputMethod: 'timer', scramble: fixtureScramble('333'), inspectionMs: 15_000 });
+    expect(attempt.inspectionPenalty).toBe('+2');
+    expect(totalPenaltyMs(attempt)).toBe(4_000);
+    expect(attemptTimeMs(attempt)).toBe(16_340);
+    expect(formatAttempt(attempt)).toBe('16.34+4');
+    const saved = addAttempt(round, attempt);
+    const toggledOff = editAttempt(saved, attempt.id, { penalty: 'none' });
+    expect(toggledOff.attempts[0].rawMs).toBe(12_345);
+    expect(toggledOff.attempts[0].inspectionPenalty).toBe('+2');
+    expect(attemptTimeMs(toggledOff.attempts[0])).toBe(14_340);
+    const toggledOn = editAttempt(toggledOff, attempt.id, { penalty: '+2' });
+    expect(attemptTimeMs(toggledOn.attempts[0])).toBe(16_340);
+  });
+  it('keeps inspection DNF even if the manual penalty is changed', () => {
+    const round = createRound('333');
+    const attempt = createAttempt(round, { rawMs: 12_340, penalty: '+2', inputMethod: 'timer', scramble: fixtureScramble('333'), inspectionMs: 17_000 });
+    expect(attemptStatus(attempt)).toBe('DNF');
+    expect(attemptTimeMs(attempt)).toBeNull();
+    expect(formatAttempt(attempt)).toBe('DNF');
+    const changed = editAttempt(addAttempt(round, attempt), attempt.id, { penalty: 'none' });
+    expect(attemptStatus(changed.attempts[0])).toBe('DNF');
+    expect(changed.attempts[0].rawMs).toBe(12_340);
+  });
+  it('uses cumulative penalties in aggregate scores', () => {
+    let round = createRound('333');
+    for (const rawMs of [10_000, 11_000, 12_000, 13_000, 14_000]) {
+      round = addAttempt(round, createAttempt(round, { rawMs, penalty: '+2', inputMethod: 'timer', scramble: fixtureScramble('333'), inspectionMs: 15_000 }));
+    }
+    expect(scoreRound(round).valueMs).toBe(16_000);
   });
 });

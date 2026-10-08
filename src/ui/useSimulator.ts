@@ -25,9 +25,11 @@ export function useSimulator(blockKeyboard: boolean) {
   const [armed, setArmed] = useState(false);
   const [holding, setHolding] = useState(false);
   const [lastAttempt, setLastAttempt] = useState<Attempt | null>(null);
+  const [automaticPenalty, setAutomaticPenalty] = useState<Penalty>('none');
   const lastAttemptRef = useRef<Attempt | null>(null);
   const engine = useRef<ReturnType<typeof createScrambleService> | null>(null);
   const serial = useRef(Promise.resolve());
+  const ownMutation = useRef(false);
   const started = useRef(0);
   const inspectionMs = useRef<number | undefined>(undefined);
   const holdStart = useRef<number | null>(null);
@@ -40,10 +42,11 @@ export function useSimulator(blockKeyboard: boolean) {
   const apply = useCallback((next: LocalState) => { current.current = next; setState(next); }, []);
   const mutate = useCallback((operation: (state: LocalState) => Promise<LocalState>): Promise<LocalState> => {
     const task = serial.current.then(async () => {
+      ownMutation.current = true;
       setSaving(true);
       try { const next = await operation(current.current); apply(next); setError(null); return next; }
       catch (cause) { setError(cause instanceof StorageConflictError ? cause.message : t('saveError')); telemetry.reportError('local_save_failed', { code: cause instanceof StorageConflictError ? 'conflict' : 'storage_failed' }); throw cause; }
-      finally { setSaving(false); }
+      finally { ownMutation.current = false; setSaving(false); }
     });
     serial.current = task.then(() => undefined, () => undefined);
     return task;
@@ -60,6 +63,7 @@ export function useSimulator(blockKeyboard: boolean) {
   }, [apply, setPhase]);
   // A tab never silently replaces edits another tab may still be making.
   useEffect(() => browserStore.subscribe(() => {
+    if (ownMutation.current) return;
     void browserStore.load().then(next => {
       if (next.revision > current.current.revision && !saving) setNotice('History changed in another tab. Reload before making further changes.');
     }).catch(() => undefined);
@@ -85,6 +89,7 @@ export function useSimulator(blockKeyboard: boolean) {
   };
   const generate = async (round: Round) => {
     const request = ++generation.current; setPhase('loading'); setError(null); setNotice(null);
+    setAutomaticPenalty('none');
     try {
       engine.current ??= createScrambleService();
       const generated = await engine.current.generate(round.eventId);
@@ -115,6 +120,7 @@ export function useSimulator(blockKeyboard: boolean) {
   const beginSolve = () => {
     const prior = phaseRef.current;
     inspectionMs.current = prior === 'inspection' ? Math.floor(performance.now() - started.current) : undefined;
+    setAutomaticPenalty(inspectionMs.current === undefined ? 'none' : inspectionPenalty(inspectionMs.current));
     cancelHold(); started.current = performance.now(); setElapsed(0);
     if (current.current.settings.inputMethod === 'manual') setPhase('entry');
     else { setPhase('solving'); saveDraft('solving'); }
@@ -140,12 +146,16 @@ export function useSimulator(blockKeyboard: boolean) {
     const round = getRound(); const value = scrambleRef.current;
     if (!round || !value) return false;
     recordBusy.current = true;
-    const inspection = inspectionMs.current === undefined ? 'none' : inspectionPenalty(inspectionMs.current);
-    const effectivePenalty = penalty === 'DNF' || penalty === 'DNS' ? penalty : inspection === 'DNF' ? 'DNF' : penalty === '+2' || inspection === '+2' ? '+2' : 'none';
-    const attempt = createAttempt(round, { rawMs, penalty: effectivePenalty, inputMethod, scramble: value, inspectionMs: inspectionMs.current });
-    lastAttemptRef.current = attempt; setLastAttempt(attempt);
-    try { const updated = addAttempt(round, attempt); await mutate(s => browserStore.saveRound(updated, s.revision)); telemetry.track('attempt_recorded', { eventId: round.eventId, inputMode: inputMethod, attemptToken: attempt.id, roundToken: round.id }); if (updated.completedAt !== undefined) telemetry.track('round_completed', { eventId: round.eventId, format: round.format, attemptCount: updated.attempts.length, roundToken: round.id }); return true; }
-    catch { return false; }
+    try {
+      const attempt = createAttempt(round, { rawMs, penalty, inputMethod, scramble: value, inspectionMs: inspectionMs.current });
+      lastAttemptRef.current = attempt; setLastAttempt(attempt);
+      const updated = addAttempt(round, attempt);
+      await mutate(s => browserStore.saveRound(updated, s.revision));
+      telemetry.track('attempt_recorded', { eventId: round.eventId, inputMode: inputMethod, attemptToken: attempt.id, roundToken: round.id });
+      if (updated.completedAt !== undefined) telemetry.track('round_completed', { eventId: round.eventId, format: round.format, attemptCount: updated.attempts.length, roundToken: round.id });
+      return true;
+    }
+    catch (cause) { setError(cause instanceof StorageConflictError ? cause.message : t('saveError')); return false; }
     finally { recordBusy.current = false; }
   };
   const stop = (interrupted = false) => {
@@ -199,7 +209,7 @@ export function useSimulator(blockKeyboard: boolean) {
         prepareAudio(); holdStart.current = performance.now(); setHolding(true);
         heldTimer.current = setTimeout(() => setArmed(true), current.current.settings.holdMs); return;
       }
-      if ((event.code === 'Space' || event.code === 'Enter') && ['home', 'complete', 'scramble', 'waiting', 'ready', 'engine-error'].includes(active)) { event.preventDefault(); actions.current.primary(); }
+      if ((event.code === 'Space' || event.code === 'Enter') && (['home', 'complete', 'scramble', 'waiting', 'ready', 'engine-error'].includes(active) || (active === 'inspection' && current.current.settings.inputMethod === 'manual'))) { event.preventDefault(); actions.current.primary(); }
       else if (event.code === 'Enter' && active === 'confirm') { event.preventDefault(); void actions.current.advance(); }
     };
     const keyUp = (event: KeyboardEvent) => {
@@ -214,5 +224,5 @@ export function useSimulator(blockKeyboard: boolean) {
 
   const updateSettings = (patch: Partial<Settings>) => mutate(s => browserStore.saveSettings({ ...s.settings, ...patch }, s.revision));
   const home = () => { generation.current++; cancelHold(); setPhase('home'); setError(null); setNotice(null); };
-  return { state, loaded, phase, scramble, error, notice, saving, elapsed, armed, holding, lastAttempt, mutate, updateSettings, primary, record, advance, home, setPhase, setError, apply, store: browserStore };
+  return { state, loaded, phase, scramble, error, notice, saving, elapsed, armed, holding, lastAttempt, automaticPenalty, mutate, updateSettings, primary, record, advance, home, setPhase, setError, apply, store: browserStore };
 }
