@@ -19,7 +19,9 @@ This section supersedes all older product/stack/checkpoint statements below. Bra
 
 Work is on feat/desktop-web-foundation, with separate reviewable commits. No production deployment or native release has occurred. Local shell network access is restricted. The connected GitHub API is used for branch updates and CI. The actual local checkout is a task-specific checkout; the existing Documents/Codex checkout is unchanged.
 
-TNoodle Java reference and TeaVM compilation succeeded in GitHub Actions. Two complete engine proof runs passed all 32 seeded fixtures and fresh WebCrypto generation for all 16 events. API build/tests also passed. Cross-browser acceptance is being run on the production build. See docs/implementation-handoff.md and the branch CI checks for verified evidence and remaining release gates. This is not a production release.
+TNoodle Java reference and TeaVM compilation succeeded in GitHub Actions. Engine proof passed all 32 seeded fixtures and fresh WebCrypto generation for all 16 events. At application commit `22d7989cc5d465e921bbe6c8771221bef53134a8`, run 37859656656 passed all 84 application tests, seven integrity/SVG regression tests, and the complete Chromium/Firefox/WebKit suites with actual offline reload and fresh generation/drawings for every event. Run 37859656637 passed 21 API tests, actual PostgreSQL transactions, and the Docker build. Run 37859656458 reported zero known dependency vulnerabilities. Playwright 1.64.0 includes the upstream WebKit offline-emulation fix; no offline assertion was bypassed. First 4×4 generation took about 56 seconds in WebKit CI and needs real-device profiling before release. See docs/implementation-handoff.md for evidence, access needs, and remaining launch gates. This is not a production release.
+
+Draft PR: https://github.com/Brandonius813/cubing-comp-sim/pull/2. The local task workspace connection became unavailable during the final handoff; the latest dependency lock and evidence updates are committed on GitHub. Fetch the remote feature branch before continuing from any older local checkout.
 
 ## Historical planning record
 
