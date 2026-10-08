@@ -1,0 +1,25 @@
+name: Resolve browser test dependency
+on:
+  push:
+    branches: [feat/desktop-web-foundation]
+    paths: ['.github/workflows/resolve-browser.yml']
+permissions:
+  contents: read
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --package-lock-only --ignore-scripts --save-dev --save-exact playwright@1.64.0 --no-audit --no-fund
+      - name: Emit public package metadata
+        run: |
+          node --input-type=module - <<'JS'
+          import { readFileSync } from 'node:fs';
+          import { gzipSync } from 'node:zlib';
+          console.log('CCS_PUBLIC_LOCK=' + gzipSync(readFileSync('package-lock.json')).toString('base64'));
+          console.log('CCS_PUBLIC_PACKAGE=' + Buffer.from(readFileSync('package.json')).toString('base64'));
+          JS
