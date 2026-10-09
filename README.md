@@ -1,73 +1,46 @@
 # Cubing Comp Sim
 
-A focused desktop website for practicing competition rounds. Open it without an account, generate a scramble locally, and record results with the spacebar timer or manual entry. Browser storage saves rounds on this device. Accounts add explicit cloud upload and download.
+**Practice the full rhythm of a speedcubing competition.**
 
-**Status:** the first website implementation is on `feat/desktop-web-foundation`. It is not deployed to production. Provider accounts, live cloud integration tests, and release review are still required.
+Cubing Comp Sim is a browser app for rehearsing competition rounds: scramble your puzzle, wait for your turn, inspect, solve, and record your result. A persistent scorecard follows you through the round so you can focus on your next attempt.
 
-## What is implemented
+Created and maintained by [Brandon True](https://github.com/Brandonius813).
 
-- React and TypeScript interface based on the approved desktop Figma, with local fonts and puzzle icons.
-- Sixteen events including FTO and Clock, with Clock last. No Fewest Moves or Multi-Blind.
-- Original pinned TNoodle generation and drawing algorithms compiled into a local JavaScript worker. No scramble server or prerecorded pool.
-- Space-only timer start, any-key stop, manual entry, inspection, independent penalties, round scoring, goals, and history.
-- Transactional IndexedDB storage, unfinished-round recovery, file export/import, and conflict detection between tabs.
-- Offline app caching after the first successful online load. Settings show connection and offline readiness separately.
-- Sixteen interface language options, local-device inspection voice selection with beep fallback, and separately opt-in analytics and diagnostics.
-- Explicit streamed-background-audio controls. Reviewed background recordings and consistent bundled voice packs remain asset work.
-- Optional Supabase accounts and a Fastify/PostgreSQL/private-object-storage API with one current save per user. Upload and download replace data; login does not transfer it.
+**[Try the guest preview](https://morning-base-55f2.btrue813.workers.dev/)** · [Explore the documentation](docs/README.md) · [Run it locally](docs/development.md)
 
-Clearing browser site data can remove local history. Export a file or upload a cloud save to preserve it. The website must finish preparing its offline files before its first offline visit.
+## Why it exists
 
-## Run locally
+A competition includes more than a timer. There is waiting between attempts, limited inspection time, and a small number of solves that determine your round result. This app brings that sequence into everyday practice, with controls for the pace and conditions of a simulated round.
 
-Use Node 24, JDK 21, and Maven 3.9 or newer. Java and Maven are build tools only; app users do not need them.
+## What you can do
 
-```sh
-npm ci
-npm run engine:verify
-npm run dev
-```
+- **Rehearse a round:** follow scramble, inspection, solve, and confirmation steps with Space and Enter to advance. Hold Space to arm the timer, release to start, and press any key to stop. Manual entry is also available.
+- **Practice across 16 events:** generate fresh scrambles and puzzle drawings on your device, including cubes from 2×2 through 7×7, blindfolded events, Megaminx, FTO, and Clock.
+- **Keep one scorecard in view:** edit times, apply +2 or DNF penalties, and track your round result without leaving the solve flow.
+- **Review your progress:** explore completed rounds, event statistics, and the mean of three rounds. Export your history for a backup.
+- **Set your practice conditions:** choose fixed or random waits up to five minutes, inspection voice and volume, theme, fonts, and interface language.
+- **Use it without an account:** rounds stay in your browser. Once offline preparation finishes, you can return to the app and generate new scrambles without a connection.
 
-The first engine build downloads compiler dependencies and runs the original JVM implementation against the compiled browser implementation. Allow several minutes. The engine is generated under `public/engine/` and is not committed.
+## Current status
 
-For the real offline website, build and preview production output:
+The desktop web app is available as an **early guest preview** and is under active development. Accounts and cloud saves require separately configured services; they are not needed for guest practice. Translation review, audio assets, and real-device testing are ongoing. Native apps are a later phase.
 
-```sh
-npm run build
-npm run preview
-```
+Local history belongs to the browser and site address you use. Export it before clearing site data or moving to another address.
 
-Development mode does not install the offline service worker. A production build refuses to proceed without a matching engine artifact and successful conformance report. `npm run build:ui` is a layout-only build and is not a releasable app.
+## How it is built
 
-Guest use requires no environment values. See [access setup](docs/access-setup.md) and [server operations](server/OPERATIONS.md) for hosted features. Keep private keys in ignored environment files or the hosting secret manager.
+The interface uses **React, TypeScript, and Vite**. An offline **TNoodle** engine generates scrambles and drawings in a background worker, while **IndexedDB** stores rounds on the device. Automated checks compare the browser engine with its Java reference and exercise the app in Chromium, Firefox, and WebKit. GitHub Actions publishes tested guest builds to **Cloudflare Workers**.
 
-## Verify
+The optional account backend uses **Supabase Auth, Fastify, PostgreSQL, and private object storage**. Cloud upload and download are explicit actions; signing in does not automatically move or merge local results.
 
-```sh
-npm run typecheck
-npm test
-node --test engine/scripts/svg-conformance.test.mjs
-npm run engine:verify
-npm run build
-npx playwright install --with-deps chromium firefox webkit
-BROWSER=chromium npm run test:browser
-BROWSER=firefox npm run test:browser
-BROWSER=webkit npm run test:browser
-```
+For implementation details, start with the [documentation index](docs/README.md) and [development guide](docs/development.md).
 
-The browser suite uses the actual production engine with networking disabled, real IndexedDB, and the actual service worker. It saves screenshots and a trace under `test-results/browser/`. API checks run separately from `server/`.
+## Project ownership
 
-## Project guide
+This project is maintained by Brandon True. Public visibility allows people to inspect the work; changes to this repository remain under the owner's control. See [contribution and review guidance](CONTRIBUTING.md).
 
-- [Architecture and product specification](docs/architecture-spec.md)
-- [Authentication alternatives and observability](docs/auth-and-observability.md)
-- [Preview the app and set up staging](docs/preview-and-environments.md)
-- [Interface language coverage and review](docs/languages.md)
-- [Inspection voices and background audio assets](docs/audio-assets.md)
-- [Accounts and access needed for hosting](docs/access-setup.md)
-- [Implementation, verified checks, and remaining launch work](docs/implementation-handoff.md)
-- [Offline engine source, adaptations, and evidence](engine/README.md)
-- [Project decisions and historical notes](PROJECT_NOTES.md)
-- [Contribution guidance](AGENTS.md)
+## Credits
 
-The vendored TNoodle code is GPL-3.0 licensed; its license and corresponding source are included. Asset licenses are under `public/assets/`. Review distribution obligations before releasing native apps. Website work comes first; native clients are a later phase.
+Scramble generation and puzzle drawings use [TNoodle](https://github.com/thewca/tnoodle-lib). Its [GPL-3.0 license](engine/vendor/tnoodle-lib/LICENSE), source, and build adaptations are included; see the [engine documentation](engine/README.md). Font and icon notices are included under [public/assets](public/assets/). An application-wide license has not yet been selected.
+
+Cubing Comp Sim is an independent training project and does not claim WCA approval.
