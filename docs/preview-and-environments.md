@@ -1,6 +1,6 @@
 # Preview and environment setup
 
-Updated October 9, 2026. These are setup instructions, not claims that accounts or hosted deployments already exist.
+Updated October 9, 2026. Brandon reports a Cloudflare account with MFA and a manually uploaded guest preview. Its exact project name and URL have not yet been recorded, and automated deployment has not been verified. The remaining sections are setup instructions.
 
 ## Preview before buying or configuring a backend
 
@@ -30,9 +30,11 @@ Browser storage belongs to the origin. Localhost, a Pages preview URL, and cubin
 
 ## Recommended hosted preview path
 
-Create a Cloudflare account and a **Pages Direct Upload** project with `main` as the production branch. Build and test in GitHub Actions, then deploy its verified `dist` with Wrangler using a staging branch. The existing Java/Maven TNoodle compilation stays in the CI environment that already runs it.
+For the existing manually uploaded preview, configure [automatic Cloudflare Pages deployment](cloudflare-deployment.md). The workflow publishes the tested artifact to that project's existing production branch so the base Pages URL stays the same.
 
-The future deployment command is `wrangler pages deploy dist --project-name=<project> --branch=staging`. This is documentation, not a command to publish an unreviewed build. Cloudflare supplies a stable branch alias such as `staging.<project>.pages.dev` and a deployment-specific URL. This example is not a live link.
+The existing guest preview uses a **Pages Direct Upload** project. Build and test in GitHub Actions, then deploy its verified `dist` with Wrangler to the project's existing production branch. The automated workflow resolves that branch through the API, preserving the base Pages URL created by the manual upload. The Java/Maven TNoodle compilation stays in the CI environment that already runs it.
+
+For a separate branch preview later, use `wrangler pages deploy dist --project-name=<project> --branch=staging`. Cloudflare supplies a stable branch alias such as `staging.<project>.pages.dev` and a deployment-specific URL. That branch alias is a different browser origin from the current base Pages URL. These examples are not live links.
 
 Direct Upload can be automated from GitHub Actions. It is a different project mode from Cloudflare-managed Git builds; Cloudflare does not support simply converting the project between the two modes later. Decide this once during setup.
 

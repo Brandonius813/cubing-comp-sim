@@ -17,11 +17,21 @@ This section supersedes all older product/stack/checkpoint statements below. Bra
 
 ## Current implementation status
 
-Work is on feat/desktop-web-foundation, with separate reviewable commits. No production deployment or native release has occurred. Local shell network access is restricted. The connected GitHub API is used for branch updates and CI. The actual local checkout is a task-specific checkout; the existing Documents/Codex checkout is unchanged.
+The web foundation is on `main` at `63cb58cefa94381304292fee2421597e0c2ea605`, with all four workflows passing for that commit. Brandon reports a manually deployed Cloudflare guest preview and an account with MFA. Automatic deployment is being prepared; no live CI deployment, custom-domain launch, or native release has been verified. See the Cloudflare setup update below for configuration and remaining verification. The older evidence below remains a historical record.
 
 TNoodle Java reference and TeaVM compilation succeeded in GitHub Actions. Engine proof passed all 32 seeded fixtures and fresh WebCrypto generation for all 16 events. At application commit `22d7989cc5d465e921bbe6c8771221bef53134a8`, run 37859656656 passed all 84 application tests, seven integrity/SVG regression tests, and the complete Chromium/Firefox/WebKit suites with actual offline reload and fresh generation/drawings for every event. Run 37859656637 passed 21 API tests, actual PostgreSQL transactions, and the Docker build. Run 37859656458 reported zero known dependency vulnerabilities. Playwright 1.64.0 includes the upstream WebKit offline-emulation fix; no offline assertion was bypassed. First 4×4 generation took about 56 seconds in WebKit CI and needs real-device profiling before release. See docs/implementation-handoff.md for evidence, access needs, and remaining launch gates. This is not a production release.
 
-Draft PR: https://github.com/Brandonius813/cubing-comp-sim/pull/2. The local task workspace connection became unavailable during the final handoff; the latest dependency lock and evidence updates are committed on GitHub. Fetch the remote feature branch before continuing from any older local checkout.
+Foundation work was reviewed in PR https://github.com/Brandonius813/cubing-comp-sim/pull/2. The current application and dependency lock are on `main`; fetch the latest `main` before continuing from an older local checkout.
+
+## Cloudflare preview setup update (October 9, 2026)
+
+This section supersedes earlier statements about the preview being uncreated and the foundation being confined to a feature branch.
+
+- The web foundation is present on `main` at `63cb58cefa94381304292fee2421597e0c2ea605`. All four workflows for that commit succeeded; Desktop web checks run 37980193932 produced the guest build.
+- Brandon reports that the Cloudflare account has MFA and that the static guest preview has been manually uploaded. The exact project name and URL are still needed.
+- Prepare automatic deployment in Desktop web checks: publish only after the web checks pass, reuse the tested artifact, and deploy only from `main`. Resolve the existing Pages production branch through the API so deployment updates the manually created project's base URL.
+- Setup names: secret `CLOUDFLARE_API_TOKEN`; repository variables `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_PAGES_PROJECT`. Secret values stay in GitHub Actions. No credential configuration or automated deployment success has been verified.
+- Operator instructions and outstanding verification: `docs/cloudflare-deployment.md`.
 
 ## Historical planning record
 
