@@ -1,6 +1,6 @@
 # Preview and environment setup
 
-Updated October 9, 2026. These are setup instructions, not claims that accounts or hosted deployments already exist.
+Updated October 9, 2026. Brandon reports a Cloudflare account with MFA and a manually uploaded static guest preview at https://morning-base-55f2.btrue813.workers.dev/. The existing Worker is morning-base-55f2; automated deployment has not been verified. The remaining sections are setup instructions.
 
 ## Preview before buying or configuring a backend
 
@@ -26,17 +26,17 @@ For local development from source, use the repository's Node/Java/Maven instruct
 
 Start with a hosted guest preview. Add staging backend resources only when testing accounts and upload/download. Add production resources when staging passes acceptance.
 
-Browser storage belongs to the origin. Localhost, a Pages preview URL, and cubingcompsim.com have separate local histories. Use Export/Import or explicit cloud upload/download to move times. Do not promise that a preview's local times will appear automatically on the production domain.
+Browser storage belongs to the origin. Localhost, a Workers preview URL, and cubingcompsim.com have separate local histories. Use Export/Import or explicit cloud upload/download to move times. Do not promise that a preview's local times will appear automatically on the production domain.
 
 ## Recommended hosted preview path
 
-Create a Cloudflare account and a **Pages Direct Upload** project with `main` as the production branch. Build and test in GitHub Actions, then deploy its verified `dist` with Wrangler using a staging branch. The existing Java/Maven TNoodle compilation stays in the CI environment that already runs it.
+Keep the existing **Worker with static assets** and configure [automatic Cloudflare Workers deployment](cloudflare-deployment.md). Brandon chose to continue with this Worker after reviewing the difference from Pages. Workers supports static sites and is Cloudflare's recommended starting point for new projects.
 
-The future deployment command is `wrangler pages deploy dist --project-name=<project> --branch=staging`. This is documentation, not a command to publish an unreviewed build. Cloudflare supplies a stable branch alias such as `staging.<project>.pages.dev` and a deployment-specific URL. This example is not a live link.
+Build and test in GitHub Actions, then deploy the same verified `dist/` artifact using Wrangler. This keeps the Java/Maven TNoodle compilation in the CI environment already testing it. The public Worker name `morning-base-55f2` lives in `wrangler.json`; updating that Worker in the same account preserves its current `.workers.dev` address.
 
-Direct Upload can be automated from GitHub Actions. It is a different project mode from Cloudflare-managed Git builds; Cloudflare does not support simply converting the project between the two modes later. Decide this once during setup.
+Grant Workers Editor access to the existing Worker, or use the supported legacy Workers Scripts Edit permission scoped to the owning account. Store `CLOUDFLARE_API_TOKEN` in GitHub Actions secrets and `CLOUDFLARE_ACCOUNT_ID` as a repository variable. Pull requests run checks; only passing runs on `main` publish to the guest preview. A separate staging or production hostname would have separate browser-local history.
 
-Create a token scoped to the chosen Cloudflare account with **Cloudflare Pages: Edit**. Store `CLOUDFLARE_API_TOKEN` in GitHub Actions secrets, never in source or chat. Store the account ID and project name as deployment configuration. Configure the deployment workflow after the account/project exist. Keep production promotion explicit and protected; preview deployment does not require changing Namecheap DNS.
+Keep production promotion explicit and protected. Preview deployment does not require changing Namecheap DNS.
 
 Preview URLs are public by default. Cloudflare Access can restrict them while the app/license is being reviewed. A preview is separate from the production custom domain.
 
@@ -46,7 +46,7 @@ Preview URLs are public by default. Cloudflare Access can restrict them while th
 |---|---|---|
 | Namecheap | Domain registrar | Keep registration, renewal and ownership of cubingcompsim.com |
 | Cloudflare DNS | Authoritative DNS | Map website, API, audio and email verification names to their services |
-| Cloudflare Pages | Static hosting and CDN | Deliver the web UI, scripts, fonts and compiled offline scramble engine |
+| Cloudflare Workers with static assets | Static hosting and CDN | Deliver the web UI, scripts, fonts and compiled offline scramble engine |
 | Cloudflare R2 | Object storage | Private compressed cloud-save files; a separate public bucket for licensed ambience |
 | Supabase Auth | Managed identity service | Email/password login, sessions, verification, recovery and account administration |
 | Supabase Postgres | Managed relational database | Save ownership, current version, checksum and object pointer |
@@ -62,7 +62,7 @@ Resend is not a human inbox such as Gmail. Use a working support/reply address s
 
 ## Ordered setup checklist
 
-1. Create Cloudflare, enable MFA, and create the guest-preview Pages project. Configure the scoped deployment credential in GitHub Actions. Do not transfer domain registration.
+1. Create Cloudflare, enable MFA, and keep the existing guest-preview Worker. Configure the scoped deployment credential in GitHub Actions. Do not transfer domain registration.
 2. Deploy one verified guest preview after the owner approves public exposure and license status. Test it before paying for the rest of the stack.
 3. When ready for branded staging/email, add cubingcompsim.com to Cloudflare DNS. Copy all current records, especially MX/TXT email records, before replacing Namecheap nameservers with Cloudflare's assigned pair. Registration remains at Namecheap.
 4. Create a Supabase **staging** project. Choose a region near the API host. Apply reviewed database migrations; configure email/password auth, exact redirect URLs and recovery behavior. Frontend gets only public URL/client key; server secrets stay private.
@@ -79,9 +79,9 @@ Do not create every paid service at once. Use staging first, set budgets, and re
 
 ## Sources
 
-- [Cloudflare Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)
-- [Direct Upload from CI](https://developers.cloudflare.com/pages/how-to/use-direct-upload-with-continuous-integration/)
-- [Preview deployments and access](https://developers.cloudflare.com/pages/configuration/preview-deployments/)
+- [Cloudflare Workers static assets](https://developers.cloudflare.com/workers/static-assets/get-started/)
+- [Workers deployment from GitHub Actions](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/)
+- [Workers roles and permissions](https://developers.cloudflare.com/workers/authorization/workers/)
 - [Namecheap nameserver changes](https://www.namecheap.com/support/knowledgebase/article.aspx/767/10/how-to-change-dns-for-a-domain/)
 - [Supabase custom SMTP](https://supabase.com/docs/guides/auth/auth-smtp)
 - [Resend with Supabase SMTP](https://resend.com/docs/send-with-supabase-smtp)
