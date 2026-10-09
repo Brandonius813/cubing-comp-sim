@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import './select.css';
 
 export interface SelectOption { value: string; label: string }
@@ -11,11 +11,10 @@ export function Select({ value, onChange, options, label, disabled = false }: {
   const menu = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
-  const [position, setPosition] = useState<CSSProperties>({});
   const search = useRef({ text: '', at: 0 });
   const selected = Math.max(0, options.findIndex(option => option.value === value));
-  const close = (restore = true) => { setOpen(false); if (restore) trigger.current?.focus(); };
-  useEffect(() => {
+  const close = (restore = true) => { setOpen(false); if (restore) trigger.current?.focus({ preventScroll: true }); };
+  useLayoutEffect(() => {
     if (!open) return;
     const element = menu.current;
     const button = trigger.current;
@@ -27,21 +26,42 @@ export function Select({ value, onChange, options, label, disabled = false }: {
       const above = rect.top - 16;
       const upwards = below < 200 && above > below;
       const height = Math.max(80, Math.min(320, upwards ? above : below));
-      setPosition({ left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)), width, maxHeight: height,
-        top: upwards ? 'auto' : rect.bottom + 6, bottom: upwards ? window.innerHeight - rect.top + 6 : 'auto' });
+      // Position synchronously before the popover's first paint. A queued state
+      // update can briefly expose coordinates from the previous viewport.
+      element.style.left = `${Math.max(12, Math.min(rect.left, window.innerWidth - width - 12))}px`;
+      element.style.width = `${width}px`;
+      element.style.maxHeight = `${height}px`;
+      element.style.top = upwards ? 'auto' : `${rect.bottom + 6}px`;
+      element.style.bottom = upwards ? `${window.innerHeight - rect.top + 6}px` : 'auto';
     };
     place();
     element.showPopover?.();
-    element.focus();
+    element.focus({ preventScroll: true });
     const outside = (event: PointerEvent) => { if (!element.contains(event.target as Node) && !button.contains(event.target as Node)) close(false); };
     const focus = (event: FocusEvent) => { if (!element.contains(event.target as Node) && !button.contains(event.target as Node)) close(false); };
     document.addEventListener('pointerdown', outside);
     document.addEventListener('focusin', focus);
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
-    return () => { element.hidePopover?.(); document.removeEventListener('pointerdown', outside); document.removeEventListener('focusin', focus); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
+    const resize = new ResizeObserver(place);
+    resize.observe(button);
+    const body = button.closest('.dialog-body');
+    if (body) resize.observe(body);
+    return () => { resize.disconnect(); element.hidePopover?.(); document.removeEventListener('pointerdown', outside); document.removeEventListener('focusin', focus); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true); };
   }, [open]);
-  useEffect(() => { if (open) menu.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: 'nearest' }); }, [open, active]);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const element = menu.current;
+    const option = element?.querySelector<HTMLElement>(`[data-index="${active}"]`);
+    if (!element || !option) return;
+    // scrollIntoView also scrolls the Settings dialog and moves the anchor.
+    // Reveal the active option inside this menu without touching ancestors.
+    const top = element.getBoundingClientRect().top + element.clientTop;
+    const bottom = top + element.clientHeight;
+    const rect = option.getBoundingClientRect();
+    if (rect.top < top) element.scrollTop -= top - rect.top;
+    else if (rect.bottom > bottom) element.scrollTop += rect.bottom - bottom;
+  }, [open, active]);
   const choose = (index: number) => { const option = options[index]; if (option) onChange(option.value); close(); };
   const onKeyDown = (event: KeyboardEvent) => {
     if (['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' ', 'Escape'].includes(event.key)) { event.preventDefault(); event.stopPropagation(); }
@@ -71,7 +91,7 @@ export function Select({ value, onChange, options, label, disabled = false }: {
       onClick={() => { setActive(selected); setOpen(!open); }} onKeyDown={event => { if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); setActive(selected); setOpen(true); } }}>
       <span>{options[selected]?.label ?? value}</span><svg width="12" height="16" viewBox="0 0 12 16" aria-hidden="true"><path d="m3 6 3-3 3 3M3 10l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
     </button>
-    {open && <div ref={menu} id={id} popover="manual" role="listbox" tabIndex={-1} aria-label={label} aria-activedescendant={`${id}-${active}`} className="select-menu" style={position} onKeyDown={onKeyDown}>
+    {open && <div ref={menu} id={id} popover="manual" role="listbox" tabIndex={-1} aria-label={label} aria-activedescendant={`${id}-${active}`} className="select-menu" onKeyDown={onKeyDown}>
       {options.map((option, index) => <div key={option.value} id={`${id}-${index}`} data-index={index} data-value={option.value} role="option" aria-selected={option.value === value} className={`select-option ${active === index ? 'active' : ''}`} onPointerMove={() => setActive(index)} onClick={() => choose(index)}><span>{option.label}</span><span aria-hidden="true">{option.value === value ? '✓' : ''}</span></div>)}
     </div>}
   </div>;

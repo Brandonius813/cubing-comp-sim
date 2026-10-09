@@ -206,3 +206,16 @@ Brandon authorized this feedback pass, parallel implementation, and a GitHub bra
 - Authentication forms remain dependent on backend configuration. This pass does not provision accounts or deploy infrastructure.
 
 Validation and remaining limitations are tracked in the feedback pull request. Browser regressions cover the requested flows, layouts, settings persistence, and manual-draft preservation during historical edits.
+
+## Round exit and timing feedback (October 9, 2026)
+
+This follow-up supersedes the earlier decision to retain unfinished rounds after changing events.
+
+- Show a small End Round button underneath the event selector for an unfinished active round. A compact confirmation explains that ending the round discards its attempts. Go back, close, Escape, and backdrop dismissal keep the current round; inspection and solve clocks continue while the confirmation is open.
+- End Round and confirmed event changes delete the unfinished active round and its draft atomically. Completed rounds remain saved. Reloading the page still recovers an unfinished round; only explicit abandonment discards it.
+- Keep the Settings content width stable when switching between scrolling and non-scrolling tabs.
+- Center the random-wait slider handles on their track and show editable endpoint times as MM:SS. Cap fixed and random waits at five minutes; clamp previously saved longer waits while preserving the remaining settings.
+- Show red while holding Space, green after the hold threshold, and start timing on release.
+- Do not calculate or display Ao5 best/worst possible results before the fourth recorded attempt. Mo3 uses the corresponding point after the second attempt. Completed scorecards retain the bounds from before the final attempt.
+
+Changes are prepared on a separate branch for GitHub review. This task does not merge or deploy them.

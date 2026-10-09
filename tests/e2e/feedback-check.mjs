@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const artifactRoot = process.env.CCS_BROWSER_ARTIFACT_DIR ?? path.join(root, 'test-results/browser');
-const phase = (page, value) => page.locator(`[data-phase="${value}"]`).waitFor({ state: 'visible', timeout: 180_000 });
+const phase = (page, value) => page.locator(`[data-phase="${value}"]`).waitFor({ state: 'visible', timeout: value === 'scramble' ? 180_000 : 15_000 });
 const outsideFocus = page => page.evaluate(() => document.activeElement?.blur());
 const settled = page => page.locator('.save-status').waitFor({ state: 'hidden' });
 async function advance(page, key = 'Space') { await settled(page); await outsideFocus(page); await page.keyboard.press(key); }
@@ -51,12 +51,158 @@ async function savedAttempts(page) {
   });
 }
 
+async function persistedRoundState(page) {
+  return page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => { const request = indexedDB.open('cubing-comp-sim'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+    try {
+      return await new Promise((resolve, reject) => {
+        const tx = db.transaction(['meta', 'rounds'], 'readonly');
+        const metadata = tx.objectStore('meta').get('state');
+        const rounds = tx.objectStore('rounds').getAll();
+        tx.oncomplete = () => resolve({ activeRoundId: metadata.result.activeRoundId, draft: metadata.result.draft, revision: metadata.result.revision, settings: metadata.result.settings, rounds: rounds.result });
+        tx.onabort = () => reject(tx.error);
+      });
+    } finally { db.close(); }
+  });
+}
+async function openEndRound(page) {
+  await page.locator('.end-round-button').click();
+  const dialog = page.getByRole('dialog', { name: 'End this round?', exact: true });
+  await dialog.waitFor();
+  return dialog;
+}
+async function checkDiscardedHistory(page, retainedRounds) {
+  const persisted = await persistedRoundState(page);
+  assert.equal(persisted.activeRoundId, null);
+  assert.equal(persisted.draft, null);
+  assert.deepEqual(persisted.rounds, retainedRounds, 'Discard changed completed history or retained the unfinished round.');
+  await page.getByRole('button', { name: 'View all stats', exact: true }).click();
+  const statistics = page.getByRole('dialog', { name: 'Statistics', exact: true });
+  const count = retainedRounds.reduce((total, round) => total + round.attempts.length, 0);
+  assert.equal(await statistics.locator('.statistics-summary > div').first().locator('dd').innerText(), String(count));
+  assert.equal(await statistics.locator('.statistics-attempts button').count(), count, 'Statistics still displays discarded attempts.');
+  const downloading = page.waitForEvent('download');
+  await statistics.getByRole('button', { name: 'Export history', exact: true }).click();
+  const download = await downloading;
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  const exported = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  assert.deepEqual(exported.rounds.map(round => round.id).sort(), retainedRounds.map(round => round.id).sort(), 'Export includes a discarded round.');
+  assert.equal(exported.rounds.reduce((total, round) => total + round.attempts.length, 0), count);
+  assert.equal(exported.activeRoundId, null);
+  await download.delete();
+  await statistics.getByRole('button', { name: 'Close', exact: true }).click();
+}
+async function recordManualAttempt(page, time) {
+  await advance(page); await phase(page, 'ready');
+  await advance(page); await phase(page, 'entry');
+  await page.getByLabel('Time', { exact: true }).fill(time);
+  await page.keyboard.press('Enter'); await phase(page, 'scramble');
+}
+async function checkRoundExits(page, artifacts) {
+  const retained = (await persistedRoundState(page)).rounds;
+  assert.ok(retained.length > 0 && retained.every(round => round.completedAt !== undefined), 'Discard checks require completed history to protect.');
+  assert.equal(await page.getByRole('button', { name: 'End Round', exact: true }).count(), 0, 'Home should not offer to end a nonexistent round.');
+  let dialog = await settings(page);
+  await toggle(dialog, 'Wait between solves', false);
+  await choose(page, 'Solve input', 'manual'); await toggle(dialog, 'Inspection', false);
+  await closeSettings(dialog);
+  await advance(page); await phase(page, 'scramble');
+  await recordManualAttempt(page, '61'); await recordManualAttempt(page, '62');
+  const prior = await persistedRoundState(page);
+  const notation = await page.locator('.scramble-notation').innerText();
+  assert.equal(prior.rounds.find(round => round.id === prior.activeRoundId).attempts.length, 2);
+  const endButton = await page.locator('.end-round-button').boundingBox();
+  assert.ok(endButton.width < 180 && endButton.height <= 48, 'End Round should be a small secondary control.');
+  for (const cancel of ['close', 'back', 'backdrop']) {
+    dialog = await openEndRound(page); await compactCentered(dialog);
+    if (cancel === 'close') await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+    else if (cancel === 'back') await dialog.getByRole('button', { name: 'Go back', exact: true }).click();
+    else await page.mouse.click(5, 5);
+    await dialog.waitFor({ state: 'hidden' }); await phase(page, 'scramble');
+    assert.equal(await page.locator('.scramble-notation').innerText(), notation, 'Canceling End Round replaced the current scramble.');
+    assert.deepEqual(await persistedRoundState(page), prior, 'Canceling End Round changed the active round or saved attempts.');
+  }
+  dialog = await openEndRound(page); await capture(page, 'end-round-confirmation', artifacts);
+  await dialog.getByRole('button', { name: 'End Round', exact: true }).click(); await phase(page, 'home');
+  await checkDiscardedHistory(page, retained);
+  assert.equal(await page.locator('.scorecard-time:not(:disabled)').count(), 0, 'Ending a round must clear the scorecard.');
+  await page.reload(); await phase(page, 'home'); await checkDiscardedHistory(page, retained);
+
+  // Confirming an event change follows the same deletion rule as End Round.
+  await advance(page); await phase(page, 'scramble');
+  await recordManualAttempt(page, '63'); await recordManualAttempt(page, '64');
+  const beforeEvent = await persistedRoundState(page);
+  assert.equal(beforeEvent.rounds.find(round => round.id === beforeEvent.activeRoundId).attempts.length, 2);
+  await page.locator('.event-selector').click();
+  await page.getByRole('dialog', { name: 'Choose event', exact: true }).getByRole('button', { name: '3×3 Cube', exact: true }).click();
+  dialog = page.getByRole('dialog', { name: 'Change event?', exact: true });
+  await dialog.getByRole('button', { name: 'Confirm', exact: true }).click(); await phase(page, 'home');
+  assert.match(await page.locator('.event-selector').innerText(), /3×3/);
+  await checkDiscardedHistory(page, retained);
+  await page.reload(); await phase(page, 'home'); await checkDiscardedHistory(page, retained);
+
+  // Hold delivery of a genuine engine result while discarding its pending round.
+  await page.evaluate(() => { window.feedbackWorkerHold = true; });
+  await advance(page);
+  await page.waitForFunction(() => window.feedbackWorkerMessages.length === 1, undefined, { timeout: 180_000 });
+  await phase(page, 'loading');
+  dialog = await openEndRound(page);
+  await dialog.getByRole('button', { name: 'End Round', exact: true }).click(); await phase(page, 'home');
+  await page.evaluate(() => {
+    window.feedbackWorkerHold = false;
+    for (const { worker, data } of window.feedbackWorkerMessages.splice(0)) worker.dispatchEvent(new MessageEvent('message', { data }));
+  });
+  await page.waitForTimeout(150);
+  assert.equal(await page.locator('[data-phase]').getAttribute('data-phase'), 'home');
+  await page.reload(); await phase(page, 'home'); await checkDiscardedHistory(page, retained);
+}
+async function checkSettingsWidth(page, dialog) {
+  const snapshot = () => dialog.locator('.settings-tabs').evaluate(element => { const box = element.getBoundingClientRect(); return { x: box.x, width: box.width }; });
+  const overflowing = () => dialog.locator('.dialog-body').evaluate(element => element.scrollHeight > element.clientHeight + 1);
+  let exercisedOverflow = false;
+  for (const height of [900, 840, 780, 720]) {
+    await page.setViewportSize({ width: 1440, height });
+    await dialog.getByRole('tab', { name: 'Simulation', exact: true }).click();
+    const baseline = await snapshot();
+    const simulationOverflow = await overflowing();
+    await dialog.getByRole('tab', { name: 'Shortcuts', exact: true }).click();
+    const shortcuts = await snapshot();
+    const shortcutsOverflow = await overflowing();
+    assert.ok(Math.abs(baseline.x - shortcuts.x) < 1 && Math.abs(baseline.width - shortcuts.width) < 1, 'Settings content shifts when the Shortcuts scrollbar appears.');
+    await dialog.getByRole('tab', { name: 'Simulation', exact: true }).click();
+    const returned = await snapshot();
+    assert.ok(Math.abs(baseline.x - returned.x) < 1 && Math.abs(baseline.width - returned.width) < 1, 'Settings content does not return to the same position.');
+    if (!simulationOverflow && shortcutsOverflow) { exercisedOverflow = true; break; }
+  }
+  assert.ok(exercisedOverflow, 'The width regression must exercise a tab that introduces a vertical scrollbar.');
+  await page.setViewportSize({ width: 1440, height: 900 });
+}
+
 /** User-feedback regressions against the built app and its real offline engine. */
 export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromium' } = {}) {
   const artifacts = path.join(artifactRoot, browserName, 'feedback');
   await mkdir(artifacts, { recursive: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
   const page = await context.newPage();
+  await page.addInitScript(() => {
+    // Delay delivery of a real TNoodle result to exercise cancellation races.
+    // Generation itself still runs in the genuine compiled worker.
+    window.feedbackWorkerHold = false; window.feedbackWorkerMessages = [];
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      constructor(url, options) {
+        super(url, options);
+        if (options?.name === 'tnoodle') this.addEventListener('message', event => {
+          if (window.feedbackWorkerHold && event.data?.type === 'result') {
+            event.stopImmediatePropagation();
+            window.feedbackWorkerMessages.push({ worker: this, data: event.data });
+          }
+        });
+      }
+    };
+  });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await context.tracing.start({ screenshots: true, snapshots: true, sources: false });
@@ -70,14 +216,21 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     assert.equal(await dialog.locator('.dialog-body').getByRole('button', { name: 'Check connection', exact: true }).count(), 0);
     assert.equal(await dialog.getByRole('switch', { name: 'Usage metrics', exact: true }).count(), 0);
     assert.equal(await dialog.getByRole('switch', { name: 'Error reports', exact: true }).count(), 0);
+    await checkSettingsWidth(page, dialog);
     for (const [width, height] of [[1440, 900], [2560, 1440]]) {
       await page.setViewportSize({ width, height });
       const control = dialog.getByRole('combobox', { name: 'Solve input', exact: true });
       await control.click();
       const menu = page.getByRole('listbox', { name: 'Solve input', exact: true });
       const [triggerBox, menuBox] = await Promise.all([control.boundingBox(), menu.boundingBox()]);
-      assert.ok(Math.abs(triggerBox.x - menuBox.x) < 3 && Math.abs(triggerBox.width - menuBox.width) < 3, 'Dropdown is misaligned with its field.');
-      assert.ok(menuBox.y >= triggerBox.y + triggerBox.height && menuBox.y - triggerBox.y - triggerBox.height < 12, 'Dropdown is not anchored below its field.');
+      const alignmentDetails = JSON.stringify({ viewport: { width, height }, triggerBox, menuBox, layout: await menu.evaluate(element => {
+        const body = element.closest('dialog')?.querySelector('.dialog-body');
+        const style = getComputedStyle(element);
+        return { inlineStyle: element.getAttribute('style'), position: style.position, left: style.left, top: style.top, width: style.width,
+          bodyScrollLeft: body?.scrollLeft, bodyScrollTop: body?.scrollTop, scrollX: window.scrollX, scrollY: window.scrollY };
+      }) });
+      assert.ok(Math.abs(triggerBox.x - menuBox.x) < 3 && Math.abs(triggerBox.width - menuBox.width) < 3, `Dropdown is misaligned with its field: ${alignmentDetails}`);
+      assert.ok(menuBox.y >= triggerBox.y + triggerBox.height && menuBox.y - triggerBox.y - triggerBox.height < 12, `Dropdown is not anchored below its field: ${alignmentDetails}`);
       assert.deepEqual(await page.getByRole('option').allTextContents().then(values => values.map(value => value.replace('✓', '').trim())), ['Spacebar', 'Manual Entry']);
       await capture(page, `dropdown-${width}`, artifacts);
       await page.keyboard.press('Escape');
@@ -138,6 +291,9 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     await advance(page, 'Space'); await phase(page, 'ready'); await assertCard(page);
     await advance(page, 'Enter'); await phase(page, 'inspection'); await assertCard(page);
     assert.match(await page.locator('.timer-number').innerText(), /^\d+$/, 'Inspection should show whole seconds.');
+    const inspectionExit = await openEndRound(page);
+    await inspectionExit.getByRole('button', { name: 'Close', exact: true }).click();
+    // Deliberately keep the restored focus: Space must resume the timer control.
     await page.keyboard.down('Space');
     await page.waitForFunction(() => document.querySelector('.timer-number')?.classList.contains('error-text'));
     await page.waitForTimeout(150);
@@ -145,9 +301,14 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     await phase(page, 'inspection');
     await page.keyboard.down('Space');
     await page.getByText('Release to start', { exact: true }).first().waitFor();
-    assert.ok(await page.locator('.timer-number').evaluate(element => element.classList.contains('error-text')), 'Armed timer must remain red until release.');
+    assert.ok(await page.locator('.timer-number').evaluate(element => element.classList.contains('positive-text')), 'Armed timer must turn green before release.');
+    await phase(page, 'inspection');
     await capture(page, 'armed-inspection', artifacts);
     await page.keyboard.up('Space'); await phase(page, 'solving'); await assertCard(page);
+    const endDuringSolve = await openEndRound(page);
+    await compactCentered(endDuringSolve);
+    await endDuringSolve.getByRole('button', { name: 'Go back', exact: true }).click();
+    await phase(page, 'solving');
     await page.keyboard.press('Space'); await phase(page, 'confirm'); await settled(page); await assertCard(page);
     assert.equal((await savedAttempts(page)).length, 1);
     const first = page.locator('.scorecard-result').first();
@@ -171,9 +332,17 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     });
     await advance(page, 'Space'); await phase(page, 'scramble'); await assertCard(page);
     assert.ok(!(await page.evaluate(() => window.feedbackPhases)).includes('home'), 'Confirm solve flashed the home screen.');
+    dialog = await settings(page); await toggle(dialog, 'Inspection', false); await closeSettings(dialog);
     await advance(page, 'Enter'); await phase(page, 'ready');
-    await advance(page, 'Space'); await phase(page, 'inspection');
-    await page.keyboard.down('Space'); await page.getByText('Release to start', { exact: true }).first().waitFor(); await page.keyboard.up('Space');
+    const readyExit = await openEndRound(page);
+    await page.keyboard.press('Escape'); await readyExit.waitFor({ state: 'hidden' });
+    await page.keyboard.down('Space');
+    await page.waitForFunction(() => document.querySelector('.timer-number')?.classList.contains('error-text'));
+    await page.waitForTimeout(150); await page.keyboard.up('Space'); await phase(page, 'ready');
+    await page.keyboard.down('Space'); await page.getByText('Release to start', { exact: true }).first().waitFor();
+    assert.ok(await page.locator('.timer-number').evaluate(element => element.classList.contains('positive-text')), 'Without inspection, an armed timer must turn green.');
+    await phase(page, 'ready');
+    await page.keyboard.up('Space');
     await phase(page, 'solving'); await page.keyboard.press('Enter'); await phase(page, 'confirm');
     await advance(page, 'Enter'); await phase(page, 'scramble'); await assertCard(page);
     dialog = await settings(page);
@@ -206,7 +375,13 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     await page.evaluate(() => { window.feedbackCard = document.querySelector('.scorecard-wrap'); });
     dialog = await settings(page);
     await toggle(dialog, 'Wait between solves', true);
-    await dialog.getByRole('spinbutton', { name: 'Wait duration', exact: true }).fill('10'); await settled(page); await closeSettings(dialog);
+    const fixedWait = dialog.getByRole('spinbutton', { name: 'Wait duration', exact: true });
+    assert.equal(await fixedWait.getAttribute('max'), '300');
+    await fixedWait.fill('300'); await settled(page);
+    assert.equal((await persistedRoundState(page)).settings.waitSeconds, 300);
+    await fixedWait.fill('301'); await settled(page);
+    assert.equal((await persistedRoundState(page)).settings.waitSeconds, 300, 'Fixed wait accepted more than five minutes.');
+    await fixedWait.fill('10'); await settled(page); await closeSettings(dialog);
     await page.clock.install();
     await advance(page); await phase(page, 'waiting'); await assertCard(page);
     await page.keyboard.press('Space'); await page.keyboard.press('Enter'); await phase(page, 'waiting');
@@ -219,13 +394,32 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     await advance(page); await phase(page, 'scramble');
     dialog = await settings(page);
     await dialog.getByRole('radio', { name: 'Random Duration', exact: true }).click();
-    await dialog.getByRole('spinbutton', { name: 'Minimum wait (s)', exact: true }).fill('10'); await settled(page);
-    await dialog.getByRole('spinbutton', { name: 'Maximum wait (s)', exact: true }).fill('20'); await settled(page);
+    const minimumWait = dialog.getByRole('textbox', { name: 'Minimum wait (MM:SS)', exact: true });
+    const maximumWait = dialog.getByRole('textbox', { name: 'Maximum wait (MM:SS)', exact: true });
+    await minimumWait.fill('00:10'); await minimumWait.press('Enter'); await settled(page);
+    await maximumWait.fill('00:20'); await maximumWait.press('Enter'); await settled(page);
+    assert.equal(await minimumWait.inputValue(), '00:10');
+    assert.equal(await maximumWait.inputValue(), '00:20');
+    await maximumWait.fill('05:01'); await maximumWait.press('Enter');
+    assert.equal(await maximumWait.getAttribute('aria-invalid'), 'true');
+    assert.equal((await persistedRoundState(page)).settings.waitMaxSeconds, 20, 'Invalid MM:SS wait changed the stored upper bound.');
+    await maximumWait.fill('05:00'); await maximumWait.press('Enter'); await settled(page);
+    assert.equal((await persistedRoundState(page)).settings.waitMaxSeconds, 300);
+    await maximumWait.fill('00:20'); await maximumWait.press('Enter'); await settled(page);
+    const rail = await dialog.locator('.wait-range-track').boundingBox();
+    for (const name of ['Minimum wait', 'Maximum wait']) {
+      const slider = dialog.getByRole('slider', { name, exact: true });
+      assert.equal(await slider.getAttribute('max'), '300');
+      const track = await slider.boundingBox();
+      assert.ok(Math.abs(track.y + track.height / 2 - rail.y - rail.height / 2) < 1, `${name} thumb is not vertically centered on the rail.`);
+      assert.ok(Math.abs(track.x + 10 - rail.x) < 1 && Math.abs(track.x + track.width - 10 - rail.x - rail.width) < 1, `${name} thumb centers do not align with rail endpoints.`);
+    }
+    await capture(page, 'random-wait-controls', artifacts);
     assert.equal(await dialog.getByRole('slider', { name: 'Minimum wait', exact: true }).inputValue(), '10');
     assert.equal(await dialog.getByRole('slider', { name: 'Maximum wait', exact: true }).inputValue(), '20');
     await dialog.getByRole('slider', { name: 'Minimum wait', exact: true }).focus();
     await page.keyboard.press('ArrowRight'); await settled(page);
-    assert.equal(await dialog.getByRole('spinbutton', { name: 'Minimum wait (s)', exact: true }).inputValue(), '11');
+    assert.equal(await minimumWait.inputValue(), '00:11');
     await page.keyboard.press('ArrowLeft'); await settled(page);
     await closeSettings(dialog);
     await page.evaluate(() => { window.feedbackRandom = Math.random; window.feedbackRandomCalls = 0; Math.random = () => { window.feedbackRandomCalls++; return 0.5; }; });
@@ -265,8 +459,10 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     }
     assert.match(await help.getByRole('link', { name: 'Source code & licenses', exact: true }).getAttribute('href'), /github\.com\/Brandonius813\/cubing-comp-sim/);
     await capture(page, 'help', artifacts);
+    await help.getByRole('button', { name: 'Close', exact: true }).click();
+    await checkRoundExits(page, artifacts);
     assert.deepEqual(errors, [], 'The feedback scenarios emitted an uncaught application error.');
-    return 'Feedback: persistent scorecard, integer inspection, red 550ms hold, keyboard flow/manual submit, penalties, compact dialogs, fixed/random waits, event cancellation, Statistics/Help, editable shortcuts, themes/fonts, aligned desktop dropdowns passed.';
+    return 'Feedback: persistent scorecard, integer inspection, red-to-green 550ms hold with/without inspection, keyboard flow/manual submit, penalties, compact dialogs, fixed/random waits, event cancellation, Statistics/Help, editable shortcuts, themes/fonts, aligned desktop dropdowns, stable Settings width, End Round cancellation/deletion/export/reload, and partial-round event-change deletion passed.';
   } catch (error) {
     await page.screenshot({ path: path.join(artifacts, 'failure.png'), fullPage: true }).catch(() => undefined);
     await writeFile(path.join(artifacts, 'failure.json'), JSON.stringify({ message: String(error), errors, phase: await page.locator('[data-phase]').getAttribute('data-phase').catch(() => null) }, null, 2));
