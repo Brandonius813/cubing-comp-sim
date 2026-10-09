@@ -118,7 +118,7 @@ async function checkExpandedLanguagesAndAudio(page, artifacts) {
   await dialog.getByRole('tab', { name: 'Audio', exact: true }).click();
   assert.equal(await dialog.getByLabel('Inspection sound', { exact: true }).inputValue(), 'device');
   assert.equal(await dialog.getByLabel('Voice language', { exact: true }).inputValue(), 'pl');
-  await dialog.getByRole('button', { name: 'Reset settings', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Reset defaults', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('select[aria-label="Inspection sound"]')?.value === 'beeps');
   assert.equal(await dialog.getByLabel('Voice language', { exact: true }).inputValue(), 'follow');
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();

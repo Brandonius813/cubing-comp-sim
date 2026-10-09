@@ -76,3 +76,12 @@ The loader caps catalog size and track count, validates IDs and duration, and re
 Unit tests cover local-only language matching, Mandarin safeguards, missing-voice beeps, cancellation, stale queued utterances, threshold consumption, preference validation, catalog trust boundaries, explicit playback, offline buffered playback, rejected playback, and pause during a pending play request. Real recorded files and native voice quality still need human listening tests.
 
 Primary API references: [SpeechSynthesisVoice.localService](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisVoice/localService), [voiceschanged](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis/voiceschanged_event), [SpeechSynthesis.cancel](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis/cancel), [HTMLMediaElement.play](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play).
+
+## Source acquisition candidates
+
+These are candidates for listening and rights review, not configured or shipped app tracks.
+
+- [CreatorAssets Lively Cafe Ambience](https://creatorassets.com/audio/lively-cafe-ambience/) lists 10-minute and 20-minute versions. Its [official terms](https://creatorassets.com/legal/) dedicate assets to CC0 and allow redistribution in websites and apps. Acquisition and listening still needed; no direct media URL has been configured.
+- [Sheyvan Convention Crowd](https://freesound.org/people/Sheyvan/sounds/494492/) is a 2:08.116 CC0 convention recording. Original download requires a free Freesound account. It could supply a shorter authentic loop after listening; repeating it into a longer file does not create additional unique material.
+
+For the planned 5–10 minute cubing-specific tracks, original authorized venue recordings remain preferable. Do not make media requests to an external source just because its catalog page is listed here.
