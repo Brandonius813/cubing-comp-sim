@@ -78,6 +78,52 @@ async function checkLanguagePersistence(page) {
   assert.equal(await page.locator('html').getAttribute('lang'), 'en');
 }
 
+
+async function checkExpandedLanguagesAndAudio(page, artifacts) {
+  const languages = ["en","es","fr","de","pl","it","pt-BR","nl","ru","uk","tr","ja","zh-Hans","zh-Hant","ko","id"];
+  const openSettings = async () => {
+    await page.locator('.utilities button').filter({ has: page.locator('img[src="/assets/settings.svg"]') }).click();
+    return page.getByRole('dialog');
+  };
+  let dialog = await openSettings();
+  await dialog.getByRole('tab').nth(2).click();
+  assert.equal(await dialog.locator('select option').count(), languages.length);
+  for (const language of languages) {
+    await dialog.locator('select').selectOption(language);
+    await page.waitForFunction(value => document.documentElement.lang === value, language);
+    assert.equal(await dialog.locator('select').inputValue(), language);
+    if (['pl', 'ja', 'zh-Hans'].includes(language)) await screenshots(page, 'language-' + language, artifacts);
+  }
+  // Reload a CJK locale and confirm device settings persisted independently of history.
+  await dialog.locator('select').selectOption('ja');
+  await page.waitForFunction(() => document.documentElement.lang === 'ja');
+  await page.keyboard.press('Escape');
+  await page.reload();
+  await page.waitForFunction(() => document.documentElement.lang === 'ja');
+  dialog = await openSettings();
+  await dialog.getByRole('tab').nth(2).click();
+  assert.equal(await dialog.locator('select').inputValue(), 'ja');
+  await dialog.locator('select').selectOption('en');
+  await page.waitForFunction(() => document.documentElement.lang === 'en');
+  await dialog.getByRole('tab', { name: 'Audio', exact: true }).click();
+  await dialog.getByLabel('Inspection sound', { exact: true }).selectOption('device');
+  await dialog.getByLabel('Voice language', { exact: true }).selectOption('pl');
+  assert.equal(await dialog.getByLabel('Voice language', { exact: true }).inputValue(), 'pl');
+  await dialog.getByRole('button', { name: 'Test voice', exact: true }).click();
+  await dialog.getByText('Background recordings have not been configured yet.', { exact: true }).waitFor();
+  await screenshots(page, 'audio-settings', artifacts);
+  await page.keyboard.press('Escape');
+  await page.reload();
+  dialog = await openSettings();
+  await dialog.getByRole('tab', { name: 'Audio', exact: true }).click();
+  assert.equal(await dialog.getByLabel('Inspection sound', { exact: true }).inputValue(), 'device');
+  assert.equal(await dialog.getByLabel('Voice language', { exact: true }).inputValue(), 'pl');
+  await dialog.getByRole('button', { name: 'Reset settings', exact: true }).click();
+  await page.waitForFunction(() => document.querySelector('select[aria-label="Inspection sound"]')?.value === 'beeps');
+  assert.equal(await dialog.getByLabel('Voice language', { exact: true }).inputValue(), 'follow');
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+}
+
 async function timerSettingsPersisted(page) {
   await page.waitForFunction(async () => {
     const db = await new Promise((resolve, reject) => {
@@ -184,6 +230,7 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     await page.keyboard.press('Escape');
     await eventPicker.waitFor({ state: 'hidden' });
     await checkLanguagePersistence(page);
+    await checkExpandedLanguagesAndAudio(page, artifacts);
     await configureInput(page, 'manual', artifacts);
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).click();
     for (let index = 0; index < 5; index++) {
@@ -193,7 +240,7 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
       await phase(page, 'ready');
       await page.getByRole('button', { name: 'Ready', exact: true }).click();
       await phase(page, 'entry');
-      await page.getByLabel('Time', { exact: true }).fill(String(10 + index));
+      await page.getByLabel('Time', { exact: true }).fill(index === 0 ? '１０，００' : String(10 + index));
       await page.getByRole('button', { name: 'Submit', exact: true }).click();
       await savedAttemptCount(page, index + 1);
     }
@@ -268,7 +315,7 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     await savedAttemptCount(page, 0);
     await checkStoredSvgIsolation(page);
     assert.deepEqual(errors, [], 'The browser emitted an uncaught application error.');
-    return `Desktop browser: Spanish settings persistence, manual Ao5 and reload, keyboard start/stop, offline reload, and 16 offline event drawings passed. Generation milliseconds: ${JSON.stringify(timing)}`;
+    return `Desktop browser: 16 language catalogs, Japanese and Spanish persistence, audio preferences, localized manual entry, manual Ao5 and reload, keyboard start/stop, offline reload, and 16 offline event drawings passed. Generation milliseconds: ${JSON.stringify(timing)}`;
   } catch (error) {
     const diagnostics = await failureDiagnostics(page).catch(cause => ({ diagnosticError: String(cause) }));
     console.error(`Browser fixture diagnostics:\n${JSON.stringify(diagnostics, null, 2)}`);

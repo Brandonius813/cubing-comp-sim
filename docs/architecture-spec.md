@@ -589,3 +589,11 @@ Official and upstream sources checked October 8, 2026. Provider costs and store 
 - [Plausible custom events](https://plausible.io/docs/custom-event-goals)
 - [Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/)
 
+
+## October 9 implementation follow-up
+
+The web interface now has 16 complete draft locale catalogs. See [language coverage](languages.md) for exact scope and review requirements. Device language stays local; portable saves keep stable event IDs and integer time values. Mandarin voice selection supports Simplified and Traditional Chinese interfaces.
+
+Inspection audio now offers installed local device speech with beeps as the default/fallback. Consistent recorded voice packs still need reviewed redistributable assets. Background audio has a streamed player and validated catalog; actual competition recordings remain an asset task. See [audio assets](audio-assets.md). These changes do not make scramble generation or timing depend on the network.
+
+See [preview and environments](preview-and-environments.md) for the guest-preview-first account checklist, Namecheap DNS relationship, staging/production isolation, and provider roles. No hosted deployment is asserted by this specification.

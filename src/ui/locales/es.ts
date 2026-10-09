@@ -1,4 +1,7 @@
+import type { EventId } from '../../core';
 import type { MessageKey } from './en';
+
+// Draft translation. Native-speaker cubing review is pending.
 export const es = {
   "app": "Cubing CompSim",
   "start": "Iniciar CompSim",
@@ -50,7 +53,7 @@ export const es = {
   "manual": "Entrada manual",
   "holdDuration": "Tiempo de pulsación",
   "alerts": "Avisos de inspección",
-  "alertsDescription": "Sonidos a los 8 y 12 segundos.",
+  "alertsDescription": "Avisos a los 8 y 12 segundos.",
   "language": "Idioma",
   "theme": "Tema",
   "dark": "Oscuro",
@@ -182,5 +185,48 @@ export const es = {
   "cloudServerError": "El servicio en la nube no está disponible. Tus tiempos locales no han cambiado.",
   "cloudReauth": "Confirma de nuevo tu contraseña para eliminar la cuenta.",
   "cloudAccountDeleting": "La eliminación de la cuenta está en curso. El acceso a la nube está desactivado; tus tiempos locales se conservan.",
-  "cloudDeletionUnavailable": "La eliminación de cuentas no está disponible en este servidor. No se solicitó ninguna eliminación."
+  "cloudDeletionUnavailable": "La eliminación de cuentas no está disponible en este servidor. No se solicitó ninguna eliminación.",
+  "audioSettings": "Audio",
+  "voiceMode": "Sonido de inspección",
+  "voiceBeeps": "Pitidos",
+  "voiceDevice": "Voz del dispositivo",
+  "voiceLanguage": "Idioma de la voz",
+  "followLanguage": "Usar idioma de la app",
+  "testVoice": "Probar voz",
+  "voiceUnavailable": "No hay una voz sin conexión instalada para este idioma. La inspección usará pitidos.",
+  "voiceDeviceHint": "Usa una voz instalada en el dispositivo. La disponibilidad y la pronunciación varían según el dispositivo.",
+  "inspectionVolume": "Volumen de inspección",
+  "ambience": "Sonido de fondo",
+  "ambienceOff": "Desactivado",
+  "ambienceTrack": "Bucle de sonido",
+  "ambienceVolume": "Volumen de fondo",
+  "ambiencePlay": "Reproducir",
+  "ambiencePause": "Pausar",
+  "ambienceUnavailable": "Aún no se han configurado las grabaciones de fondo.",
+  "ambienceOnlineOnly": "El sonido de fondo se reproduce por internet. Las mezclas y el cronómetro siguen funcionando sin conexión.",
+  "ambienceLoadError": "No se pudo reproducir este sonido. Comprueba la conexión e inténtalo de nuevo."
 } satisfies Record<MessageKey, string>;
+
+export const esEvents = {
+  "222": "Cubo 2×2",
+  "333": "Cubo 3×3",
+  "444": "Cubo 4×4",
+  "555": "Cubo 5×5",
+  "666": "Cubo 6×6",
+  "777": "Cubo 7×7",
+  "333oh": "3×3 a una mano",
+  "333bf": "3×3 a ciegas",
+  "444bf": "4×4 a ciegas",
+  "555bf": "5×5 a ciegas",
+  "minx": "Megaminx",
+  "pyram": "Pyraminx",
+  "skewb": "Skewb",
+  "sq1": "Square-1",
+  "fto": "FTO",
+  "clock": "Clock"
+} satisfies Record<EventId, string>;
+
+export const esInspection = {
+  "eight": "8 segundos",
+  "twelve": "12 segundos"
+} as const;

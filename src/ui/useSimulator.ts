@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { addAttempt, createAttempt, createRound, getEvent, inspectionPenalty, type Attempt, type Penalty, type Round, type Scramble } from '../core';
 import { BrowserStore, DEFAULT_SETTINGS, StorageConflictError, type LocalState, type Settings } from '../storage';
 import { createScrambleService } from '../scramble';
-import { t } from './i18n';
+import { inspectionPhrase, t } from './i18n';
+import { InspectionAudio, takeInspectionCue } from '../audio/inspection';
+import { getAudioPreferences } from '../audio/preferences';
 import { telemetry } from '../telemetry';
 
 export type Phase = 'home' | 'loading' | 'scramble' | 'waiting' | 'ready' | 'inspection' | 'solving' | 'entry' | 'confirm' | 'complete' | 'engine-error';
@@ -15,7 +17,8 @@ export function useSimulator(blockKeyboard: boolean) {
   const [loaded, setLoaded] = useState(false);
   const [phase, setPhaseState] = useState<Phase>('home');
   const phaseRef = useRef(phase);
-  const setPhase = useCallback((next: Phase) => { phaseRef.current = next; setPhaseState(next); }, []);
+  const audio = useRef<InspectionAudio | null>(null);
+  const setPhase = useCallback((next: Phase) => { if (next !== 'inspection') audio.current?.cancel(); phaseRef.current = next; setPhaseState(next); }, []);
   const [scramble, setScramble] = useState<Scramble | null>(null);
   const scrambleRef = useRef(scramble); scrambleRef.current = scramble;
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +37,6 @@ export function useSimulator(blockKeyboard: boolean) {
   const inspectionMs = useRef<number | undefined>(undefined);
   const holdStart = useRef<number | null>(null);
   const heldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const audio = useRef<AudioContext | null>(null);
   const callouts = useRef(new Set<number>());
   const generation = useRef(0);
   const recordBusy = useRef(false);
@@ -74,14 +76,12 @@ export function useSimulator(blockKeyboard: boolean) {
     heldTimer.current = null; holdStart.current = null; setArmed(false); setHolding(false);
   }, []);
   useEffect(() => { if (blockKeyboard) cancelHold(); }, [blockKeyboard, cancelHold]);
-  useEffect(() => () => { engine.current?.dispose(); cancelHold(); void audio.current?.close(); }, [cancelHold]);
+  useEffect(() => () => { engine.current?.dispose(); cancelHold(); audio.current?.dispose(); audio.current = null; }, [cancelHold]);
 
+  useEffect(() => { if (!state.settings.audioCallouts) audio.current?.cancel(); }, [state.settings.audioCallouts]);
   const prepareAudio = () => {
     if (!current.current.settings.audioCallouts) return;
-    try { audio.current ??= new AudioContext(); void audio.current.resume(); } catch { /* Timing stays available without audio. */ }
-  };
-  const beep = () => {
-    try { const ctx = audio.current; if (!ctx) return; const oscillator = ctx.createOscillator(); const gain = ctx.createGain(); oscillator.frequency.value = 880; gain.gain.setValueAtTime(0.08, ctx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.16); oscillator.connect(gain); gain.connect(ctx.destination); oscillator.start(); oscillator.stop(ctx.currentTime + 0.17); } catch { /* Visual inspection remains active. */ }
+    try { audio.current ??= new InspectionAudio(); void audio.current.prepare(); } catch { /* Sound must not gate timing. */ }
   };
   const saveDraft = (stage: 'scramble' | 'waiting' | 'ready' | 'inspection' | 'solving') => {
     const round = getRound(); const value = scrambleRef.current;
@@ -185,7 +185,15 @@ export function useSimulator(blockKeyboard: boolean) {
         if (remaining === 0) { setPhase('ready'); saveDraft('ready'); return; }
       } else {
         setElapsed(ms);
-        if (phaseRef.current === 'inspection' && current.current.settings.audioCallouts) for (const threshold of [8000, 12000]) if (ms >= threshold && !callouts.current.has(threshold)) { callouts.current.add(threshold); beep(); }
+        if (phaseRef.current === 'inspection') {
+          const cue = takeInspectionCue(ms, callouts.current);
+          if (cue !== null && current.current.settings.audioCallouts && !document.hidden) {
+            const preferences = getAudioPreferences();
+            const language = preferences.voiceLanguage === 'follow' ? current.current.settings.language : preferences.voiceLanguage;
+            audio.current?.cue(language, inspectionPhrase(language, cue), preferences,
+              () => phaseRef.current === 'inspection' && current.current.settings.audioCallouts && !document.hidden);
+          }
+        }
       }
       frame = requestAnimationFrame(tick);
     };
@@ -219,7 +227,7 @@ export function useSimulator(blockKeyboard: boolean) {
       event.preventDefault(); const enough = performance.now() - holdStart.current >= current.current.settings.holdMs;
       if (!blockKeyboard && enough && ['inspection', 'ready'].includes(phaseRef.current)) actions.current.beginSolve(); else cancelHold();
     };
-    const blur = () => { cancelHold(); if (phaseRef.current === 'solving') actions.current.stop(true); };
+    const blur = () => { audio.current?.cancel(); cancelHold(); if (phaseRef.current === 'solving') actions.current.stop(true); };
     window.addEventListener('keydown', keyDown); window.addEventListener('keyup', keyUp); window.addEventListener('blur', blur);
     return () => { window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); window.removeEventListener('blur', blur); };
   }, [blockKeyboard, loaded, saving, cancelHold]);

@@ -1,3 +1,4 @@
+import type { EventId } from '../../core';
 export const en = {
   "app": "Cubing CompSim",
   "start": "Start CompSim",
@@ -49,7 +50,7 @@ export const en = {
   "manual": "Manual entry",
   "holdDuration": "Hold to start",
   "alerts": "Inspection alerts",
-  "alertsDescription": "Beeps at 8 and 12 seconds.",
+  "alertsDescription": "Alerts at 8 and 12 seconds.",
   "language": "Language",
   "theme": "Theme",
   "dark": "Dark",
@@ -181,6 +182,44 @@ export const en = {
   "cloudServerError": "The cloud service is unavailable. Your local times are unchanged.",
   "cloudReauth": "Confirm your password again to delete your account.",
   "cloudAccountDeleting": "Account deletion is in progress. Cloud access is disabled; your local times are kept.",
-  "cloudDeletionUnavailable": "Account deletion is unavailable on this server. No deletion was requested."
+  "cloudDeletionUnavailable": "Account deletion is unavailable on this server. No deletion was requested.",
+  "audioSettings": "Audio",
+  "voiceMode": "Inspection sound",
+  "voiceBeeps": "Beeps",
+  "voiceDevice": "Device voice",
+  "voiceLanguage": "Voice language",
+  "followLanguage": "Match app language",
+  "testVoice": "Test voice",
+  "voiceUnavailable": "No offline voice for this language is installed. Inspection will use beeps.",
+  "voiceDeviceHint": "Uses an installed device voice. Availability and pronunciation vary by device.",
+  "inspectionVolume": "Inspection volume",
+  "ambience": "Background sound",
+  "ambienceOff": "Off",
+  "ambienceTrack": "Sound loop",
+  "ambienceVolume": "Background volume",
+  "ambiencePlay": "Play",
+  "ambiencePause": "Pause",
+  "ambienceUnavailable": "Background recordings have not been configured yet.",
+  "ambienceOnlineOnly": "Background sound streams online. Scrambling and timing still work offline.",
+  "ambienceLoadError": "This sound could not be played. Check your connection and try again."
 } as const;
 export type MessageKey = keyof typeof en;
+export const enEvents: Record<EventId, string> = {
+  "222": "2×2 Cube",
+  "333": "3×3 Cube",
+  "444": "4×4 Cube",
+  "555": "5×5 Cube",
+  "666": "6×6 Cube",
+  "777": "7×7 Cube",
+  "333oh": "3×3 One-Handed",
+  "333bf": "3×3 Blindfolded",
+  "444bf": "4×4 Blindfolded",
+  "555bf": "5×5 Blindfolded",
+  "minx": "Megaminx",
+  "pyram": "Pyraminx",
+  "skewb": "Skewb",
+  "sq1": "Square-1",
+  "fto": "FTO",
+  "clock": "Clock"
+};
+export const enInspection = { eight: 'Eight seconds', twelve: 'Twelve seconds' } as const;

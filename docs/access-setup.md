@@ -1,6 +1,6 @@
 # Access and service setup
 
-Status: October 8, 2026. No live account, production secret, or deployment is asserted by this document.
+Status: October 9, 2026. No live account, production secret, or deployment is asserted by this document.
 
 The local website, competition logic, browser persistence, file export/import, offline engine work, and automated tests can proceed without production account access.
 
@@ -27,11 +27,13 @@ Email/password alone can launch before Google/WCA if those registrations lag, pr
 
 Apple and Google Play developer accounts are not needed now. Native apps begin only after the website is stable.
 
+For the current owner-specific provider explanations and guest-preview-first checklist, use [Preview and environments](preview-and-environments.md).
+
 ## Recommended setup order
 
 1. Confirm the existing GitHub repository and keep code changes in a reviewable branch.
 2. Finish and verify the local guest website, with mandatory fresh offline generation for every included event.
-3. Create/configure isolated staging auth, database, bucket, and API hosting.
+3. Create a Cloudflare guest preview from the verified CI artifact, then configure isolated staging auth, database, bucket, and API hosting when ready to test cloud features.
 4. Configure auth SMTP and test verification/recovery delivery.
 5. Configure upload/download authorization and atomic replacement; run two-account and two-device tests.
 6. Configure telemetry projects, consent gating, privacy settings, budgets, and alert destination.

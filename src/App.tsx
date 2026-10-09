@@ -8,7 +8,7 @@ import { SettingsDialog } from './ui/SettingsDialog';
 import { Dialog, FlowButton, Icon, IconButton } from './ui/primitives';
 import { Scorecard, eventName, formatLabel, scoreText } from './ui/Scorecard';
 import { useSimulator } from './ui/useSimulator';
-import { errorMessage, localizedDate, setLocale, t, useLocale } from './ui/i18n';
+import { errorMessage, localizedDate, normalizeTimeInput, setLocale, t, useLocale } from './ui/i18n';
 import { telemetry } from './telemetry';
 import { loadMetricsConsent } from './ui/metricsConsent';
 import './styles/app.css';
@@ -59,14 +59,14 @@ function App() {
   };
   const submitManual = (event: FormEvent) => {
     event.preventDefault(); if (sim.saving) return;
-    const parsed = parseTimeInput(timeInput.replace(',', '.') || (penalty === 'DNF' || penalty === 'DNS' ? penalty : ''));
+    const parsed = parseTimeInput(normalizeTimeInput(timeInput) || (penalty === 'DNF' || penalty === 'DNS' ? penalty : ''));
     if (!parsed) { setFieldError(t('invalid')); return; }
     setFieldError('');
     void sim.record(parsed.rawMs, penalty === 'none' ? parsed.penalty : penalty, 'manual').then(async saved => { if (saved) await sim.advance(); });
   };
   const saveEdit = (event: FormEvent) => {
     event.preventDefault(); if (!editingRound || !editingAttempt) return;
-    const parsed = parseTimeInput(timeInput.replace(',', '.') || (penalty === 'DNF' || penalty === 'DNS' ? penalty : ''));
+    const parsed = parseTimeInput(normalizeTimeInput(timeInput) || (penalty === 'DNF' || penalty === 'DNS' ? penalty : ''));
     if (!parsed) { setFieldError(t('invalid')); return; }
     const updated = editAttempt(editingRound, editingAttempt.id, { rawMs: parsed.rawMs, penalty: penalty === 'none' ? parsed.penalty : penalty });
     void sim.mutate(s => sim.store.updateRound(updated, s.revision)).then(close).catch(() => undefined);

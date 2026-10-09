@@ -159,7 +159,7 @@ Reference: [Codex command guide](https://learn.chatgpt.com/docs/developer-comman
 - **Tradeoffs accepted:** Repository contents and activity are visible to everyone and can be forked. Review files and issue discussions for public suitability before pushing or posting.
 - **Revisit if:** Any required content cannot safely be public; in that case remove it from the repository and reconsider visibility before adding further material.
 
-No product, architecture, hosting, or stack decisions have been made yet. Record future decisions here in this format:
+The template below is retained from initial setup. Current product and architecture decisions are recorded in the specification and later entries.
 
 ### Decision: [short name]
 
@@ -167,3 +167,13 @@ No product, architecture, hosting, or stack decisions have been made yet. Record
 - **Reason:**
 - **Tradeoffs accepted:**
 - **Revisit if:**
+
+## Language, audio and setup follow-up (2026-10-09)
+
+The owner requested many more interface languages, inspection voices for those languages, longer streamed background loops, and an educational account/setup checklist. This continues the previously authorized web implementation.
+
+- Added 16 draft interface catalogs including Japanese, Simplified and Traditional Chinese with Mandarin speech selection, French, German and Polish. Translation quality still needs fluent-cuber review.
+- Added installed local inspection voice selection with beep fallback, separate voice language and volume. Tiny reviewed offline voice recordings remain the consistent cross-device target.
+- Added explicit streamed-ambience controls and a validated catalog. No background recordings are falsely listed as shipped. Plan 5–10 minute reviewed competition-room loops, excluded from the web app's essential offline download; optional native downloads later.
+- Recommend guest preview before backend provisioning. Domain registration remains at Namecheap. Cloudflare Pages Direct Upload from the existing verified GitHub Actions build avoids introducing a second Java/Maven build environment.
+- Record account roles, staging isolation, DNS/email setup and preview instructions in docs/preview-and-environments.md. No new provider account, paid service, secret, DNS change or public deployment was created by this follow-up.

@@ -3,6 +3,10 @@ import { DEFAULT_SETTINGS, type Settings } from '../storage';
 import { registerOfflineSupport, type OfflineStatus } from '../platform/offline';
 import { Dialog, Toggle } from './primitives';
 import { t } from './i18n';
+import { LOCALES } from '../locales';
+import { AudioSettings } from './AudioSettings';
+import { DEFAULT_AUDIO_PREFERENCES, saveAudioPreferences } from '../audio/preferences';
+import { ambiencePlayer } from '../audio/ambience';
 import { telemetry } from '../telemetry';
 import { loadMetricsConsent, saveMetricsConsent } from './metricsConsent';
 
@@ -10,7 +14,7 @@ function Row({ label, children, hint }: { label: string; children: ReactNode; hi
   return <div className="setting-row"><div><label>{label}</label>{hint && <p>{hint}</p>}</div><div className="setting-control">{children}</div></div>;
 }
 export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Settings; onUpdate: (patch: Partial<Settings>) => Promise<unknown>; onClose: () => void }) {
-  const [tab, setTab] = useState<'simulation' | 'appearance' | 'shortcuts'>('simulation');
+  const [tab, setTab] = useState<'simulation' | 'audioSettings' | 'appearance' | 'shortcuts'>('simulation');
   const [connection, setConnection] = useState<'online' | 'offline' | 'connectionUnknown'>(navigator.onLine ? 'connectionUnknown' : 'offline');
   const [offlineStatus, setOfflineStatus] = useState<OfflineStatus>('unavailable');
   const [error, setError] = useState('');
@@ -18,6 +22,14 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
   const telemetryStatus = telemetry.getStatus();
   const updateConsent = (next: typeof consent) => { try { saveMetricsConsent(next); setConsent(next); } catch { setError(t('saveError')); } };
   const update = (patch: Partial<Settings>) => { setError(''); void onUpdate(patch).catch(() => setError(t('saveError'))); };
+  const reset = async () => {
+    setError('');
+    ambiencePlayer.pause();
+    const audioSaved = saveAudioPreferences(DEFAULT_AUDIO_PREFERENCES);
+    try { await onUpdate({ ...DEFAULT_SETTINGS, eventId: settings.eventId, language: settings.language }); }
+    catch { setError(t('saveError')); }
+    if (!audioSaved) setError(t('saveError'));
+  };
   const check = async () => {
     if (!navigator.onLine) { setConnection('offline'); return; }
     try {
@@ -29,7 +41,7 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
   useEffect(() => { void check(); const online = () => void check(); const offline = () => setConnection('offline'); window.addEventListener('online', online); window.addEventListener('offline', offline); return () => { window.removeEventListener('online', online); window.removeEventListener('offline', offline); }; }, []);
   useEffect(() => registerOfflineSupport(setOfflineStatus), []);
   return <Dialog title={t('settings')} onClose={onClose}>
-    <div className="settings-tabs" role="tablist" aria-label={t('settings')}>{(['simulation', 'appearance', 'shortcuts'] as const).map(key => <button type="button" key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>{t(key)}</button>)}</div>
+    <div className="settings-tabs" role="tablist" aria-label={t('settings')}>{(['simulation', 'audioSettings', 'appearance', 'shortcuts'] as const).map(key => <button type="button" key={key} role="tab" aria-selected={tab === key} onClick={() => setTab(key)}>{t(key)}</button>)}</div>
     {error && <p role="alert" className="error-text">{error}</p>}
     {tab === 'simulation' && <div role="tabpanel">
       <Row label={t('wait')}><Toggle label={t('wait')} checked={settings.waitSeconds > 0} onChange={value => update({ waitSeconds: value ? 30 : 0 })} /></Row>
@@ -40,11 +52,12 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
       <Row label={t('alerts')} hint={t('alertsDescription')}><Toggle label={t('alerts')} checked={settings.audioCallouts} onChange={value => update({ audioCallouts: value })} /></Row>
       <Row label={t('goal')}><div className="number-unit"><input aria-label={t('goal')} placeholder={t('noGoal')} type="number" min="0" step="0.01" value={settings.goalMs === null ? '' : settings.goalMs / 1000} onChange={event => { const value = event.target.value === '' ? null : Math.round(Number(event.target.value) * 1000); if (value === null || value >= 0) update({ goalMs: value }); }} /><span>s</span></div></Row>
     </div>}
-    {tab === 'appearance' && <div role="tabpanel"><Row label={t('showScorecard')}><Toggle label={t('showScorecard')} checked={settings.showScorecard} onChange={value => update({ showScorecard: value })} /></Row><Row label={t('theme')}><span>{t('dark')}</span></Row><Row label={t('language')}><select aria-label={t('language')} value={settings.language} onChange={event => update({ language: event.target.value as Settings['language'] })}><option value="en">English</option><option value="es">Español</option></select></Row></div>}
+    {tab === 'audioSettings' && <div role="tabpanel" className="audio-settings"><AudioSettings locale={settings.language} /></div>}
+    {tab === 'appearance' && <div role="tabpanel"><Row label={t('showScorecard')}><Toggle label={t('showScorecard')} checked={settings.showScorecard} onChange={value => update({ showScorecard: value })} /></Row><Row label={t('theme')}><span>{t('dark')}</span></Row><Row label={t('language')}><select aria-label={t('language')} value={settings.language} onChange={event => update({ language: event.target.value as Settings['language'] })}>{LOCALES.map(locale => <option key={locale.id} value={locale.id}>{locale.nativeName}</option>)}</select></Row></div>}
     {tab === 'shortcuts' && <div role="tabpanel" className="shortcut-settings"><Row label={t('advance')} hint={t('outsideFields')}><kbd>Enter</kbd><kbd>{t('spaceKey')}</kbd></Row><Row label={t('startTimer')} hint={t('holdInstruction')}><kbd>{t('spaceKey')}</kbd></Row><Row label={t('stopTimer')}><kbd>{t('anyKey')}</kbd></Row><Row label={t('submitSolve')}><kbd>Enter</kbd></Row></div>}
     <div className="connection-setting"><span className={`status-dot ${connection}`} /><span>{t(connection)}</span><button type="button" className="text-button" onClick={() => void check()}>{t('checkConnection')}</button><p>{t('localAlways')} {offlineStatus === 'ready' ? t('offlineReady') : offlineStatus === 'downloading' ? t('offlinePreparing') : offlineStatus === 'update-ready' ? t('offlineUpdate') : ''}</p></div>
     <Row label={t('usageMetrics')} hint={telemetryStatus.productConfigured ? t('usageMetricsHint') : t('previewUnavailable')}><Toggle label={t('usageMetrics')} checked={consent.product} disabled={!telemetryStatus.productConfigured} onChange={product => updateConsent({ ...consent, product })} /></Row>
     <Row label={t('errorReports')} hint={telemetryStatus.diagnosticsConfigured ? t('errorReportsHint') : t('previewUnavailable')}><Toggle label={t('errorReports')} checked={consent.diagnostics} disabled={!telemetryStatus.diagnosticsConfigured} onChange={diagnostics => updateConsent({ ...consent, diagnostics })} /></Row>
-    <button className="secondary-button" onClick={() => update({ ...DEFAULT_SETTINGS, eventId: settings.eventId, language: settings.language })}>{t('resetSettings')}</button>
+    <button className="secondary-button" onClick={() => void reset()}>{t('resetSettings')}</button>
   </Dialog>;
 }

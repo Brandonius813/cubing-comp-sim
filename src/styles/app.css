@@ -12,3 +12,13 @@
 @media(max-width:700px){.utilities{gap:4px;right:12px;top:20px}.icon-button{width:36px;height:36px}.event-selector{left:12px;transform:none;top:16px;width:192px}.workspace.with-scorecard{grid-template-columns:1fr;min-height:100dvh;padding:100px 16px 80px;gap:40px}.workspace.with-scorecard .main-stage{min-height:240px}.scorecard-wrap{width:336px;max-width:100%;margin:0 auto}.main-stage{min-height:100dvh}.scramble-stage{width:calc(100vw - 40px);margin:132px 0 80px;min-height:calc(100dvh - 212px)}.scramble-notation{font-size:24px;line-height:36px}.drawing-area{min-height:230px}.bottom-action{bottom:100px}.dialog{width:calc(100vw - 24px);height:calc(100dvh - 24px)}.dialog-header{padding:20px;height:80px}.dialog-body{padding:0 20px 24px;height:calc(100% - 80px)}.account-dialog,.edit-dialog{height:auto}.settings-tabs{font-size:12px}.setting-row{gap:12px}.setting-control select{min-width:150px;width:150px}.history-toolbar{flex-direction:column}.history-toolbar .button-row{gap:8px}.history-metrics{justify-content:space-between;gap:12px}.history-metrics strong{font-size:24px}.history-round-title strong{margin-left:0}.event-picker{height:416px;width:344px;max-width:calc(100vw - 24px);top:72px}.event-picker .dialog-body{height:100%;padding:0}.shortcut-settings .setting-control kbd{min-width:60px;padding:0 8px}.complete-stage .round-extremes{font-size:11px}.show-scorecard{top:100px}.save-status{display:none}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .danger-button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 20px;border-radius:8px;background:var(--negative);color:#251414;font-size:14px;font-weight:500;line-height:20px}.delete-confirmation{padding-top:24px;border-top:1px solid var(--border)}
+
+/* Translated labels may be longer; controls stay usable without horizontal scrolling. */
+.settings-tabs{flex-wrap:wrap}
+.settings-tabs>button{min-width:120px;padding:8px 12px;overflow-wrap:anywhere}
+.setting-row>div:first-child{min-width:0;overflow-wrap:anywhere}
+.setting-control{flex-wrap:wrap}
+.setting-control input[type=range]{min-width:120px;width:160px;max-width:100%;padding:0;accent-color:var(--accent)}
+.audio-settings h3{margin:28px 0 12px;font-size:16px}
+.audio-settings>p{font-size:14px;line-height:22px;color:var(--secondary);margin:12px 0}
+@media(max-width:700px){.audio-settings .setting-row{align-items:flex-start;flex-direction:column;padding:12px 0}.audio-settings .setting-control{justify-content:flex-start;width:100%}.settings-tabs>button{min-width:40%;font-size:12px}}

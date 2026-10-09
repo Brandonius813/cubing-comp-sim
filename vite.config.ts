@@ -15,6 +15,7 @@ function offlineCache(): Plugin {
           entry.isDirectory() ? files(join(dir, entry.name)) : [join(dir, entry.name)]);
       }
       const paths = files(outDir).filter(path => !path.endsWith('/sw.js') && !path.endsWith('.map')
+        && !path.replaceAll(String.fromCharCode(92), '/').includes('/audio/background/')
         && !path.endsWith('/connection-check.json') && !path.endsWith('/_headers'));
       if (!paths.some(path => path.endsWith('/engine/tnoodle.js'))) return;
       const digest = createHash('sha256');

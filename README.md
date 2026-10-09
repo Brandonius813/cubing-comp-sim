@@ -60,6 +60,9 @@ The browser suite uses the actual production engine with networking disabled, re
 
 - [Architecture and product specification](docs/architecture-spec.md)
 - [Authentication alternatives and observability](docs/auth-and-observability.md)
+- [Preview the app and set up staging](docs/preview-and-environments.md)
+- [Interface language coverage and review](docs/languages.md)
+- [Inspection voices and background audio assets](docs/audio-assets.md)
 - [Accounts and access needed for hosting](docs/access-setup.md)
 - [Implementation, verified checks, and remaining launch work](docs/implementation-handoff.md)
 - [Offline engine source, adaptations, and evidence](engine/README.md)
