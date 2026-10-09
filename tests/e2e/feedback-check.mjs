@@ -223,8 +223,14 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
       await control.click();
       const menu = page.getByRole('listbox', { name: 'Solve input', exact: true });
       const [triggerBox, menuBox] = await Promise.all([control.boundingBox(), menu.boundingBox()]);
-      assert.ok(Math.abs(triggerBox.x - menuBox.x) < 3 && Math.abs(triggerBox.width - menuBox.width) < 3, 'Dropdown is misaligned with its field.');
-      assert.ok(menuBox.y >= triggerBox.y + triggerBox.height && menuBox.y - triggerBox.y - triggerBox.height < 12, 'Dropdown is not anchored below its field.');
+      const alignmentDetails = JSON.stringify({ viewport: { width, height }, triggerBox, menuBox, layout: await menu.evaluate(element => {
+        const body = element.closest('dialog')?.querySelector('.dialog-body');
+        const style = getComputedStyle(element);
+        return { inlineStyle: element.getAttribute('style'), position: style.position, left: style.left, top: style.top, width: style.width,
+          bodyScrollLeft: body?.scrollLeft, bodyScrollTop: body?.scrollTop, scrollX: window.scrollX, scrollY: window.scrollY };
+      }) });
+      assert.ok(Math.abs(triggerBox.x - menuBox.x) < 3 && Math.abs(triggerBox.width - menuBox.width) < 3, `Dropdown is misaligned with its field: ${alignmentDetails}`);
+      assert.ok(menuBox.y >= triggerBox.y + triggerBox.height && menuBox.y - triggerBox.y - triggerBox.height < 12, `Dropdown is not anchored below its field: ${alignmentDetails}`);
       assert.deepEqual(await page.getByRole('option').allTextContents().then(values => values.map(value => value.replace('✓', '').trim())), ['Spacebar', 'Manual Entry']);
       await capture(page, `dropdown-${width}`, artifacts);
       await page.keyboard.press('Escape');
