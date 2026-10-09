@@ -1,12 +1,12 @@
 # Automatic Cloudflare Workers deployment
 
-Status: October 9, 2026. Brandon reports a Cloudflare account with MFA and a manually uploaded static guest preview at https://morning-base-55f2.btrue813.workers.dev/. This is a Worker with static assets. Credentials and automated deployment have not been verified.
+Status: October 9, 2026. Brandon reports a Cloudflare account with MFA and a manually uploaded static guest preview at https://morning-base-55f2.btrue813.workers.dev/. This is a Worker with static assets. Brandon reports adding the GitHub repository secret and account variable. Automated authentication and deployment have not yet been verified.
 
 ## Configure access to the existing Worker
 
 1. In Cloudflare, select the account owning the preview and open **Manage Account > Account API Tokens > Create Token**.
 2. Name the token `GitHub guest preview deployment`. Grant the Workers **Editor** role scoped to the existing `morning-base-55f2` Worker. Current Workers permissions support tokens limited to individual Workers; Editor permits deploying an existing Worker.
-3. If the dashboard instead presents legacy permission dropdowns, create a custom token with **Account > Workers Scripts > Edit** and **Account > Account Settings > Read**. Under **Account Resources**, select **Include > Specific account** and choose the account owning the Worker. Legacy Workers Scripts permissions remain supported and grant access across the selected account.
+3. Brandon's dashboard displayed **My Profile > API Tokens > Create Custom Token**, with legacy permission dropdowns. On that form, create a custom token with **Account > Workers Scripts > Edit** and **Account > Account Settings > Read**. Under **Account Resources**, select **Include > Specific account** and choose the account owning the Worker. Legacy Workers Scripts permissions remain supported and grant access across the selected account.
 4. Leave client IP filtering empty for GitHub-hosted runners. Copy the token directly into GitHub **Settings > Secrets and variables > Actions > Secrets > New repository secret**, named `CLOUDFLARE_API_TOKEN`. Do not put the value in source, chat, or workflow logs.
 5. In Cloudflare, press Command/Control-K, search for **Copy account ID**, and copy it. Workers & Pages also displays the account ID under Account Details.
 6. In GitHub's **Variables** tab on the same Actions settings page, create `CLOUDFLARE_ACCOUNT_ID` with the copied account ID.
