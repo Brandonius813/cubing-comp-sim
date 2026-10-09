@@ -1,4 +1,32 @@
-# Competition Cubing Simulator: project notes
+# Cubing Comp Sim: project notes
+
+## Approved implementation checkpoint (October 8, 2026)
+
+This section supersedes all older product/stack/checkpoint statements below. Brandon approved the architecture specification with the following amendments and explicitly authorized implementation, parallel agents, and as much progress as possible. The earlier planning-only boundary is no longer active.
+
+- Website first: React, TypeScript, Vite, custom CSS from the approved Figma. Native Mac/Windows/mobile work begins after the web version is stable. React Native is acceptable; platform languages are not required.
+- Guest use needs no account. Local browser data clearing/loss is acceptable; normal app saves, imports, and transfers must remain transactional.
+- Unlimited fresh OFFLINE TNoodle generation and TNoodle drawings are mandatory. Reuse pinned upstream source including the accepted unapproved FTO implementation. Do not substitute another algorithm or online service.
+- Events: 2–7 cubes, OH, 3/4/5 BLD, Megaminx, Pyraminx, Skewb, Square-1, FTO, Clock. Exclude FMC/Multi-Blind. Clock last, ordinary label. No user-facing event approval/retirement badges or regulations-sync feature.
+- Inputs: Space only starts keyboard timing; any key received by the active timer stops. Manual entry also supported. Ignore repeats and editable-field shortcuts.
+- Cloud: explicit upload/download replacement, never merge. ONE current save per user. Temporary objects needed for atomic replacement and ordinary infrastructure backups are separate from a user-facing history feature.
+- Settings: online/offline connection indicator; distinguish browser network hint from cloud reachability. Connection never gates local scrambling.
+- Auth: Supabase Auth with production SMTP is the recommended initial implementation. Account login never implicitly transfers or deletes local history.
+- Observability: explicit consent-based product events, separate opt-in client diagnostics, redacted server logs. No solve contents, passwords, reset links, or emails in telemetry.
+- Full public implementation specification: docs/architecture-spec.md. Auth alternatives and metric definitions: docs/auth-and-observability.md. Required provider access: docs/access-setup.md.
+
+## Current implementation status
+
+Work is on feat/desktop-web-foundation, with separate reviewable commits. No production deployment or native release has occurred. Local shell network access is restricted. The connected GitHub API is used for branch updates and CI. The actual local checkout is a task-specific checkout; the existing Documents/Codex checkout is unchanged.
+
+TNoodle Java reference and TeaVM compilation succeeded in GitHub Actions. Engine proof passed all 32 seeded fixtures and fresh WebCrypto generation for all 16 events. At application commit `22d7989cc5d465e921bbe6c8771221bef53134a8`, run 37859656656 passed all 84 application tests, seven integrity/SVG regression tests, and the complete Chromium/Firefox/WebKit suites with actual offline reload and fresh generation/drawings for every event. Run 37859656637 passed 21 API tests, actual PostgreSQL transactions, and the Docker build. Run 37859656458 reported zero known dependency vulnerabilities. Playwright 1.64.0 includes the upstream WebKit offline-emulation fix; no offline assertion was bypassed. First 4×4 generation took about 56 seconds in WebKit CI and needs real-device profiling before release. See docs/implementation-handoff.md for evidence, access needs, and remaining launch gates. This is not a production release.
+
+Draft PR: https://github.com/Brandonius813/cubing-comp-sim/pull/2. The local task workspace connection became unavailable during the final handoff; the latest dependency lock and evidence updates are committed on GitHub. Fetch the remote feature branch before continuing from any older local checkout.
+
+## Historical planning record
+
+The following sections describe the earlier setup and are retained for context. They do not override the approved implementation scope above.
+
 
 ## Current setup status (verified 2026-10-06)
 
@@ -131,7 +159,7 @@ Reference: [Codex command guide](https://learn.chatgpt.com/docs/developer-comman
 - **Tradeoffs accepted:** Repository contents and activity are visible to everyone and can be forked. Review files and issue discussions for public suitability before pushing or posting.
 - **Revisit if:** Any required content cannot safely be public; in that case remove it from the repository and reconsider visibility before adding further material.
 
-No product, architecture, hosting, or stack decisions have been made yet. Record future decisions here in this format:
+The template below is retained from initial setup. Current product and architecture decisions are recorded in the specification and later entries.
 
 ### Decision: [short name]
 
@@ -139,3 +167,13 @@ No product, architecture, hosting, or stack decisions have been made yet. Record
 - **Reason:**
 - **Tradeoffs accepted:**
 - **Revisit if:**
+
+## Language, audio and setup follow-up (2026-10-09)
+
+The owner requested many more interface languages, inspection voices for those languages, longer streamed background loops, and an educational account/setup checklist. This continues the previously authorized web implementation.
+
+- Added 16 draft interface catalogs including Japanese, Simplified and Traditional Chinese with Mandarin speech selection, French, German and Polish. Translation quality still needs fluent-cuber review.
+- Added installed local inspection voice selection with beep fallback, separate voice language and volume. Tiny reviewed offline voice recordings remain the consistent cross-device target.
+- Added explicit streamed-ambience controls and a validated catalog. No background recordings are falsely listed as shipped. Plan 5–10 minute reviewed competition-room loops, excluded from the web app's essential offline download; optional native downloads later.
+- Recommend guest preview before backend provisioning. Domain registration remains at Namecheap. Cloudflare Pages Direct Upload from the existing verified GitHub Actions build avoids introducing a second Java/Maven build environment.
+- Record account roles, staging isolation, DNS/email setup and preview instructions in docs/preview-and-environments.md. No new provider account, paid service, secret, DNS change or public deployment was created by this follow-up.

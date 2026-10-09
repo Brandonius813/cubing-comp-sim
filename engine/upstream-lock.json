@@ -1,0 +1,368 @@
+{
+  "repository": "https://github.com/thewca/tnoodle-lib",
+  "commit": "d01a947d9f028f38085cda9b0507a9cf3d3f38a8",
+  "version": "0.20.0-development",
+  "license": "GPL-3.0",
+  "files": [
+    {
+      "path": "LICENSE",
+      "gitBlobSha": "ef7e7efc09c9d471c391f05b9567966928085840",
+      "bytes": 35121
+    },
+    {
+      "path": "README.md",
+      "gitBlobSha": "c0bec7211dcaa234d4bd5d4970d9ca427fdc50af",
+      "bytes": 3813
+    },
+    {
+      "path": "fto3phase/src/main/java/levigibson/fto3phase/FtoCoord.java",
+      "gitBlobSha": "702e555abd58238a394009e66689509e0f380e05",
+      "bytes": 21168
+    },
+    {
+      "path": "fto3phase/src/main/java/levigibson/fto3phase/FtoCubie.java",
+      "gitBlobSha": "ab292b9b99068c04970dcbf902ec696aa12cb44b",
+      "bytes": 43047
+    },
+    {
+      "path": "fto3phase/src/main/java/levigibson/fto3phase/Search.java",
+      "gitBlobSha": "c88226251bd4a0eeeca8fc06881ad634b38c0956",
+      "bytes": 8785
+    },
+    {
+      "path": "fto3phase/src/main/java/levigibson/fto3phase/Util.java",
+      "gitBlobSha": "1a11d9c22f87a5814400773c62ed0b67f12ac45b",
+      "bytes": 9809
+    },
+    {
+      "path": "gradle/libs.versions.toml",
+      "gitBlobSha": "8b2e093950c496a84c14e8ba962db58129ab03b3",
+      "bytes": 758
+    },
+    {
+      "path": "min2phase/src/main/java/cs/min2phase/CoordCube.java",
+      "gitBlobSha": "de80a73fa142f5065127769f9339f3dc1b12b5e6",
+      "bytes": 13688
+    },
+    {
+      "path": "min2phase/src/main/java/cs/min2phase/CubieCube.java",
+      "gitBlobSha": "2ca52a469348ce33241f7f2c4b1839254e4d4741",
+      "bytes": 14674
+    },
+    {
+      "path": "min2phase/src/main/java/cs/min2phase/Search.java",
+      "gitBlobSha": "e3e5fb66369667768c292619386062fbe1130cc7",
+      "bytes": 22926
+    },
+    {
+      "path": "min2phase/src/main/java/cs/min2phase/SearchWCA.java",
+      "gitBlobSha": "5bd52c4b3b9b93c2153eaf8b6aecfd2cdd1c5af3",
+      "bytes": 6580
+    },
+    {
+      "path": "min2phase/src/main/java/cs/min2phase/Tools.java",
+      "gitBlobSha": "c489cea5b2f89a659f41643815a6926a57d538d4",
+      "bytes": 8870
+    },
+    {
+      "path": "min2phase/src/main/java/cs/min2phase/Util.java",
+      "gitBlobSha": "4d7aab79722f549bf72748e89458a95a12db1f64",
+      "bytes": 7247
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/ClockPuzzle.java",
+      "gitBlobSha": "8801b713ff13eae9156944caec4063a8b9e140d4",
+      "bytes": 13131
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/CubePuzzle.java",
+      "gitBlobSha": "961553f8c35856deae65039bfdfa4d753785499f",
+      "bytes": 21956
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/FaceTurningOctahedronPuzzle.java",
+      "gitBlobSha": "db2cf2e6fdba543e2906b4a67f7ecde11428b9e0",
+      "bytes": 15836
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/FourByFourCubePuzzle.java",
+      "gitBlobSha": "8c47380d5cbadaec0977ec243af7ed811265418f",
+      "bytes": 1368
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/FourByFourRandomTurnsCubePuzzle.java",
+      "gitBlobSha": "a4de498622e3c55e44764b4ad12f801f79506e0a",
+      "bytes": 553
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/MegaminxPuzzle.java",
+      "gitBlobSha": "5b39a0de5c669e6ef4f6adc8b072b220390372d2",
+      "bytes": 23951
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/NoInspectionFiveByFiveCubePuzzle.java",
+      "gitBlobSha": "1bc8e88947a80c8f1d143ee069ce2f41c25b06b4",
+      "bytes": 2605
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/NoInspectionFourByFourCubePuzzle.java",
+      "gitBlobSha": "40ae79e4b75be1259027a8042c1aabedc8be9a45",
+      "bytes": 1875
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/NoInspectionThreeByThreeCubePuzzle.java",
+      "gitBlobSha": "1c6ac52fea69c970ccde3ed95e766c538cc9b7b7",
+      "bytes": 1709
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/PyraminxPuzzle.java",
+      "gitBlobSha": "d14f1fd4fb7980f15cfbc5aae9192e4ee54b9fd1",
+      "bytes": 19781
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/PyraminxSolver.java",
+      "gitBlobSha": "25d782851a5da0c0f143b25c85dd999e61f085d5",
+      "bytes": 19366
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/SkewbPuzzle.java",
+      "gitBlobSha": "f41b51549c4546687013761a1602fc17c72518a9",
+      "bytes": 18829
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/SkewbSolver.java",
+      "gitBlobSha": "b668067643eca61c6efd256c4219c9fb96713257",
+      "bytes": 12928
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/SquareOnePuzzle.java",
+      "gitBlobSha": "ec25fa38b97646acd9f5060eea573cb2b7ea0e36",
+      "bytes": 18507
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/ThreeByThreeCubeFewestMovesPuzzle.java",
+      "gitBlobSha": "8a61c2527f133ae7ea1dabee2b73c3785bb621d9",
+      "bytes": 5517
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/ThreeByThreeCubePuzzle.java",
+      "gitBlobSha": "6f77692fb0bb5d882b8fa999fdfb11403f9c7757",
+      "bytes": 3200
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/TwoByTwoCubePuzzle.java",
+      "gitBlobSha": "25270161ddd7bde739a401842f62fe2290b98844",
+      "bytes": 1677
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/puzzle/TwoByTwoSolver.java",
+      "gitBlobSha": "f42cc7ac99e3d21b3d80264ad0e9b757fc1d4fc5",
+      "bytes": 18731
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/AlgorithmBuilder.java",
+      "gitBlobSha": "fce3cb1c7e08ce0dbe095eb1a92dc8c47499d80f",
+      "bytes": 10094
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/InvalidMoveException.java",
+      "gitBlobSha": "c5ef70904ba3d2f6f3c6743690bf7584d06450f4",
+      "bytes": 202
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/InvalidScrambleException.java",
+      "gitBlobSha": "aa39d72fab5e223d1aa09a0f2bd0a19d5acb09d6",
+      "bytes": 330
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/LazySupplier.java",
+      "gitBlobSha": "fcddb83320ecda5d50f9c1d48bdd5c2a1dd797ae",
+      "bytes": 1356
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/Puzzle.java",
+      "gitBlobSha": "05dd93321a5ba46c63454b81962cc2a74d41df11",
+      "bytes": 35784
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/PuzzleImageInfo.java",
+      "gitBlobSha": "f2e6b75eb14020dd82dd1f3c8c7fde81f9d2fd31",
+      "bytes": 1038
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/PuzzleRegistry.java",
+      "gitBlobSha": "207044eab6b75a4e92435650a7e77cae09462351",
+      "bytes": 1550
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/PuzzleStateAndGenerator.java",
+      "gitBlobSha": "32b86b5046af7df2e16438ffa6a46d61329d9e8a",
+      "bytes": 311
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/ScrambleCacher.java",
+      "gitBlobSha": "e2e4c23921b86d77bd759aaaed3f90923cb9b97e",
+      "bytes": 5080
+    },
+    {
+      "path": "scrambles/src/main/java/org/worldcubeassociation/tnoodle/scrambles/ScrambleCacherListener.java",
+      "gitBlobSha": "e32b7d6129020deae6079f4727cf1d80fa43b3d0",
+      "bytes": 155
+    },
+    {
+      "path": "sq12phase/src/main/java/cs/sq12phase/FullCube.java",
+      "gitBlobSha": "40643d479f0317b88142991cace6990903c03553",
+      "bytes": 6355
+    },
+    {
+      "path": "sq12phase/src/main/java/cs/sq12phase/Search.java",
+      "gitBlobSha": "ffb1def5aca3a747d5adb0360ba5577347f77e1d",
+      "bytes": 12131
+    },
+    {
+      "path": "sq12phase/src/main/java/cs/sq12phase/SearchTest.java",
+      "gitBlobSha": "9b50d3437be3952a6aa3d9855d205bffdde2846f",
+      "bytes": 2327
+    },
+    {
+      "path": "sq12phase/src/main/java/cs/sq12phase/Shape.java",
+      "gitBlobSha": "38325d9b2591d491c229e54490ebefbd2764f365",
+      "bytes": 6459
+    },
+    {
+      "path": "sq12phase/src/main/java/cs/sq12phase/Square.java",
+      "gitBlobSha": "18d42bdceb9a3fcc0764676f54abdfe3e8ac297d",
+      "bytes": 4955
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Circle.java",
+      "gitBlobSha": "5164fcb0a7be96a84cb034cee8beda13b447fcb4",
+      "bytes": 235
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Color.java",
+      "gitBlobSha": "09f4daa8d29c9315a59a2c7d17a18700331a898d",
+      "bytes": 3496
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Dimension.java",
+      "gitBlobSha": "f5b52ada43913f5dec5afd41fd01fa149195147f",
+      "bytes": 515
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Element.java",
+      "gitBlobSha": "bdfd00737ea41bd054489742294393281418c567",
+      "bytes": 4733
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Ellipse.java",
+      "gitBlobSha": "4d4c8319e46ba654caf90286f7d4b6feff3b3d05",
+      "bytes": 396
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Group.java",
+      "gitBlobSha": "e3af7b7501f92a64855ba803fdcba593c37c3b6f",
+      "bytes": 139
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/InvalidHexColorException.java",
+      "gitBlobSha": "136aea49d6be6cd00a3696ac3c71fcd27a118ff3",
+      "bytes": 201
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Path.java",
+      "gitBlobSha": "24df4f1825c2820c5b4de84b4f2ce97efa9f86d7",
+      "bytes": 2795
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/PathIterator.java",
+      "gitBlobSha": "fc0b95cc6bcc8331adc0a207ff8eabb99aa4720f",
+      "bytes": 892
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Point2D.java",
+      "gitBlobSha": "70e5cf5f4b60868e0e55ede6d50e7b853679f626",
+      "bytes": 245
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Rectangle.java",
+      "gitBlobSha": "414c3cd0cbc9259049d0d6f2d8eb305f597fddb1",
+      "bytes": 416
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Svg.java",
+      "gitBlobSha": "d667132b49b2b2958ef576fb0b31c38e6b0b51b1",
+      "bytes": 858
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Text.java",
+      "gitBlobSha": "2e4379732c0b6a4135014c431929e7718a224b28",
+      "bytes": 267
+    },
+    {
+      "path": "svglite/src/main/java/org/worldcubeassociation/tnoodle/svglite/Transform.java",
+      "gitBlobSha": "ea671275bc6f2ce75cfe617fd880cff3cf15885a",
+      "bytes": 2954
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/Center1.java",
+      "gitBlobSha": "fe54c06b64f7d1ec611dc6d0caae5eefb76428d1",
+      "bytes": 7335
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/Center2.java",
+      "gitBlobSha": "432b5d747fb9a8218e487c38201cc3780771b63d",
+      "bytes": 6177
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/Center3.java",
+      "gitBlobSha": "6fea8c5825ae4b60dc19a85377e544586b838054",
+      "bytes": 3801
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/CenterCube.java",
+      "gitBlobSha": "fa6e43b6cccdb749cd3fb72e684a2d9e977ca137",
+      "bytes": 2364
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/CornerCube.java",
+      "gitBlobSha": "4cb687d132bbd2f7bf4f6f70495350b05975e46a",
+      "bytes": 2538
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/Edge3.java",
+      "gitBlobSha": "3bfe0c93e7524b7054bf8e3f75d47cbeccead20d",
+      "bytes": 11969
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/EdgeCube.java",
+      "gitBlobSha": "f81100ba28e9cf0f6cbd6eeb2167f5aafc14458e",
+      "bytes": 4057
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/FullCube.java",
+      "gitBlobSha": "b50f09c91e1ad9b579bc896771d307171fda147a",
+      "bytes": 8426
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/Moves.java",
+      "gitBlobSha": "a5d01bbce83ea70b6d677ab944ba893291dcccdf",
+      "bytes": 8217
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/Search.java",
+      "gitBlobSha": "f06c4afe571b3a35d675cef158ec27f1c517eba6",
+      "bytes": 10801
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/Tools.java",
+      "gitBlobSha": "aff791d5086e066425f318120e2c651280a8224a",
+      "bytes": 2082
+    },
+    {
+      "path": "threephase/src/main/java/cs/threephase/Util.java",
+      "gitBlobSha": "d5dc6554147001bc5b38aa1676d203eaa2396437",
+      "bytes": 3031
+    }
+  ]
+}
