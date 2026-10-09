@@ -221,7 +221,7 @@ export class BrowserStore {
       const checkedAttemptIds = new Set(checked.attempts.map(attempt => attempt.id));
       if (rounds.some(previous => previous.attempts.some(attempt => checkedAttemptIds.has(attempt.id)))) throw new InvalidSaveError('Attempt id belongs to another round.');
       stores.rounds.put(checked);
-      return { ...state, rounds: [checked, ...rounds].sort((a, b) => b.createdAt - a.createdAt), activeRoundId: checked.id, draft: checkedDraft };
+      return { ...state, rounds: [checked, ...rounds].sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id)), activeRoundId: checked.id, draft: checkedDraft };
     });
   }
 

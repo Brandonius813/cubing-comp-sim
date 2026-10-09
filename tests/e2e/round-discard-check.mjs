@@ -11,12 +11,16 @@ export async function checkRoundDiscard(page, databaseName) {
     const fixture = eventId => ({ eventId, notation: 'storage-test-only', svg: '<svg/>', engineVersion: 'storage-test-only', generatedAt: Date.now() });
     const add = (round, rawMs) => core.addAttempt(round, core.createAttempt(round, { rawMs, inputMethod: 'manual', scramble: fixture(round.eventId) }));
     let state = await store.load();
-    let completed = core.createRound('333');
+    // Coarse browser clocks can give two rounds the same creation time. Insert
+    // IDs in reverse prepend order so writes must apply the same tie-break as reads.
+    const tiedCreatedAt = Date.now();
+    let completed = { ...core.createRound('333'), id: '00000000-0000-4000-8000-000000000001', createdAt: tiedCreatedAt, updatedAt: tiedCreatedAt };
     for (const ms of [10_000, 11_000, 12_000, 13_000, 14_000]) completed = add(completed, ms);
     state = await store.saveRound(completed, state.revision);
-    let partial = core.createRound('333');
+    let partial = { ...core.createRound('333'), id: '00000000-0000-4000-8000-000000000002', createdAt: tiedCreatedAt, updatedAt: tiedCreatedAt };
     partial = add(add(partial, 31_000), 32_000);
     state = await store.saveRound(partial, state.revision, { roundId: partial.id, scramble: fixture('333'), stage: 'solving', savedAt: Date.now() });
+    if (state.rounds[0].id !== completed.id || state.rounds[1].id !== partial.id) throw new Error('Equal-timestamp writes do not use the deterministic round ID order used by storage reads.');
     const completedBefore = JSON.stringify(state.rounds.find(round => round.id === completed.id));
     const before = JSON.stringify(state);
     const revision = state.revision;
