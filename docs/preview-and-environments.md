@@ -1,6 +1,6 @@
 # Preview and environment setup
 
-Updated October 9, 2026. Brandon reports a Cloudflare account with MFA and a manually uploaded static guest preview at https://morning-base-55f2.btrue813.workers.dev/. The existing Worker is morning-base-55f2; automated deployment has not been verified. The remaining sections are setup instructions.
+Updated October 9, 2026. Brandon reports a Cloudflare account with MFA. GitHub Actions successfully deployed the tested guest preview to the existing Worker `morning-base-55f2` at https://morning-base-55f2.btrue813.workers.dev/ in [run 37987134133, attempt 2](https://github.com/Brandonius813/cubing-comp-sim/actions/runs/37987134133/attempts/2). Actual-device review is the next checkpoint. The remaining sections are setup instructions.
 
 ## Preview before buying or configuring a backend
 

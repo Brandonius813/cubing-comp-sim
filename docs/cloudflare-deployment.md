@@ -1,6 +1,6 @@
 # Automatic Cloudflare Workers deployment
 
-Status: October 9, 2026. Brandon reports a Cloudflare account with MFA and a manually uploaded static guest preview at https://morning-base-55f2.btrue813.workers.dev/. This is a Worker with static assets. Brandon reports adding the GitHub repository secret and account variable. Automated authentication and deployment have not yet been verified.
+Status: October 9, 2026. Automatic deployment to the existing Worker with static assets succeeded at https://morning-base-55f2.btrue813.workers.dev/. Brandon reports a Cloudflare account with MFA. GitHub Actions confirmed the configured credentials and published the tested build. Real-device preview acceptance remains pending.
 
 ## Configure access to the existing Worker
 
@@ -33,13 +33,15 @@ Wrangler 4 is installed in CI. Local Wrangler installation is not required.
 
 ## First automatic deployment and verification
 
+Completed: [run 37987134133, attempt 2](https://github.com/Brandonius813/cubing-comp-sim/actions/runs/37987134133/attempts/2) published commit `f7dc786af0ee895297e38dbaeaa64ba7cbdca6c6` on October 9, 2026. Application, engine, deployment dry-run and Chromium/Firefox/WebKit checks passed. After the owner corrected a line break in the token, the failed deployment job reused the original tested artifact and succeeded. Cloudflare returned the existing hostname and Worker version `c2e6c077-66cf-4509-8420-51826f55b765`. This proves the CI publication; actual-device acceptance is still required.
+
 1. Configure the secret and account variable.
 2. Merge the reviewed deployment pull request into `main`. Its workflow change triggers the build and deployment.
 3. In **Actions > Desktop web checks**, verify that both the web job and **Deploy guest preview to Cloudflare Workers** succeed.
 4. Open https://morning-base-55f2.btrue813.workers.dev/ and check the app on an actual device.
 5. To redeploy later without a code change, choose **Run workflow** under Desktop web checks and select `main`. This rebuilds and reruns checks before uploading.
 
-A failed web job prevents publishing. A failed upload does not establish a new successful deployment. After correcting credentials, use **Run workflow** to retry. Record the successful automated run and perform device checks before marking setup complete.
+A failed web job prevents publishing. A failed upload does not establish a new successful deployment. After correcting credentials, use **Re-run failed jobs** on the failed run to reuse its successful build while the artifact is still available. If the artifact has expired, or source/configuration changed, use **Run workflow** on `main` to build and test a fresh artifact. GitHub hides stored secret values; the blank edit field accepts a replacement and does not mean the saved secret is empty. Paste only the token itself on one line. Perform device checks before marking preview acceptance complete.
 
 ## References
 
