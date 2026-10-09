@@ -1,4 +1,4 @@
-import type { Round } from '../core';
+import type { EventId, Round } from '../core';
 import { DEFAULT_SETTINGS, validateDraft, validateSettings } from './settings';
 import type { Settings, SolveDraft } from './settings';
 import { InvalidSaveError, parseHistoryJson, validateHistorySnapshot, validateRound } from './validation';
@@ -258,6 +258,23 @@ export class BrowserStore {
     return this.mutate(expectedRevision, state => {
       if (id !== null && !state.rounds.some(round => round.id === id)) throw new InvalidSaveError('Active round not found.');
       return { ...state, activeRoundId: id, draft: id === state.activeRoundId ? state.draft : null };
+    });
+  }
+
+  /** Explicitly abandon only the active unfinished round, with its draft and attempts.
+   * Event selection and deletion share one transaction, so neither can commit alone.
+   * Completed rounds remain history even if they are still the active scorecard.
+   */
+  discardActiveRound(expectedRevision: number, nextEventId?: EventId): Promise<LocalState> {
+    return this.mutate(expectedRevision, (state, stores) => {
+      const settings = nextEventId === undefined ? state.settings : validateSettings({ ...state.settings, eventId: nextEventId });
+      const active = state.rounds.find(round => round.id === state.activeRoundId);
+      const discard = active && active.completedAt === undefined ? active.id : null;
+      if (discard !== null) stores.rounds.delete(discard);
+      return {
+        ...state, settings, activeRoundId: null, draft: null,
+        rounds: discard === null ? state.rounds : state.rounds.filter(round => round.id !== discard),
+      };
     });
   }
 

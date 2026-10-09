@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, validateSettings, type Settings } from './settings';
+import { DEFAULT_SETTINGS, MAX_WAIT_SECONDS, validateSettings, type Settings } from './settings';
 
 const legacy = {
   eventId: '333', inputMethod: 'timer', inspection: true, waitSeconds: 0, holdMs: 300,
@@ -30,6 +30,15 @@ describe('settings migration and persistence', () => {
       { waitMaxSeconds: 601 }, { waitMaxSeconds: Infinity }, { waitMinSeconds: null },
       { waitMode: 'sometimes' }, { waitMode: null }, { waitEnabled: 1 },
     ]) expect(() => read({ ...DEFAULT_SETTINGS, ...patch })).toThrow('Invalid settings');
+  });
+  it('caps saved ten-minute settings at five minutes without losing other preferences', () => {
+    const fixed = read({ ...legacy, waitSeconds: 600 });
+    expect(MAX_WAIT_SECONDS).toBe(300);
+    expect(fixed).toMatchObject({ ...legacy, waitSeconds: 300, waitEnabled: true });
+    const random = { ...DEFAULT_SETTINGS, waitMode: 'random', waitEnabled: true, waitSeconds: 599, waitMinSeconds: 240, waitMaxSeconds: 600, holdMs: 1250, theme: 'light', textFont: 'georgia', language: 'ja' };
+    expect(read(random)).toMatchObject({ ...random, waitSeconds: 300, waitMaxSeconds: 300 });
+    expect(read({ ...random, waitMinSeconds: 450 })).toMatchObject({ waitMinSeconds: 300, waitMaxSeconds: 300 });
+    expect(read({ ...random, waitMaxSeconds: 300 })).toMatchObject({ waitMinSeconds: 240, waitMaxSeconds: 300 });
   });
   it('rejects malformed appearance and shortcut values rather than resetting them', () => {
     for (const patch of [

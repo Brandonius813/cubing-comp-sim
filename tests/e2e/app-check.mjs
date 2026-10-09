@@ -250,6 +250,8 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).click();
     for (let index = 0; index < 5; index++) {
       await phase(page, 'scramble', 180_000);
+      const expectedBounds = index === 4 ? ['11.00', '12.00'] : ['—', '—'];
+      assert.deepEqual(await page.locator('.possible-results > div > span:last-child').allTextContents(), expectedBounds, 'BPA/WPA should appear only after four attempts.');
       if (index === 0) await screenshots(page, 'scramble', artifacts);
       await page.getByRole('button', { name: 'Scramble is good', exact: true }).click();
       await phase(page, 'ready');

@@ -20,6 +20,10 @@ export const FONT_OPTIONS = [
 ] as const;
 export type FontFamily = typeof FONT_OPTIONS[number]['value'];
 export type Theme = 'dark' | 'light' | 'system';
+export const MAX_WAIT_SECONDS = 300;
+// Existing previews allowed up to ten minutes. Read those settings safely, then
+// cap them to the current five-minute limit without discarding other preferences.
+const LEGACY_MAX_WAIT_SECONDS = 600;
 export function isShortcutCode(value: unknown): value is string {
   return typeof value === 'string' && /^(Enter|Space|Key[A-Z]|Digit[0-9]|Numpad[0-9]|NumpadEnter|Arrow(Up|Down|Left|Right)|Backquote|Minus|Equal|BracketLeft|BracketRight|Backslash|Semicolon|Quote|Comma|Period|Slash)$/.test(value);
 }
@@ -61,7 +65,7 @@ export interface SolveDraft {
 
 export function validateSettings(value: Settings): Settings {
   if (!value || !isEventId(value.eventId) || !['timer', 'manual'].includes(value.inputMethod)
-    || !Number.isInteger(value.waitSeconds) || value.waitSeconds < 0 || value.waitSeconds > 600
+    || !Number.isInteger(value.waitSeconds) || value.waitSeconds < 0 || value.waitSeconds > LEGACY_MAX_WAIT_SECONDS
     || !Number.isInteger(value.holdMs) || value.holdMs < 0 || value.holdMs > 5_000
     || (value.goalMs !== null && !isValidTime(value.goalMs)) || !isLocale(value.language)
     || ['inspection', 'audioCallouts', 'ambience', 'showScorecard'].some(key => typeof value[key as keyof Settings] !== 'boolean')) {
@@ -78,7 +82,7 @@ export function validateSettings(value: Settings): Settings {
   const numberFont = value.numberFont === undefined ? DEFAULT_SETTINGS.numberFont : value.numberFont;
   const shortcuts = value.shortcuts === undefined ? DEFAULT_SETTINGS.shortcuts : value.shortcuts;
   if (typeof waitEnabled !== 'boolean' || !['fixed', 'random'].includes(waitMode)
-    || ![waitMinSeconds, waitMaxSeconds].every(seconds => Number.isInteger(seconds) && seconds >= 0 && seconds <= 600)
+    || ![waitMinSeconds, waitMaxSeconds].every(seconds => Number.isInteger(seconds) && seconds >= 0 && seconds <= LEGACY_MAX_WAIT_SECONDS)
     || waitMinSeconds > waitMaxSeconds || !['dark', 'light', 'system'].includes(theme)
     || !FONT_OPTIONS.some(font => font.value === textFont) || !FONT_OPTIONS.some(font => font.value === numberFont)
     || !shortcuts || !isShortcutCode(shortcuts.advance) || !isShortcutCode(shortcuts.submit)) {
@@ -86,10 +90,11 @@ export function validateSettings(value: Settings): Settings {
   }
   return {
     eventId: value.eventId, inputMethod: value.inputMethod, inspection: value.inspection,
-    waitSeconds: value.waitSeconds, holdMs: value.holdMs, goalMs: value.goalMs,
+    waitSeconds: Math.min(value.waitSeconds, MAX_WAIT_SECONDS), holdMs: value.holdMs, goalMs: value.goalMs,
     audioCallouts: value.audioCallouts, ambience: value.ambience,
     showScorecard: value.showScorecard, language: value.language,
-    waitEnabled, waitMode, waitMinSeconds, waitMaxSeconds, theme, textFont, numberFont,
+    waitEnabled, waitMode, waitMinSeconds: Math.min(waitMinSeconds, MAX_WAIT_SECONDS),
+    waitMaxSeconds: Math.min(waitMaxSeconds, MAX_WAIT_SECONDS), theme, textFont, numberFont,
     shortcuts: { advance: shortcuts.advance, submit: shortcuts.submit },
   };
 }

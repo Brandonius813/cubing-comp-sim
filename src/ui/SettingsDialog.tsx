@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { DEFAULT_SETTINGS, FONT_OPTIONS, isShortcutCode, type Settings } from '../storage';
+import { DEFAULT_SETTINGS, FONT_OPTIONS, MAX_WAIT_SECONDS, isShortcutCode, type Settings } from '../storage';
 import { registerOfflineSupport, type OfflineStatus } from '../platform/offline';
 import { Dialog, Select, Toggle } from './primitives';
-import { t } from './i18n';
+import { normalizeTimeInput, t } from './i18n';
 import { LOCALES } from '../locales';
 import { AudioSettings } from './AudioSettings';
 import { DEFAULT_AUDIO_PREFERENCES, saveAudioPreferences } from '../audio/preferences';
@@ -41,15 +41,38 @@ function ShortcutControl({ action, value, onChange }: { action: string; value: s
     onChange(event.code); setCapturing(false); setInvalid(false);
   }}>{capturing ? t('pressShortcut') : shortcutLabel(value)}</button>{invalid && <span className="error-text" role="status">{t('invalidShortcut')}</span>}</div>;
 }
+function waitTime(seconds: number) {
+  return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+}
+/** Keep partial edits local until blur/Enter, so typing 01:30 never saves 1 first. */
+function WaitTimeInput({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (seconds: number) => void }) {
+  const [draft, setDraft] = useState(() => waitTime(value));
+  const [invalid, setInvalid] = useState(false);
+  const focused = useRef(false);
+  const errorId = useId();
+  useEffect(() => { if (!focused.current) { setDraft(waitTime(value)); setInvalid(false); } }, [value]);
+  const commit = () => {
+    const text = normalizeTimeInput(draft.trim());
+    const parts = /^(\d{1,2}):([0-5]\d)$/.exec(text);
+    const seconds = parts ? Number(parts[1]) * 60 + Number(parts[2]) : /^\d{1,3}$/.test(text) ? Number(text) : NaN;
+    if (!Number.isInteger(seconds) || seconds < min || seconds > max) { setInvalid(true); return; }
+    setDraft(waitTime(seconds)); setInvalid(false);
+    if (seconds !== value) onChange(seconds);
+  };
+  return <label className="wait-time-field">{label}<input type="text" inputMode="text" autoComplete="off" spellCheck={false} aria-label={`${label} (MM:SS)`} aria-invalid={invalid} aria-describedby={invalid ? errorId : undefined} placeholder="MM:SS" value={draft} onFocus={() => { focused.current = true; }} onChange={event => { setDraft(event.target.value); setInvalid(false); }} onBlur={() => { focused.current = false; commit(); }} onKeyDown={event => {
+    if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); commit(); }
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setDraft(waitTime(value)); setInvalid(false); }
+  }} />{invalid && <span id={errorId} role="alert" className="error-text">{t('waitTimeInvalid', { min: waitTime(min), max: waitTime(max) })}</span>}</label>;
+}
 function WaitRange({ settings, update }: { settings: Settings; update: (patch: Partial<Settings>) => void }) {
   const rangeId = useId();
   return <div className="wait-range" aria-describedby={rangeId}>
     <div className="wait-range-slider">
-      <div className="wait-range-track"><span style={{ left: `${settings.waitMinSeconds / 6}%`, right: `${100 - settings.waitMaxSeconds / 6}%` }} /></div>
-      <input type="range" aria-label={t('minimumWait')} aria-valuemax={settings.waitMaxSeconds} aria-valuetext={t('secondsValue', { value: settings.waitMinSeconds })} min="0" max="600" step="1" value={settings.waitMinSeconds} onChange={event => update({ waitMinSeconds: Math.min(Number(event.target.value), settings.waitMaxSeconds) })} />
-      <input type="range" aria-label={t('maximumWait')} aria-valuemin={settings.waitMinSeconds} aria-valuetext={t('secondsValue', { value: settings.waitMaxSeconds })} min="0" max="600" step="1" value={settings.waitMaxSeconds} onChange={event => update({ waitMaxSeconds: Math.max(Number(event.target.value), settings.waitMinSeconds) })} />
+      <div className="wait-range-track"><span style={{ left: `${settings.waitMinSeconds / MAX_WAIT_SECONDS * 100}%`, right: `${100 - settings.waitMaxSeconds / MAX_WAIT_SECONDS * 100}%` }} /></div>
+      <input type="range" aria-label={t('minimumWait')} aria-valuemax={settings.waitMaxSeconds} aria-valuetext={t('secondsValue', { value: settings.waitMinSeconds })} min="0" max={MAX_WAIT_SECONDS} step="1" value={settings.waitMinSeconds} onChange={event => update({ waitMinSeconds: Math.min(Number(event.target.value), settings.waitMaxSeconds) })} />
+      <input type="range" aria-label={t('maximumWait')} aria-valuemin={settings.waitMinSeconds} aria-valuetext={t('secondsValue', { value: settings.waitMaxSeconds })} min="0" max={MAX_WAIT_SECONDS} step="1" value={settings.waitMaxSeconds} onChange={event => update({ waitMaxSeconds: Math.max(Number(event.target.value), settings.waitMinSeconds) })} />
     </div>
-    <div className="wait-range-inputs">{(['waitMinSeconds', 'waitMaxSeconds'] as const).map((key, index) => <label key={key}>{t(index === 0 ? 'minimumWait' : 'maximumWait')}<div className="number-unit"><input type="number" aria-label={`${t(index === 0 ? 'minimumWait' : 'maximumWait')} (s)`} min={index === 0 ? 0 : settings.waitMinSeconds} max={index === 0 ? settings.waitMaxSeconds : 600} step="1" value={settings[key]} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value >= 0 && value <= 600) update(index === 0 ? { waitMinSeconds: Math.min(value, settings.waitMaxSeconds) } : { waitMaxSeconds: Math.max(value, settings.waitMinSeconds) }); }} /><span>s</span></div></label>)}</div>
+    <div className="wait-range-inputs"><WaitTimeInput label={t('minimumWait')} value={settings.waitMinSeconds} min={0} max={settings.waitMaxSeconds} onChange={waitMinSeconds => update({ waitMinSeconds })} /><WaitTimeInput label={t('maximumWait')} value={settings.waitMaxSeconds} min={settings.waitMinSeconds} max={MAX_WAIT_SECONDS} onChange={waitMaxSeconds => update({ waitMaxSeconds })} /></div>
     <p id={rangeId}>{t('waitRangeHint')}</p>
   </div>;
 }
@@ -100,7 +123,7 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
     {tab === 'simulation' && <>
       <Row label={t('wait')}><Toggle label={t('wait')} checked={settings.waitEnabled} onChange={value => update({ waitEnabled: value, ...(value && settings.waitMode === 'fixed' && settings.waitSeconds === 0 ? { waitSeconds: 30 } : {}) })} /></Row>
       {settings.waitEnabled && <><Row label={t('waitDuration')}><SegmentedControl label={t('waitDuration')} value={settings.waitMode} options={[{ value: 'fixed', label: t('fixedDuration') }, { value: 'random', label: t('randomDuration') }]} onChange={waitMode => update({ waitMode })} /></Row>
-      {settings.waitMode === 'fixed' ? <Row label={t('fixedDuration')}><div className="number-unit"><input aria-label={t('waitDuration')} type="number" min="0" max="600" step="1" value={settings.waitSeconds} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value >= 0 && value <= 600) update({ waitSeconds: value }); }} /><span>s</span></div></Row> : <Row label={t('waitRange')}><WaitRange settings={settings} update={update} /></Row>}</>}
+      {settings.waitMode === 'fixed' ? <Row label={t('fixedDuration')}><div className="number-unit"><input aria-label={t('waitDuration')} type="number" min="0" max={MAX_WAIT_SECONDS} step="1" value={settings.waitSeconds} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value >= 0 && value <= MAX_WAIT_SECONDS) update({ waitSeconds: value }); }} /><span>s</span></div></Row> : <Row label={t('waitRange')}><WaitRange settings={settings} update={update} /></Row>}</>}
       <Row label={t('inspection')}><Toggle label={t('inspection')} checked={settings.inspection} onChange={value => update({ inspection: value })} /></Row>
       <Row label={t('input')}><Select label={t('input')} value={settings.inputMethod} options={[{ value: 'timer', label: t('keyboard') }, { value: 'manual', label: t('manual') }]} onChange={inputMethod => update({ inputMethod: inputMethod as Settings['inputMethod'] })} /></Row>
       <Row label={t('holdDuration')}><div className="number-unit"><input aria-label={t('holdDuration')} type="number" min="0" max="5" step="0.05" value={settings.holdMs / 1000} onChange={event => { const value = Math.round(Number(event.target.value) * 1000); if (value >= 0 && value <= 5000) update({ holdMs: value }); }} /><span>s</span></div></Row>
