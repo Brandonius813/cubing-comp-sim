@@ -193,7 +193,7 @@ export const it = {
   "voiceLanguage": "Lingua della voce",
   "followLanguage": "Usa la lingua dell’app",
   "testVoice": "Prova la voce",
-  "voiceUnavailable": "Non è installata una voce offline per questa lingua. L’ispezione userà segnali acustici.",
+  "voiceUnavailable": "Non è installata una voce offline per questa lingua. Installa una voce sul dispositivo per ascoltare gli avvisi durante l’ispezione.",
   "voiceDeviceHint": "Usa una voce installata sul dispositivo. Disponibilità e pronuncia variano in base al dispositivo.",
   "inspectionVolume": "Volume dell’ispezione",
   "ambience": "Suoni di sottofondo",

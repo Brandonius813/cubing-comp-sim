@@ -193,7 +193,7 @@ export const nl = {
   "voiceLanguage": "Taal van de stem",
   "followLanguage": "Taal van de app gebruiken",
   "testVoice": "Stem testen",
-  "voiceUnavailable": "Er is geen offline stem voor deze taal geïnstalleerd. De inspectie gebruikt pieptonen.",
+  "voiceUnavailable": "Er is geen offline stem voor deze taal geïnstalleerd. Installeer een stem op je apparaat om de meldingen tijdens de inspectie te horen.",
   "voiceDeviceHint": "Gebruikt een stem die op het apparaat is geïnstalleerd. Beschikbaarheid en uitspraak verschillen per apparaat.",
   "inspectionVolume": "Inspectievolume",
   "ambience": "Achtergrondgeluid",

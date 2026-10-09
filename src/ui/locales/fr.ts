@@ -193,7 +193,7 @@ export const fr = {
   "voiceLanguage": "Langue de la voix",
   "followLanguage": "Langue de l’application",
   "testVoice": "Tester la voix",
-  "voiceUnavailable": "Aucune voix hors ligne n’est installée pour cette langue. L’inspection utilisera des bips.",
+  "voiceUnavailable": "Aucune voix hors ligne n’est installée pour cette langue. Installez une voix sur votre appareil pour entendre les annonces pendant l’inspection.",
   "voiceDeviceHint": "Utilise une voix installée sur l’appareil. La disponibilité et la prononciation varient selon l’appareil.",
   "inspectionVolume": "Volume de l’inspection",
   "ambience": "Ambiance sonore",

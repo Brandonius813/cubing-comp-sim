@@ -193,7 +193,7 @@ export const de = {
   "voiceLanguage": "Sprache der Stimme",
   "followLanguage": "Sprache der App verwenden",
   "testVoice": "Stimme testen",
-  "voiceUnavailable": "Für diese Sprache ist keine Offline-Stimme installiert. Die Inspektion verwendet Signaltöne.",
+  "voiceUnavailable": "Für diese Sprache ist keine Offline-Stimme installiert. Installiere eine Stimme auf deinem Gerät, um die Ansagen während der Inspektion zu hören.",
   "voiceDeviceHint": "Verwendet eine installierte Gerätestimme. Verfügbarkeit und Aussprache variieren je nach Gerät.",
   "inspectionVolume": "Lautstärke der Inspektion",
   "ambience": "Hintergrundgeräusche",

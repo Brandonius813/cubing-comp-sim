@@ -19,17 +19,20 @@ try {
     ...(process.env.CCS_BROWSER_CHANNEL ? { channel: process.env.CCS_BROWSER_CHANNEL } : {}),
     ...(process.env.CCS_BROWSER_EXECUTABLE ? { executablePath: process.env.CCS_BROWSER_EXECUTABLE } : {}),
   });
+  if (!process.argv.includes('--feedback-only')) {
   dev = await createServer({ root, server: { host: '127.0.0.1', port: 0, strictPort: false } });
   await dev.listen();
   const devAddress = dev.httpServer.address();
   console.log(`[${browserName}] ${await checkBrowserStorage(browser, `http://127.0.0.1:${devAddress.port}`)}`);
   await dev.close();
   dev = undefined;
+  }
 
   if (!process.argv.includes('--storage-only')) {
     // The production build is intentional: development does not install a service worker.
     // Build the real engine and run npm run build before this acceptance command.
     const { checkDesktopApp } = await import('../tests/e2e/app-check.mjs');
+    const { checkFeedbackApp } = await import('../tests/e2e/feedback-check.mjs');
     production = await preview({
       root,
       preview: { host: '127.0.0.1', port: 0, strictPort: false },
@@ -48,10 +51,11 @@ try {
       }],
     });
     const address = production.httpServer.address();
-    console.log(`[${browserName}] ${await checkDesktopApp(browser, `http://127.0.0.1:${address.port}`, {
+    if (!process.argv.includes('--feedback-only')) console.log(`[${browserName}] ${await checkDesktopApp(browser, `http://127.0.0.1:${address.port}`, {
       browserName,
       setConnectionAvailable: available => { connectionAvailable = available; },
     })}`);
+    console.log(`[${browserName}] ${await checkFeedbackApp(browser, `http://127.0.0.1:${address.port}`, { browserName })}`);
   }
 } finally {
   await browser?.close();

@@ -1,0 +1,50 @@
+/* Settings controls share the app fonts and colors in every theme. */
+.settings-dialog[open]{display:flex;flex-direction:column}
+.settings-dialog .dialog-header{height:auto;min-height:116px;align-items:flex-start;gap:24px;padding-bottom:20px}
+.settings-dialog .dialog-body{height:auto;flex:1;min-height:0}
+.settings-connection{flex:1;max-width:540px;margin-left:auto;font-size:12px;line-height:18px}
+.settings-connection>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:24px}
+.settings-connection .text-button{font-size:12px;min-height:24px}
+.settings-connection p{color:var(--secondary);margin-top:4px}
+.settings-dialog .setting-row{padding:8px 0;gap:20px}
+.settings-dialog .setting-control{flex-shrink:0;max-width:65%}
+.settings-dialog .setting-control .app-select{min-width:200px}
+.settings-hint{font-size:13px;line-height:21px;color:var(--secondary);max-width:720px;margin:12px 0 20px}
+.setting-segments{display:flex;gap:3px;max-width:100%;padding:3px;border:1px solid var(--border);border-radius:8px;background:var(--app)}
+.setting-segments button{font-size:13px;line-height:18px;min-height:36px;padding:8px 14px;background:transparent;border-radius:5px}
+.setting-segments button[aria-checked=true]{background:var(--raised);box-shadow:0 1px 3px #0002}
+.wait-range{width:320px;max-width:100%}
+.wait-range-slider{position:relative;height:40px;margin-bottom:8px}
+.wait-range-track{position:absolute;left:10px;right:10px;top:18px;height:4px;border-radius:4px;background:var(--border)}
+.wait-range-track>span{position:absolute;inset-block:0;background:var(--accent);border-radius:4px}
+.settings-dialog .wait-range-slider input[type=range]{position:absolute;inset:0;width:100%;max-width:100%;height:40px;margin:0;padding:0;appearance:none;-webkit-appearance:none;background:transparent;border:none;pointer-events:none;outline:none}
+.wait-range-slider input[type=range]::-webkit-slider-runnable-track{height:4px;background:transparent}
+.wait-range-slider input[type=range]::-moz-range-track{height:4px;background:transparent}
+.wait-range-slider input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;pointer-events:auto;width:20px;height:20px;border:2px solid var(--accent);border-radius:50%;background:var(--surface);margin-top:-8px;cursor:ew-resize;box-shadow:0 1px 4px #0003}
+.wait-range-slider input[type=range]::-moz-range-thumb{pointer-events:auto;width:16px;height:16px;border:2px solid var(--accent);border-radius:50%;background:var(--surface);cursor:ew-resize;box-shadow:0 1px 4px #0003}
+.wait-range-slider input[type=range]:focus-visible::-webkit-slider-thumb{outline:2px solid var(--accent);outline-offset:4px}
+.wait-range-slider input[type=range]:focus-visible::-moz-range-thumb{outline:2px solid var(--accent);outline-offset:4px}
+.wait-range-inputs{display:flex;justify-content:space-between;gap:16px}
+.wait-range-inputs>label{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--secondary)}
+.wait-range p{font-size:12px;line-height:18px;color:var(--secondary);margin-top:10px}
+.font-preview{margin-top:20px;padding:18px;border:1px solid var(--border);border-radius:8px;background:var(--app)}
+.font-preview p{font-family:var(--font-text);font-size:17px;line-height:28px}
+.font-preview>div{font-family:var(--font-numbers);font-variant-numeric:tabular-nums;font-size:28px;line-height:40px;margin-top:8px}
+.shortcut-key{background:var(--raised);border:1px solid var(--border);border-radius:8px;min-width:100px;min-height:48px;padding:10px 16px}
+.shortcut-key.capturing{border-color:var(--accent);color:var(--accent)}
+.shortcut-capture{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.shortcut-capture>span{max-width:260px;font-size:12px;line-height:18px}
+.settings-reset{margin-top:24px}
+.settings-dialog .number-unit input{font-family:var(--font-numbers);font-variant-numeric:tabular-nums}
+@media(max-width:700px){
+  .settings-dialog .dialog-header{position:relative;flex-wrap:wrap;gap:12px;min-height:150px;padding:20px}
+  .settings-dialog .dialog-header>h1{flex:1;order:0}
+  .settings-dialog .dialog-header>.icon-button{order:1}
+  .settings-connection{order:2;flex-basis:100%;max-width:none;margin:0}
+  .settings-dialog .setting-row{align-items:flex-start;flex-wrap:wrap;gap:12px;padding:14px 0}
+  .settings-dialog .setting-control{max-width:100%;margin-left:auto}
+  .settings-dialog .setting-control .app-select{min-width:180px;max-width:100%}
+  .settings-dialog .shortcut-settings .setting-row{min-height:80px}
+  .setting-segments button{padding:8px 10px}
+  .wait-range{width:min(320px,calc(100vw - 76px))}
+}

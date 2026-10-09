@@ -2,7 +2,6 @@ import { isLocale, type Locale } from '../locales';
 
 export interface AudioPreferences {
   version: 1;
-  voiceMode: 'beeps' | 'device';
   voiceLanguage: Locale | 'follow';
   inspectionVolume: number;
   ambienceTrack: string | null;
@@ -10,7 +9,7 @@ export interface AudioPreferences {
 }
 export const AUDIO_PREFERENCES_KEY = 'cubing-comp-sim:audio:v1';
 export const DEFAULT_AUDIO_PREFERENCES: AudioPreferences = {
-  version: 1, voiceMode: 'beeps', voiceLanguage: 'follow',
+  version: 1, voiceLanguage: 'follow',
   inspectionVolume: 0.8, ambienceTrack: null, ambienceVolume: 0.25,
 };
 const volume = (value: unknown, fallback: number) =>
@@ -20,7 +19,6 @@ export function validateAudioPreferences(value: unknown): AudioPreferences {
   const v = value as Record<string, unknown>;
   return {
     version: 1,
-    voiceMode: v.voiceMode === 'device' ? 'device' : 'beeps',
     voiceLanguage: v.voiceLanguage === 'follow' || isLocale(v.voiceLanguage) ? v.voiceLanguage : 'follow',
     inspectionVolume: volume(v.inspectionVolume, DEFAULT_AUDIO_PREFERENCES.inspectionVolume),
     ambienceTrack: typeof v.ambienceTrack === 'string' && /^[a-z0-9][a-z0-9-]{0,63}$/.test(v.ambienceTrack) ? v.ambienceTrack : null,

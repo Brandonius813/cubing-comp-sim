@@ -1,0 +1,33 @@
+.dialog.statistics-dialog{width:min(1200px,calc(100vw - 48px))}
+.statistics-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:24px}
+.statistics-layout{display:grid;grid-template-columns:minmax(0,1fr) 284px;gap:32px;align-items:start}
+.statistics-history{min-width:0}
+.statistics-summary{display:flex;flex-wrap:wrap;gap:24px 40px;margin:0 0 28px}
+.statistics-summary>div{min-width:90px}
+.statistics-summary dt,.round-mean-values dt{font-size:12px;line-height:18px;color:var(--secondary)}
+.statistics-summary dd{font:30px/40px var(--mono);margin:8px 0 0;font-variant-numeric:tabular-nums}
+.statistics-empty{padding:56px 16px;color:var(--secondary);text-align:center;font-size:14px;line-height:22px}
+.statistics-round{border-top:1px solid var(--border);padding:22px 0}
+.statistics-round-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.statistics-round-heading time{display:block;margin-top:4px;font-size:12px;line-height:18px;color:var(--secondary)}
+.statistics-round-result{text-align:right;flex:none}
+.statistics-round-result>span{font-size:12px;color:var(--secondary)}
+.statistics-round-result strong{display:block;font:22px/30px var(--mono);margin-top:2px;font-variant-numeric:tabular-nums}
+.statistics-attempts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.statistics-attempts button{font:16px/24px var(--mono);padding:8px 12px;gap:12px;font-variant-numeric:tabular-nums}
+.statistics-attempts button>span{color:var(--secondary);font-size:11px}
+.statistics-pagination{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:16px 0}
+.statistics-page-number{font:14px/20px var(--mono)}
+.round-means-panel{border:1px solid var(--border);border-radius:12px;background:var(--app);padding:20px;min-width:0}
+.round-means-panel h2{font-size:16px;line-height:24px}
+.round-means-description,.round-means-empty,.round-means-footnote,.round-mean-progress{font-size:12px;line-height:19px;color:var(--secondary)}
+.round-means-description{margin-top:8px}
+.round-means-empty{padding:24px 0}
+.round-mean-event{margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+.round-mean-event h3{font-size:14px;line-height:21px;font-weight:500;margin:0 0 12px}
+.round-mean-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:0}
+.round-mean-values dd{font:24px/34px var(--mono);margin:4px 0 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.round-mean-progress{margin-top:12px}
+.round-means-footnote{border-top:1px solid var(--border);padding-top:16px;margin-top:20px}
+@media(max-width:850px){.statistics-layout{grid-template-columns:minmax(0,1fr) 240px;gap:20px}.statistics-summary{gap:16px 24px}.statistics-summary dd{font-size:26px}.round-means-panel{padding:16px}.round-mean-values dd{font-size:21px}}
+@media(max-width:650px){.dialog.statistics-dialog{width:calc(100vw - 24px)}.statistics-layout{grid-template-columns:minmax(0,1fr)}.statistics-toolbar{flex-wrap:wrap;align-items:stretch}.statistics-toolbar>button{margin-left:auto}.statistics-summary{justify-content:space-between;gap:12px}.statistics-summary>div{min-width:0}.statistics-summary dd{font-size:24px}.round-means-panel{grid-row:1}.round-mean-values{grid-template-columns:repeat(2,minmax(0,1fr))}.round-means-footnote{margin-top:16px}.statistics-attempts button{font-size:15px}}

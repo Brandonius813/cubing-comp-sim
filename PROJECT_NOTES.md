@@ -188,3 +188,20 @@ The owner requested many more interface languages, inspection voices for those l
 - Added explicit streamed-ambience controls and a validated catalog. No background recordings are falsely listed as shipped. Plan 5–10 minute reviewed competition-room loops, excluded from the web app's essential offline download; optional native downloads later.
 - Recommend guest preview before backend provisioning. Domain registration remains at Namecheap. Cloudflare Pages Direct Upload from the existing verified GitHub Actions build avoids introducing a second Java/Maven build environment.
 - Record account roles, staging isolation, DNS/email setup and preview instructions in docs/preview-and-environments.md. No new provider account, paid service, secret, DNS change or public deployment was created by this follow-up.
+
+## Preview feedback pass (October 9, 2026)
+
+Brandon authorized this feedback pass, parallel implementation, and a GitHub branch/PR. Do not merge or deploy it yet; preview infrastructure is being prepared separately.
+
+- Keep the same scorecard visible throughout the CompSim. Enlarge scramble drawings on large screens and move the solve counter nearer the event selector. Keep edit/confirmation dialogs compact and centered.
+- Show whole inspection seconds. Show red while holding Space, with a release cue after arming. New settings default to a 550ms hold; preserve explicitly saved hold values.
+- Space and Enter always advance/submit through non-timing phases, including manual entry. Space alone holds to start timing, and any key stops. Additional advance/submit bindings are editable; the two built-in keys remain available.
+- Waits can use fixed seconds or a random inclusive whole-second range. Sample once per solve and make Ready available when the wait finishes.
+- Offer Dark/Light/System, independent text and number font choices with offline/device language fallbacks, and consistently anchored dropdowns. Keep scorecard visibility on the card itself.
+- Connection status belongs in the Settings header. Optional product metrics and diagnostic consent belong in one Privacy tab. Inspection uses installed device voices; voice language and test volume remain, without a beep mode or fallback.
+- Statistics replaces the History screen label, retains export, and removes the import action from that screen. Mean of 3 rounds uses completed round results in completion order for each event separately. Current uses the last three; Best uses the fastest consecutive window; a DNF round invalidates its window. It is a practice statistic.
+- Confirm event changes during an unfinished CompSim. Cancel, close, Escape, and backdrop dismissal preserve the current simulation. Recorded times remain saved when changing events.
+- Help has three topic tabs and embedded-video slots. Video URLs and final creator content remain to be provided. New labels/help text fall back to English until translated copy is reviewed.
+- Authentication forms remain dependent on backend configuration. This pass does not provision accounts or deploy infrastructure.
+
+Validation and remaining limitations are tracked in the feedback pull request. Browser regressions cover the requested flows, layouts, settings persistence, and manual-draft preservation during historical edits.

@@ -1,0 +1,126 @@
+/* Keep row actions scoped: they must not inherit the full-width time button. */
+.scorecard-wrap .scorecard {
+  height: auto;
+  min-height: 552px;
+}
+
+.scorecard-wrap .scorecard.three-solves {
+  min-height: 440px;
+}
+
+.scorecard-results .scorecard-result {
+  position: relative;
+  height: auto;
+  min-height: 52px;
+}
+
+.scorecard-results .scorecard-time {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  height: auto;
+  min-height: 52px;
+  padding: 8px 12px;
+}
+
+.scorecard-results .scorecard-time > span,
+.scorecard-results .scorecard-time > small {
+  white-space: nowrap;
+}
+
+.scorecard-results .scorecard-penalties {
+  position: absolute;
+  z-index: 2;
+  right: 100%;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms;
+}
+
+/* The padded parent bridges the gap, so moving left does not lose hover. */
+.scorecard-results .scorecard-result:hover .scorecard-penalties,
+.scorecard-results .scorecard-result:focus-within .scorecard-penalties {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scorecard-results .scorecard-penalty-controls {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 4px 16px #0002;
+}
+
+.scorecard-results .scorecard-penalty-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  height: 36px;
+  min-width: 40px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--secondary);
+  font: 12px/16px var(--mono);
+}
+
+.scorecard-results .scorecard-penalty-button[aria-pressed='true'] {
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.scorecard-results .scorecard-penalty-button[aria-pressed='true']:not(:disabled):hover {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--text);
+}
+
+.scorecard-results .scorecard-penalty-button:disabled {
+  opacity: .4;
+}
+
+.scorecard-results .scorecard-penalty-button:focus-visible {
+  outline-offset: 1px;
+}
+
+/* Touch users need visible actions; small screens keep them within the card. */
+@media (hover: none), (pointer: coarse), (max-width: 700px) {
+  .scorecard-results .scorecard-result {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 4px 8px;
+    height: auto;
+    min-height: 52px;
+  }
+
+  .scorecard-results .scorecard-penalties {
+    position: static;
+    grid-column: 2;
+    padding: 0 0 4px;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .scorecard-results .scorecard-penalty-controls {
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .scorecard-results .scorecard-penalty-button {
+    height: 44px;
+    min-width: 44px;
+    border-color: var(--border);
+  }
+}

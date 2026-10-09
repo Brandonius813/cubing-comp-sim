@@ -1,7 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import type { EventId } from '../core';
 import { isLocale, type Locale } from '../locales';
-import type { MessageKey } from './locales/en';
+import type { MessageKey as BaseMessageKey } from './locales/en';
+import { feedbackEn } from './locales/feedback-en';
+import { workflowEn } from './locales/workflow-en';
+type MessageKey = BaseMessageKey | keyof typeof feedbackEn | keyof typeof workflowEn;
 import { en, enEvents, enInspection } from './locales/en';
 import { es, esEvents, esInspection } from './locales/es';
 import { fr, frEvents, frInspection } from './locales/fr';
@@ -22,7 +25,7 @@ import { id, idEvents, idInspection } from './locales/id';
 export type { Locale, MessageKey };
 let locale: Locale = 'en';
 const listeners = new Set<() => void>();
-export const catalogs: Record<Locale, Record<MessageKey, string>> = {
+export const catalogs: Record<Locale, Record<BaseMessageKey, string>> = {
   'en': en,
   'es': es,
   'fr': fr,
@@ -87,7 +90,9 @@ export function useLocale() {
   return useSyncExternalStore(listener => { listeners.add(listener); return () => listeners.delete(listener); }, () => locale, () => 'en' as Locale);
 }
 export function t(key: MessageKey, values: Record<string, string | number> = {}): string {
-  return catalogs[locale][key].replace(/\{(\w+)\}/g, (token, name: string) => name in values ? String(values[name]) : token);
+  const message = (catalogs[locale] as Partial<Record<MessageKey, string>>)[key]
+    ?? ({ ...feedbackEn, ...workflowEn } as Partial<Record<MessageKey, string>>)[key] ?? key;
+  return message.replace(/\{(\w+)\}/g, (token, name: string) => name in values ? String(values[name]) : token);
 }
 export const localizedDate = (date: string | number) => new Date(date).toLocaleString(locale);
 export const localizedEventName = (eventId: EventId) => names[locale][eventId];

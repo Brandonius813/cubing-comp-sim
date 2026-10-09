@@ -193,7 +193,7 @@ export const es = {
   "voiceLanguage": "Idioma de la voz",
   "followLanguage": "Usar idioma de la app",
   "testVoice": "Probar voz",
-  "voiceUnavailable": "No hay una voz sin conexión instalada para este idioma. La inspección usará pitidos.",
+  "voiceUnavailable": "No hay una voz sin conexión instalada para este idioma. Instala una voz en tu dispositivo para escuchar los avisos durante la inspección.",
   "voiceDeviceHint": "Usa una voz instalada en el dispositivo. La disponibilidad y la pronunciación varían según el dispositivo.",
   "inspectionVolume": "Volumen de inspección",
   "ambience": "Sonido de fondo",
