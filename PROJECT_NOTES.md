@@ -219,3 +219,9 @@ This follow-up supersedes the earlier decision to retain unfinished rounds after
 - Do not calculate or display Ao5 best/worst possible results before the fourth recorded attempt. Mo3 uses the corresponding point after the second attempt. Completed scorecards retain the bounds from before the final attempt.
 
 Changes are prepared on a separate branch for GitHub review. This task does not merge or deploy them.
+
+## API container download reliability (October 9, 2026)
+
+Cloud API checks repeatedly stopped before checkout because Docker Hub rate-limited the shared runner's unauthenticated `postgres:16` download. Retrying the job did not clear the limit. Use Docker Official Images published on Amazon ECR Public for the PostgreSQL test service and both Node 24 Alpine API build stages. This keeps the selected major versions and requires no registry credentials or AWS account. No API behavior, database health checks, or tests are removed.
+
+References: [Docker Official Images on ECR Public](https://aws.amazon.com/blogs/containers/docker-official-images-now-available-on-amazon-elastic-container-registry-public/), [public pulls require no authentication](https://docs.aws.amazon.com/AmazonECR/latest/public/public-gallery.html). This repair is prepared separately from merged PR #5; verification results belong in its pull request.

@@ -12,7 +12,8 @@ jobs:
     timeout-minutes: 10
     services:
       postgres:
-        image: postgres:16
+        # Docker Official Images on ECR Public avoid Docker Hub's shared-IP pull limit.
+        image: public.ecr.aws/docker/library/postgres:16
         env:
           POSTGRES_USER: ccs_test
           POSTGRES_PASSWORD: ci-only-password
