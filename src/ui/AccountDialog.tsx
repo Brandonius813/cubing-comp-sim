@@ -101,7 +101,7 @@ export function AccountDialog({ session, recovery, onClose, onExport, onReplace,
   };
 
   return <Dialog title={t('accountTitle')} onClose={() => { if (!busy) onClose(); }} className="account-dialog">
-    {!cloudConfigured && <p className="notice">{t('cloudUnavailable')}</p>}
+    {!cloudConfigured && <p className="notice">{t(auth.configured ? 'cloudNotConfigured' : 'cloudUnavailable')}</p>}
     {error && <p role="alert" className="error-text">{error}</p>}
     {message && <p role="status" className="positive-text">{t(message)}</p>}
     {deletedResult ? <div className="account-form">

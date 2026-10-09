@@ -6,6 +6,7 @@ import { inspectionPhrase, t } from './i18n';
 import { InspectionAudio, takeInspectionCue } from '../audio/inspection';
 import { getAudioPreferences } from '../audio/preferences';
 import { telemetry } from '../telemetry';
+import { sampleWaitMs, simulatorKeyAction } from './simulatorInput';
 
 export type Phase = 'home' | 'loading' | 'scramble' | 'waiting' | 'ready' | 'inspection' | 'solving' | 'entry' | 'confirm' | 'complete' | 'engine-error';
 const initial: LocalState = { revision: 0, rounds: [], activeRoundId: null, settings: { ...DEFAULT_SETTINGS }, draft: null };
@@ -35,6 +36,8 @@ export function useSimulator(blockKeyboard: boolean) {
   const ownMutation = useRef(false);
   const started = useRef(0);
   const inspectionMs = useRef<number | undefined>(undefined);
+  const waitDuration = useRef(0);
+  const pressedKeys = useRef(new Set<string>());
   const holdStart = useRef<number | null>(null);
   const heldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const callouts = useRef(new Set<number>());
@@ -78,9 +81,7 @@ export function useSimulator(blockKeyboard: boolean) {
   useEffect(() => { if (blockKeyboard) cancelHold(); }, [blockKeyboard, cancelHold]);
   useEffect(() => () => { engine.current?.dispose(); cancelHold(); audio.current?.dispose(); audio.current = null; }, [cancelHold]);
 
-  useEffect(() => { if (!state.settings.audioCallouts) audio.current?.cancel(); }, [state.settings.audioCallouts]);
   const prepareAudio = () => {
-    if (!current.current.settings.audioCallouts) return;
     try { audio.current ??= new InspectionAudio(); void audio.current.prepare(); } catch { /* Sound must not gate timing. */ }
   };
   const saveDraft = (stage: 'scramble' | 'waiting' | 'ready' | 'inspection' | 'solving') => {
@@ -89,13 +90,14 @@ export function useSimulator(blockKeyboard: boolean) {
   };
   const generate = async (round: Round) => {
     const request = ++generation.current; setPhase('loading'); setError(null); setNotice(null);
-    setAutomaticPenalty('none');
+    cancelHold(); setAutomaticPenalty('none'); inspectionMs.current = undefined;
     try {
       engine.current ??= createScrambleService();
       const generated = await engine.current.generate(round.eventId);
       if (request !== generation.current) return;
       const value: Scramble = { ...generated, eventId: round.eventId };
       await mutate(s => browserStore.saveDraft({ roundId: round.id, scramble: value, stage: 'scramble', savedAt: Date.now() }, s.revision));
+      if (request !== generation.current) return;
       setScramble(value); scrambleRef.current = value; setPhase('scramble');
     } catch (cause) {
       if (request !== generation.current) return;
@@ -126,13 +128,13 @@ export function useSimulator(blockKeyboard: boolean) {
     else { setPhase('solving'); saveDraft('solving'); }
   };
   const primary = () => {
-    if (saving || blockKeyboard) return;
+    if (blockKeyboard || !loaded) return;
     if (phaseRef.current === 'home' || phaseRef.current === 'complete' || phaseRef.current === 'engine-error') { void start(); return; }
     if (phaseRef.current === 'scramble') {
-      const wait = current.current.settings.waitSeconds;
-      setElapsed(wait * 1000); started.current = performance.now(); setPhase(wait > 0 ? 'waiting' : 'ready'); saveDraft(wait > 0 ? 'waiting' : 'ready'); return;
+      const wait = sampleWaitMs(current.current.settings);
+      waitDuration.current = wait;
+      setElapsed(wait); started.current = performance.now(); setPhase(wait > 0 ? 'waiting' : 'ready'); saveDraft(wait > 0 ? 'waiting' : 'ready'); return;
     }
-    if (phaseRef.current === 'waiting') { setPhase('ready'); saveDraft('ready'); return; }
     if (phaseRef.current === 'ready') {
       const round = getRound();
       if (current.current.settings.inspection && round && getEvent(round.eventId).inspection) beginInspection();
@@ -165,7 +167,7 @@ export function useSimulator(blockKeyboard: boolean) {
     void record(value, interrupted ? 'DNF' : 'none', 'timer');
   };
   const advance = async () => {
-    const round = getRound(); if (!round || saving) return;
+    const round = getRound(); if (!round || saving || recordBusy.current || phaseRef.current === 'loading') return;
     const attempt = lastAttemptRef.current;
     if (attempt && !round.attempts.some(item => item.id === attempt.id)) {
       try { await mutate(s => browserStore.saveRound(addAttempt(round, attempt), s.revision)); } catch { return; }
@@ -181,17 +183,17 @@ export function useSimulator(blockKeyboard: boolean) {
     const tick = () => {
       const ms = performance.now() - started.current;
       if (phaseRef.current === 'waiting') {
-        const remaining = Math.max(0, current.current.settings.waitSeconds * 1000 - ms); setElapsed(remaining);
+        const remaining = Math.max(0, waitDuration.current - ms); setElapsed(remaining);
         if (remaining === 0) { setPhase('ready'); saveDraft('ready'); return; }
       } else {
         setElapsed(ms);
         if (phaseRef.current === 'inspection') {
           const cue = takeInspectionCue(ms, callouts.current);
-          if (cue !== null && current.current.settings.audioCallouts && !document.hidden) {
+          if (cue !== null && !document.hidden) {
             const preferences = getAudioPreferences();
             const language = preferences.voiceLanguage === 'follow' ? current.current.settings.language : preferences.voiceLanguage;
             audio.current?.cue(language, inspectionPhrase(language, cue), preferences,
-              () => phaseRef.current === 'inspection' && current.current.settings.audioCallouts && !document.hidden);
+              () => phaseRef.current === 'inspection' && !document.hidden);
           }
         }
       }
@@ -204,30 +206,56 @@ export function useSimulator(blockKeyboard: boolean) {
 
   const actions = useRef({ primary, stop, beginSolve, advance }); actions.current = { primary, stop, beginSolve, advance };
   useEffect(() => {
-    const editable = (target: EventTarget | null) => target instanceof HTMLElement && Boolean(target.closest('input, textarea, select, [contenteditable="true"]'));
     const keyDown = (event: KeyboardEvent) => {
-      if (event.repeat || event.isComposing || editable(event.target) || blockKeyboard || !loaded) return;
+      if (event.isComposing || event.defaultPrevented || blockKeyboard || !loaded) return;
       const active = phaseRef.current;
-      if (active === 'solving') { event.preventDefault(); actions.current.stop(); return; }
+      if (active !== 'solving' && (event.ctrlKey || event.metaKey || event.altKey)) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const entryForm = active === 'entry' ? document.querySelector<HTMLFormElement>('form[data-solve-entry]') : null;
+      const entryInput = entryForm && target instanceof HTMLInputElement && entryForm.contains(target);
+      const builtIn = ['Space', 'Enter', 'NumpadEnter'].includes(event.code);
+      // Numeric solve entry accepts both advance keys. Other editable controls
+      // keep their normal typing and selection behavior, including extra shortcuts.
+      if (active !== 'solving' && target?.closest('input, textarea, select, [contenteditable="true"], [role="combobox"], [role="listbox"], [role="option"]')
+        && !(entryInput && builtIn)) return;
+      const control = target?.closest('button, a, [role="button"]');
+      if (active !== 'solving' && control && !control.matches('.flow-button, [data-simulator-action]')
+        && !(entryForm?.contains(control) && control.matches('button[type="submit"]'))) return;
       const round = getRound();
-      const canStart = round !== null && scrambleRef.current !== null && current.current.settings.inputMethod === 'timer' && (active === 'inspection' || (active === 'ready' && (!current.current.settings.inspection || !getEvent(round.eventId).inspection)));
-      if (event.code === 'Space' && canStart) {
-        event.preventDefault(); if (holdStart.current !== null) return;
+      const canStart = round !== null && scrambleRef.current !== null && current.current.settings.inputMethod === 'timer'
+        && (active === 'inspection' || (active === 'ready' && (!current.current.settings.inspection || !getEvent(round.eventId).inspection)));
+      const action = simulatorKeyAction(event.code, active, current.current.settings.inputMethod, canStart, current.current.settings.shortcuts);
+      // Prevent the native focused-button action and scrolling even on repeats.
+      if (action || builtIn && ['waiting', 'loading', 'inspection'].includes(active)) event.preventDefault();
+      if (event.repeat || pressedKeys.current.has(event.code)) return;
+      pressedKeys.current.add(event.code);
+      if (action === 'stop') { actions.current.stop(); return; }
+      if (action === 'hold') {
+        if (holdStart.current !== null) return;
         prepareAudio(); holdStart.current = performance.now(); setHolding(true);
-        heldTimer.current = setTimeout(() => setArmed(true), current.current.settings.holdMs); return;
+        heldTimer.current = setTimeout(() => {
+          if (holdStart.current !== null && ['inspection', 'ready'].includes(phaseRef.current)) setArmed(true);
+        }, current.current.settings.holdMs);
+        return;
       }
-      // The scramble is committed before ready/inspection. Stage-only draft writes
-      // are serialized, so they must not make a valid timer-start press disappear.
-      if (saving) return;
-      if ((event.code === 'Space' || event.code === 'Enter') && (['home', 'complete', 'scramble', 'waiting', 'ready', 'engine-error'].includes(active) || (active === 'inspection' && current.current.settings.inputMethod === 'manual'))) { event.preventDefault(); actions.current.primary(); }
-      else if (event.code === 'Enter' && active === 'confirm') { event.preventDefault(); void actions.current.advance(); }
+      if (action === 'primary') actions.current.primary();
+      else if (action === 'submit' && !saving && !recordBusy.current) {
+        if (active === 'entry') entryForm?.requestSubmit();
+        else void actions.current.advance();
+      }
     };
     const keyUp = (event: KeyboardEvent) => {
+      pressedKeys.current.delete(event.code);
       if (event.code !== 'Space' || holdStart.current === null) return;
-      event.preventDefault(); const enough = performance.now() - holdStart.current >= current.current.settings.holdMs;
-      if (!blockKeyboard && enough && ['inspection', 'ready'].includes(phaseRef.current)) actions.current.beginSolve(); else cancelHold();
+      event.preventDefault();
+      const enough = performance.now() - holdStart.current >= current.current.settings.holdMs;
+      if (!blockKeyboard && enough && ['inspection', 'ready'].includes(phaseRef.current)) actions.current.beginSolve();
+      else cancelHold();
     };
-    const blur = () => { audio.current?.cancel(); cancelHold(); if (phaseRef.current === 'solving') actions.current.stop(true); };
+    const blur = () => {
+      pressedKeys.current.clear(); audio.current?.cancel(); cancelHold();
+      if (phaseRef.current === 'solving') actions.current.stop(true);
+    };
     window.addEventListener('keydown', keyDown); window.addEventListener('keyup', keyUp); window.addEventListener('blur', blur);
     return () => { window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); window.removeEventListener('blur', blur); };
   }, [blockKeyboard, loaded, saving, cancelHold]);

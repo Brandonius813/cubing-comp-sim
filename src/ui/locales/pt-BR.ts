@@ -193,7 +193,7 @@ export const ptBR = {
   "voiceLanguage": "Idioma da voz",
   "followLanguage": "Usar idioma do aplicativo",
   "testVoice": "Testar voz",
-  "voiceUnavailable": "Não há uma voz offline instalada para este idioma. A inspeção usará bipes.",
+  "voiceUnavailable": "Não há uma voz offline instalada para este idioma. Instale uma voz no dispositivo para ouvir os avisos durante a inspeção.",
   "voiceDeviceHint": "Usa uma voz instalada no dispositivo. A disponibilidade e a pronúncia variam conforme o dispositivo.",
   "inspectionVolume": "Volume da inspeção",
   "ambience": "Som de fundo",

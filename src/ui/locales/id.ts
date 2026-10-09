@@ -193,7 +193,7 @@ export const id = {
   "voiceLanguage": "Bahasa suara",
   "followLanguage": "Ikuti bahasa aplikasi",
   "testVoice": "Uji suara",
-  "voiceUnavailable": "Tidak ada suara offline untuk bahasa ini yang terpasang. Inspeksi akan menggunakan bunyi bip.",
+  "voiceUnavailable": "Tidak ada suara offline untuk bahasa ini yang terpasang. Pasang suara di perangkat Anda untuk mendengar pengumuman saat inspeksi.",
   "voiceDeviceHint": "Menggunakan suara yang terpasang di perangkat. Ketersediaan dan pelafalan berbeda menurut perangkat.",
   "inspectionVolume": "Volume inspeksi",
   "ambience": "Suara latar",

@@ -41,11 +41,24 @@ async function savedAttemptCount(page, expected) {
   }, expected);
 }
 
+async function selectValue(control, value) {
+  if (await control.evaluate(element => element.tagName === 'SELECT')) {
+    await control.selectOption(value);
+    return;
+  }
+  await control.click();
+  await control.page().locator(`[role="option"][data-value="${value}"]`).click();
+}
+
+async function selectedValue(control) {
+  return control.evaluate(element => element.tagName === 'SELECT' ? element.value : element.getAttribute('data-value'));
+}
+
 async function configureInput(page, mode, captureDirectory) {
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Settings', exact: true });
   if (captureDirectory) await screenshots(page, 'settings', captureDirectory);
-  await dialog.getByLabel('Solve input', { exact: true }).selectOption(mode);
+  await selectValue(dialog.getByRole('combobox', { name: 'Solve input', exact: true }), mode);
   const inspection = dialog.getByRole('switch', { name: 'Inspection', exact: true });
   if (await inspection.getAttribute('aria-checked') === 'true') await inspection.click();
   await page.waitForFunction(() => document.querySelector('[role="switch"][aria-label="Inspection"]')?.getAttribute('aria-checked') === 'false');
@@ -57,10 +70,10 @@ async function checkLanguagePersistence(page) {
   await page.getByRole('button', { name: 'Settings', exact: true }).click();
   const english = page.getByRole('dialog', { name: 'Settings', exact: true });
   await english.getByRole('tab', { name: 'Appearance', exact: true }).click();
-  await english.getByLabel('Language', { exact: true }).selectOption('es');
+  await selectValue(english.getByRole('combobox', { name: 'Language', exact: true }), 'es');
   const spanish = page.getByRole('dialog', { name: 'Ajustes', exact: true });
   await spanish.waitFor();
-  assert.equal(await spanish.getByLabel('Idioma', { exact: true }).inputValue(), 'es');
+  assert.equal(await selectedValue(spanish.getByRole('combobox', { name: 'Idioma', exact: true })), 'es');
   await spanish.getByRole('button', { name: 'Cerrar', exact: true }).click();
   await page.getByRole('button', { name: 'Iniciar CompSim', exact: true }).waitFor();
   await page.reload();
@@ -69,8 +82,8 @@ async function checkLanguagePersistence(page) {
   await page.getByRole('button', { name: 'Ajustes', exact: true }).click();
   const restoredSpanish = page.getByRole('dialog', { name: 'Ajustes', exact: true });
   await restoredSpanish.getByRole('tab', { name: 'Apariencia', exact: true }).click();
-  assert.equal(await restoredSpanish.getByLabel('Idioma', { exact: true }).inputValue(), 'es');
-  await restoredSpanish.getByLabel('Idioma', { exact: true }).selectOption('en');
+  assert.equal(await selectedValue(restoredSpanish.getByRole('combobox', { name: 'Idioma', exact: true })), 'es');
+  await selectValue(restoredSpanish.getByRole('combobox', { name: 'Idioma', exact: true }), 'en');
   await page.getByRole('dialog', { name: 'Settings', exact: true }).getByRole('button', { name: 'Close', exact: true }).click();
   await page.reload();
   await page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
@@ -87,28 +100,31 @@ async function checkExpandedLanguagesAndAudio(page, artifacts) {
   };
   let dialog = await openSettings();
   await dialog.getByRole('tab').nth(2).click();
-  assert.equal(await dialog.locator('select option').count(), languages.length);
+  // Language is the first Appearance combobox, before the two font families.
+  await dialog.getByRole('combobox').first().click();
+  assert.equal(await page.getByRole('option').count(), languages.length);
+  await page.keyboard.press('Escape');
   for (const language of languages) {
-    await dialog.locator('select').selectOption(language);
+    await selectValue(dialog.getByRole('combobox').first(), language);
     await page.waitForFunction(value => document.documentElement.lang === value, language);
-    assert.equal(await dialog.locator('select').inputValue(), language);
+    assert.equal(await selectedValue(dialog.getByRole('combobox').first()), language);
     if (['pl', 'ja', 'zh-Hans'].includes(language)) await screenshots(page, 'language-' + language, artifacts);
   }
   // Reload a CJK locale and confirm device settings persisted independently of history.
-  await dialog.locator('select').selectOption('ja');
+  await selectValue(dialog.getByRole('combobox').first(), 'ja');
   await page.waitForFunction(() => document.documentElement.lang === 'ja');
   await page.keyboard.press('Escape');
   await page.reload();
   await page.waitForFunction(() => document.documentElement.lang === 'ja');
   dialog = await openSettings();
   await dialog.getByRole('tab').nth(2).click();
-  assert.equal(await dialog.locator('select').inputValue(), 'ja');
-  await dialog.locator('select').selectOption('en');
+  assert.equal(await selectedValue(dialog.getByRole('combobox').first()), 'ja');
+  await selectValue(dialog.getByRole('combobox').first(), 'en');
   await page.waitForFunction(() => document.documentElement.lang === 'en');
   await dialog.getByRole('tab', { name: 'Audio', exact: true }).click();
-  await dialog.getByLabel('Inspection sound', { exact: true }).selectOption('device');
-  await dialog.getByLabel('Voice language', { exact: true }).selectOption('pl');
-  assert.equal(await dialog.getByLabel('Voice language', { exact: true }).inputValue(), 'pl');
+  assert.equal(await dialog.getByLabel('Inspection sound', { exact: true }).count(), 0);
+  await selectValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true }), 'pl');
+  assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'pl');
   await dialog.getByRole('button', { name: 'Test voice', exact: true }).click();
   await dialog.getByText('Background recordings have not been configured yet.', { exact: true }).waitFor();
   await screenshots(page, 'audio-settings', artifacts);
@@ -116,11 +132,10 @@ async function checkExpandedLanguagesAndAudio(page, artifacts) {
   await page.reload();
   dialog = await openSettings();
   await dialog.getByRole('tab', { name: 'Audio', exact: true }).click();
-  assert.equal(await dialog.getByLabel('Inspection sound', { exact: true }).inputValue(), 'device');
-  assert.equal(await dialog.getByLabel('Voice language', { exact: true }).inputValue(), 'pl');
+  assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'pl');
   await dialog.getByRole('button', { name: 'Reset defaults', exact: true }).click();
-  await page.waitForFunction(() => document.querySelector('select[aria-label="Inspection sound"]')?.value === 'beeps');
-  assert.equal(await dialog.getByLabel('Voice language', { exact: true }).inputValue(), 'follow');
+  await page.waitForFunction(() => document.querySelector('[role="combobox"][aria-label="Voice language"]')?.getAttribute('data-value') === 'follow');
+  assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'follow');
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
 }
 
@@ -260,8 +275,6 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     await phase(page, 'scramble', 180_000);
     await page.getByRole('button', { name: 'Scramble is good', exact: true }).click();
     await phase(page, 'ready');
-    await page.keyboard.press('Enter');
-    await phase(page, 'ready');
     await page.keyboard.press('KeyA');
     await phase(page, 'ready');
     await page.keyboard.press('Space');
@@ -294,25 +307,13 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
     const worker = assets.filter(name => /^worker-.*\.js$/.test(name));
     assert.equal(worker.length, 1, 'Expected the compiled scramble worker asset.');
     const timing = await checkOfflineWorker(page, `/assets/${worker[0]}`);
-    // Exercise the destructive import UI only after saving and offline checks.
-    await page.locator('button.event-selector').click();
-    const returnPicker = page.getByRole('dialog', { name: 'Choose event', exact: true });
-    await returnPicker.getByRole('button', { name: '3×3 Cube', exact: true }).click();
-    await returnPicker.waitFor({ state: 'hidden' });
-    await phase(page, 'home');
-    await savedAttemptCount(page, 6);
+    // Statistics exposes export, while history replacement remains an account action.
     await page.getByRole('button', { name: 'View all stats', exact: true }).click();
-    await page.getByLabel('Import history file', { exact: true }).setInputFiles({ name: 'invalid-save.json', mimeType: 'application/json', buffer: Buffer.from('{"schemaVersion":999}') });
-    await page.getByRole('button', { name: 'Replace history', exact: true }).click();
-    await page.getByRole('dialog').getByRole('alert').waitFor();
+    const statistics = page.getByRole('dialog', { name: 'Statistics', exact: true });
+    await statistics.getByRole('button', { name: 'Export history', exact: true }).waitFor();
+    assert.equal(await statistics.getByRole('button', { name: 'Import history', exact: true }).count(), 0);
+    await statistics.getByRole('button', { name: 'Close', exact: true }).click();
     await savedAttemptCount(page, 6);
-    await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-    await page.getByRole('button', { name: 'View all stats', exact: true }).click();
-    const emptySave = { app: 'cubing-comp-sim', schemaVersion: 1, exportedAt: Date.now(), rounds: [], activeRoundId: null };
-    await page.getByLabel('Import history file', { exact: true }).setInputFiles({ name: 'empty-save.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(emptySave)) });
-    await page.getByRole('button', { name: 'Replace history', exact: true }).click();
-    await page.getByRole('dialog').waitFor({ state: 'hidden' });
-    await savedAttemptCount(page, 0);
     await checkStoredSvgIsolation(page);
     assert.deepEqual(errors, [], 'The browser emitted an uncaught application error.');
     return `Desktop browser: 16 language catalogs, Japanese and Spanish persistence, audio preferences, localized manual entry, manual Ao5 and reload, keyboard start/stop, offline reload, and 16 offline event drawings passed. Generation milliseconds: ${JSON.stringify(timing)}`;

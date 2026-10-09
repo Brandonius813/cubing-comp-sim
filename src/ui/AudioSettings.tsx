@@ -4,6 +4,7 @@ import { getAudioPreferences, saveAudioPreferences, subscribeAudioPreferences, t
 import { InspectionAudio, selectLocalVoice } from '../audio/inspection';
 import { ambiencePlayer, loadAudioCatalog, type AmbienceTrack } from '../audio/ambience';
 import { inspectionPhrase, t } from './i18n';
+import { Select } from './primitives';
 
 function Row({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return <div className="setting-row"><div><label>{label}</label>{hint && <p>{hint}</p>}</div><div className="setting-control">{children}</div></div>;
@@ -48,17 +49,11 @@ export function AudioSettings({ locale }: { locale: Locale }) {
   };
   return <>
     {saveError && <p className="error-text" role="alert">{t('saveError')}</p>}
-    <Row label={t('voiceMode')} hint={t('voiceDeviceHint')}>
-      <select aria-label={t('voiceMode')} value={preferences.voiceMode} onChange={event => update({ voiceMode: event.target.value as AudioPreferences['voiceMode'] })}>
-        <option value="beeps">{t('voiceBeeps')}</option><option value="device">{t('voiceDevice')}</option>
-      </select>
+    <Row label={t('voiceLanguage')} hint={t('voiceDeviceHint')}>
+      <Select label={t('voiceLanguage')} value={preferences.voiceLanguage} onChange={value => update({ voiceLanguage: value as AudioPreferences['voiceLanguage'] })}
+        options={[{ value: 'follow', label: t('followLanguage') }, ...LOCALES.map(item => ({ value: item.id, label: item.nativeName }))]} />
     </Row>
-    <Row label={t('voiceLanguage')}>
-      <select aria-label={t('voiceLanguage')} value={preferences.voiceLanguage} disabled={preferences.voiceMode !== 'device'} onChange={event => update({ voiceLanguage: event.target.value as AudioPreferences['voiceLanguage'] })}>
-        <option value="follow">{t('followLanguage')}</option>{LOCALES.map(item => <option key={item.id} value={item.id}>{item.nativeName}</option>)}
-      </select>
-    </Row>
-    {preferences.voiceMode === 'device' && !voiceAvailable && <p role="status">{t('voiceUnavailable')}</p>}
+    {!voiceAvailable && <p role="status">{t('voiceUnavailable')}</p>}
     <Row label={t('inspectionVolume')}>
       <input type="range" aria-label={t('inspectionVolume')} min="0" max="1" step="0.05" value={preferences.inspectionVolume} onChange={event => update({ inspectionVolume: Number(event.target.value) })} />
       <button type="button" className="secondary-button" onClick={preview}>{t('testVoice')}</button>
@@ -67,9 +62,8 @@ export function AudioSettings({ locale }: { locale: Locale }) {
     <p>{t('ambienceOnlineOnly')}</p>
     {tracks.length === 0 ? <p role="status">{catalogError && online ? t('ambienceLoadError') : t('ambienceUnavailable')}</p> : <>
       <Row label={t('ambienceTrack')}>
-        <select aria-label={t('ambienceTrack')} value={track?.id ?? ''} onChange={event => update({ ambienceTrack: event.target.value || null })}>
-          <option value="">{t('ambienceOff')}</option>{tracks.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}
-        </select>
+        <Select label={t('ambienceTrack')} value={track?.id ?? ''} onChange={value => update({ ambienceTrack: value || null })}
+          options={[{ value: '', label: t('ambienceOff') }, ...tracks.map(item => ({ value: item.id, label: item.title }))]} />
       </Row>
       <Row label={t('ambienceVolume')}>
         <input type="range" aria-label={t('ambienceVolume')} min="0" max="1" step="0.05" value={preferences.ambienceVolume} onChange={event => update({ ambienceVolume: Number(event.target.value) })} />

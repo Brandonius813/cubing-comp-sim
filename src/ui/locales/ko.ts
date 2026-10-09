@@ -193,7 +193,7 @@ export const ko = {
   "voiceLanguage": "음성 언어",
   "followLanguage": "앱 언어에 맞춤",
   "testVoice": "음성 테스트",
-  "voiceUnavailable": "이 언어의 오프라인 음성이 설치되어 있지 않습니다. 인스펙션에는 알림음을 사용합니다.",
+  "voiceUnavailable": "이 언어의 오프라인 음성이 설치되어 있지 않습니다. 인스펙션 안내를 들으려면 기기에 음성을 설치하세요.",
   "voiceDeviceHint": "기기에 설치된 음성을 사용합니다. 사용 가능한 음성과 발음은 기기마다 다릅니다.",
   "inspectionVolume": "인스펙션 음량",
   "ambience": "배경음",

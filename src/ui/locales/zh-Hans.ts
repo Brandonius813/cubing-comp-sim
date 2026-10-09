@@ -193,7 +193,7 @@ export const zhHans = {
   "voiceLanguage": "语音语言",
   "followLanguage": "跟随应用语言",
   "testVoice": "试听语音",
-  "voiceUnavailable": "尚未安装此语言的离线语音，观察阶段将使用蜂鸣声。",
+  "voiceUnavailable": "尚未安装此语言的离线语音。请在设备上安装语音，以便听取观察阶段的语音提示。",
   "voiceDeviceHint": "使用设备上已安装的语音。可用语音及发音因设备而异。",
   "inspectionVolume": "观察提示音量",
   "ambience": "背景声音",

@@ -193,7 +193,7 @@ export const tr = {
   "voiceLanguage": "Ses dili",
   "followLanguage": "Uygulama diliyle aynı",
   "testVoice": "Sesi dene",
-  "voiceUnavailable": "Bu dil için çevrimdışı ses yüklü değil. İncelemede bip sesleri kullanılacak.",
+  "voiceUnavailable": "Bu dil için çevrimdışı ses yüklü değil. İnceleme sırasında sesli uyarıları duymak için cihazınıza bir ses yükleyin.",
   "voiceDeviceHint": "Cihazda yüklü bir ses kullanılır. Kullanılabilirlik ve telaffuz cihaza göre değişir.",
   "inspectionVolume": "İnceleme ses düzeyi",
   "ambience": "Arka plan sesi",

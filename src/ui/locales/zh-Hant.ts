@@ -193,7 +193,7 @@ export const zhHant = {
   "voiceLanguage": "語音語言",
   "followLanguage": "跟隨應用程式語言",
   "testVoice": "試聽語音",
-  "voiceUnavailable": "尚未安裝此語言的離線語音，觀察階段將使用嗶聲。",
+  "voiceUnavailable": "尚未安裝此語言的離線語音。請在裝置上安裝語音，以便聽取觀察階段的語音提示。",
   "voiceDeviceHint": "使用裝置上已安裝的語音。可用語音及發音因裝置而異。",
   "inspectionVolume": "觀察提示音量",
   "ambience": "背景聲音",

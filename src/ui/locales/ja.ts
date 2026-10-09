@@ -193,7 +193,7 @@ export const ja = {
   "voiceLanguage": "読み上げ言語",
   "followLanguage": "アプリの言語に合わせる",
   "testVoice": "音声を試す",
-  "voiceUnavailable": "この言語のオフライン音声がインストールされていません。インスペクションにはビープ音を使います。",
+  "voiceUnavailable": "この言語のオフライン音声がインストールされていません。インスペクション中の読み上げを聞くには、デバイスに音声をインストールしてください。",
   "voiceDeviceHint": "端末にインストールされた音声を使います。利用できる音声や発音は端末によって異なります。",
   "inspectionVolume": "インスペクションの音量",
   "ambience": "環境音",

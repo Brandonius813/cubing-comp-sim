@@ -193,7 +193,7 @@ export const pl = {
   "voiceLanguage": "Język głosu",
   "followLanguage": "Zgodny z językiem aplikacji",
   "testVoice": "Przetestuj głos",
-  "voiceUnavailable": "Nie zainstalowano głosu offline dla tego języka. Preinspekcja użyje sygnałów dźwiękowych.",
+  "voiceUnavailable": "Nie zainstalowano głosu offline dla tego języka. Zainstaluj głos na urządzeniu, aby słyszeć komunikaty podczas preinspekcji.",
   "voiceDeviceHint": "Używa głosu zainstalowanego na urządzeniu. Dostępność i wymowa zależą od urządzenia.",
   "inspectionVolume": "Głośność preinspekcji",
   "ambience": "Dźwięki tła",
