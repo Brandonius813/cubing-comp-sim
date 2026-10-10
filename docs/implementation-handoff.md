@@ -1,6 +1,14 @@
 # Website implementation handoff
 
-Updated October 8, 2026. This records implementation and verification separately. The app has not been deployed and no production accounts or provider secrets have been configured.
+## Current status (October 9, 2026)
+
+The web app is on `main`, with a guest preview deployed through GitHub Actions to [Cloudflare Workers](https://morning-base-55f2.btrue813.workers.dev/). See [deployment details](cloudflare-deployment.md) for publication evidence and [the project overview](../README.md) for the current experience. Accounts and cloud saves still require separately configured and verified services.
+
+The preview feedback work added the persistent scorecard, Statistics with mean of three rounds, configurable fonts and themes, fixed/random waits, consistent advance keys, and explicit round abandonment. Inspection now uses device voices without a beep fallback. Sixteen draft language catalogs are available; newer feedback labels use English pending translation review. See [language coverage](languages.md) and [audio status](audio-assets.md).
+
+## Foundation handoff (October 8, 2026)
+
+The remaining sections preserve the foundation's dated implementation and test evidence. Their test counts, screenshots, and deferred-work list describe that checkpoint, not the latest app. Later product decisions are recorded in [project notes](../PROJECT_NOTES.md); current pull-request checks provide verification for subsequent changes.
 
 ## Implementation
 

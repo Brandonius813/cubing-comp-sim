@@ -2,9 +2,9 @@
 
 ## Implemented now
 
-The interface offers beeps or a **device voice preview**. Beeps remain the default. Voice language can follow the interface or be selected separately across the 16 app locales. The 8-second and 12-second phrases come from the translation catalogs.
+Inspection callouts use an **installed device voice**, with a volume control and Test voice button. There is no beep mode or beep fallback. Voice language follows the interface by default or can be selected separately across the 16 app locales. The 8-second and 12-second phrases come from the draft translation catalogs.
 
-Device mode selects only a matching voice that the browser marks `localService: true`. Missing voices fall back to beeps and Settings explains that fallback. Mandarin selections use explicit mainland or Taiwanese Mandarin tags; Cantonese, ambiguous `zh`, unrelated languages, and remote speech services are not fallback choices. Voice availability differs by operating system and browser. This does not claim a bundled, consistent voice pack for every language.
+The app selects only a matching voice that the browser marks `localService: true`. If none is available, callouts remain silent and Audio settings explains that a device voice must be installed. Timing and inspection penalties continue to work. Mandarin selections use explicit mainland or Taiwanese Mandarin tags; Cantonese, ambiguous `zh`, unrelated languages, and remote speech services are not fallback choices. Voice availability differs by operating system and browser. This does not claim a bundled, consistent voice pack for every language.
 
 The timer uses its existing monotonic clock. Audio never supplies elapsed time or penalties. Each threshold is consumed once; a resumed tab cannot replay missed callouts in a burst. Speech is cancelled when inspection ends, a solve starts, the window loses focus, or the simulator unmounts. A queued utterance that has not started within 500 ms is cancelled rather than saying a stale warning. Browser speech still cannot promise sample-accurate output. The next release-quality step is the recorded pack below.
 
@@ -21,7 +21,7 @@ For each of the 16 locales:
 3. Trim leading silence, normalize consistently, and verify the clips are short and clear over background sound.
 4. Keep speaker permission, provider terms, source files, edit notes, and an asset hash with the release records. Add required attribution.
 5. Bundle the small reviewed clips with the app and offline web cache. No runtime speech API, internet request, or paid per-call synthesis should be required.
-6. Test actual onset, interruption, volume, and intelligibility on Chromium, Firefox, Safari, and later native devices. Preserve beeps when a file fails.
+6. Test actual onset, interruption, volume, and intelligibility on Chromium, Firefox, Safari, and later native devices. Missing or failed audio must not block timing; keep failure behavior consistent with the voice-only controls.
 
 ## Long ambience transport
 
@@ -29,7 +29,7 @@ For each of the 16 locales:
 
 The implemented player uses a normal HTML audio element with `preload="none"` and `loop=true`. Only an explicit Play click fetches a selected recording. Volume and selection persist; playback never starts automatically after a page reload. It can continue when Settings closes. Pause, a changed selection, or page exit stops it. The player shows a localized error when a media request or browser playback permission fails.
 
-A network hint changing to offline does not cut off audio that is already buffered and working. A new stream cannot start while the browser reports offline. Existing buffered playback may continue, but **streamed ambience has no full offline guarantee**. Reconnection never starts audio automatically. Offline scrambling and inspection beeps remain independent.
+A network hint changing to offline does not cut off audio that is already buffered and working. A new stream cannot start while the browser reports offline. Existing buffered playback may continue, but **streamed ambience has no full offline guarantee**. Reconnection never starts audio automatically. Offline scrambling and installed-device inspection speech remain independent of streamed ambience.
 
 Background files under `/audio/background/` are excluded from the app's offline precache. Remote public HTTPS files can live on an audio CDN or a public object-storage hostname. The small catalog can be bundled. Private cloud-save buckets and authentication tokens must never be used for these public recordings. A future native app may offer an explicit download with a visible file size, checksum, and Remove Download control, allowing ambience offline after downloading.
 
@@ -73,7 +73,7 @@ The loader caps catalog size and track count, validates IDs and duration, and re
 
 ## Verification
 
-Unit tests cover local-only language matching, Mandarin safeguards, missing-voice beeps, cancellation, stale queued utterances, threshold consumption, preference validation, catalog trust boundaries, explicit playback, offline buffered playback, rejected playback, and pause during a pending play request. Real recorded files and native voice quality still need human listening tests.
+Unit tests cover local-only language matching, Mandarin safeguards, silent missing-voice behavior, cancellation, stale queued utterances, threshold consumption, preference validation, migration of removed beep preferences, catalog trust boundaries, explicit playback, offline buffered playback, rejected playback, and pause during a pending play request. Real recorded files and native voice quality still need human listening tests.
 
 Primary API references: [SpeechSynthesisVoice.localService](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisVoice/localService), [voiceschanged](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis/voiceschanged_event), [SpeechSynthesis.cancel](https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis/cancel), [HTMLMediaElement.play](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/play).
 

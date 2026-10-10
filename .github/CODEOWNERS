@@ -1,0 +1,3 @@
+# Review ownership for every file, including this file and workflow configuration.
+# Repository permissions control write access; this file alone is not a merge gate.
+* @Brandonius813
