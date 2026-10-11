@@ -4,7 +4,7 @@ The staging target is `https://staging.cubingcompsim.com`, with API `https://api
 
 ## Frontend
 
-`Deploy isolated staging frontend` reuses the engine from a successful `Desktop web checks` artifact, verifies its checksum/conformance proof and unchanged engine source, and rebuilds only the UI with staging public settings. Unit checks and Chromium checks run before publication. The existing `morning-base-55f2` guest deployment remains separate. The staging hostname is reassigned to `ccs-staging-frontend`; its browser origin and IndexedDB name stay the same, so hosting changes do not clear local history.
+`Deploy isolated staging frontend` reuses the engine from a successful `Desktop web checks` artifact, verifies its checksum/conformance proof and unchanged engine source, and rebuilds only the UI with staging public settings. Unit checks and Chromium smoke checks run before publication. Build, publication and hostname activation are separate jobs, so failed activation can be retried without rebuilding the proven assets. The existing `morning-base-55f2` guest deployment remains separate. The staging hostname is reassigned to `ccs-staging-frontend`; its browser origin and IndexedDB name stay the same, so hosting changes do not clear local history.
 
 Public settings live in `environments/staging.json` and the `CCS_STAGING_SUPABASE_PUBLISHABLE_KEY` Actions variable. The existing `CLOUDFLARE_API_TOKEN` secret and account variable authorize publication. Custom-domain activation also requires the zone permissions Cloudflare enforces; an authorization failure is reported without exposing the token. After setup, dispatch the workflow with a successful evidence run ID. Evidence expires, so archive verified releases for long-term promotion/rollback.
 
@@ -12,7 +12,7 @@ Backend administrator keys, database passwords and R2 keys never enter a fronten
 
 ## API artifact and environment rendering
 
-`Cloud API checks` builds and tests an API image, then packages it as `api-release-<commit>` with a checksum and source SHA. Download that same image for staging and, after acceptance, production. Verify `SHA256SUMS` before loading it with Docker. Promote the image without rebuilding it against another moving base-image tag.
+`Cloud API checks` builds and tests an API image, then packages and reloads it to verify image identity as `api-release-<commit>` with a checksum and source SHA. Download that same image for staging and, after acceptance, production. Verify `SHA256SUMS` before loading it with Docker. Promote the image without rebuilding it against another moving base-image tag.
 
 Render each environment's API/HTTPS configuration with:
 
