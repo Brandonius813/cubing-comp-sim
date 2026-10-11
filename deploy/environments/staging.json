@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "environment": "staging",
+  "appUrl": "https://staging.cubingcompsim.com",
+  "apiUrl": "https://api-staging.cubingcompsim.com",
+  "workerName": "ccs-staging-frontend",
+  "supabaseUrl": "https://sgagluvbcsndtnwnmzbb.supabase.co",
+  "publicKeyVariable": "CCS_STAGING_SUPABASE_PUBLISHABLE_KEY",
+  "bucket": "cubing-comp-sim-saves-staging",
+  "databaseSchema": "ccs_backend",
+  "databaseRole": "ccs_api_staging",
+  "serviceName": "ccs-staging",
+  "privateDirectory": "/home/brandon/ccs-staging/private",
+  "proxyIp": "172.28.53.2",
+  "apiIp": "172.28.53.3",
+  "networkSubnet": "172.28.53.0/24"
+}

@@ -38,6 +38,19 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: docker build -f Dockerfile -t cubing-comp-sim-api:ci ..
+      - name: Package the tested API image for promotion
+        run: |
+          mkdir -p ../test-results/api-release
+          docker tag cubing-comp-sim-api:ci "ccs-api:${GITHUB_SHA}"
+          docker save "ccs-api:${GITHUB_SHA}" | gzip > ../test-results/api-release/api-image.tar.gz
+          cd ../test-results/api-release
+          sha256sum api-image.tar.gz > SHA256SUMS
+          printf '%s\n' "$GITHUB_SHA" > source-commit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api-release-${{ github.sha }}
+          path: test-results/api-release/
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: api-lockfile

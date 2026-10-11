@@ -12,6 +12,8 @@ coverage/
 *.tsbuildinfo
 test-results/
 public/engine/
+public/deployment.json
+wrangler.release.json
 
 # Generated Java reference and compiler artifacts
 engine/target/
