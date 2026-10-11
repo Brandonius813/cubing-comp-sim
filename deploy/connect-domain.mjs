@@ -9,6 +9,7 @@ async function request(path, method = 'GET', body) {
     method, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(30000),
   });
+  if (response.status === 204 && response.ok) return undefined;
   const payload = await response.json();
   if (!response.ok || !payload.success) {
     // Provider responses can contain request data. Report only status and numeric codes.
@@ -20,8 +21,12 @@ async function request(path, method = 'GET', body) {
 const hostname = new URL(config.appUrl).hostname;
 const domains = await request('domains');
 const current = domains.find(domain => domain.hostname === hostname);
-if (!current) throw new Error('The existing staging custom domain was not found; stop before changing DNS.');
-if (current.service === config.workerName) console.log('Staging hostname already points to the isolated Worker.');
+if (!current) {
+  // Recover an interrupted detach/attach operation for this one approved host.
+  await request(`scripts/${config.workerName}/settings`);
+  await request('domains', 'PUT', { hostname, service: config.workerName, enabled: true, previews_enabled: false, zone_name: 'cubingcompsim.com' });
+  console.log('Connected the approved staging hostname to its deployed Worker.');
+} else if (current.service === config.workerName) console.log('Staging hostname already points to the isolated Worker.');
 else {
   if (current.service !== 'morning-base-55f2') throw new Error('Staging hostname points to an unexpected Worker; review before reassignment.');
   // The attach API rejects a hostname still assigned to another Worker (409).
