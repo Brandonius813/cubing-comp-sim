@@ -2,6 +2,8 @@
 
 The staging target is `https://staging.cubingcompsim.com`, with API `https://api-staging.cubingcompsim.com`. A prepared configuration or passing build is not proof that either is deployed or that cloud saves work.
 
+On October 11, the independent staging frontend was deployed and its HTTPS hostname verified at source `60838e3b9142c27279e6493796b108705af12078`. Real browser password sign-in passed for two disposable confirmed accounts; sign-in and sign-out preserved local solve history. Both identities were removed afterward. This check did not exercise signup email delivery, recovery, or cloud transfers. The API remains pending the storage permission fix and administrator installation.
+
 ## Frontend
 
 `Deploy isolated staging frontend` reuses the engine from a successful `Desktop web checks` artifact, verifies its checksum/conformance proof and unchanged engine source, and rebuilds only the UI with staging public settings. Unit checks and Chromium smoke checks run before publication. Build, publication and hostname activation are separate jobs, so failed activation can be retried without rebuilding the proven assets. The existing `morning-base-55f2` guest deployment remains separate. The staging hostname is reassigned to `ccs-staging-frontend`; its browser origin and IndexedDB name stay the same, so hosting changes do not clear local history.
@@ -31,6 +33,8 @@ The currently prepared staging installer activates HTTPS, reboot recovery, daily
 ## Verification and rollback
 
 After installing a release, verify certificate trust, exact frontend CORS origin, actual database/Auth/R2 operations and browser sign-in/upload/download/logout using disposable controlled accounts. Check that sign-in preserves local history, transfers occur only after confirmation, replacements never merge, and a second account sees only its own save. Process `/health` alone is insufficient. Email confirmation/recovery through a real inbox and large-save/failure/restore acceptance remain separate launch checks.
+
+`verify-cloud-browser.mjs` accepts a private fixture with `settings.mode` equal to `cloud` or `signin-only`. The latter permits checking actual deployed Auth independently of an unavailable API; its temporary identities require private server-side cleanup afterward. Never put fixtures or human credentials in source control. Auth-only success is not cloud-save acceptance.
 
 Rollback uses the previous tested API image and frontend artifact, with the same environment resources and secret files. Keep migrations compatible with the previous image or restore into isolated recovery resources before changing schema destructively. Do not roll back databases by deleting current user data.
 

@@ -8,6 +8,7 @@ const [credentialFile, resultFile] = process.argv.slice(2);
 if (!credentialFile || !resultFile) throw new Error('Supply private controlled-account credentials and a result path.');
 const { settings, accounts } = JSON.parse(await readFile(credentialFile, 'utf8'));
 if (settings.appUrl !== 'https://staging.cubingcompsim.com' || accounts.length !== 2 || accounts.some(a => !/^ccs-check-[a-f0-9-]+@example\.test$/.test(a.email))) throw new Error('This check is restricted to disposable staging accounts.');
+if (!['cloud', 'signin-only'].includes(settings.mode)) throw new Error('Unknown verification mode.');
 const results = { environment: 'staging', url: settings.appUrl, confirmed_test_accounts: true, email_confirmation_delivery: 'not tested by this check', checks: [] };
 const pass = name => { results.checks.push(name); console.log(`Passed: ${name}`); };
 let stage = 'https_preflight';
@@ -64,7 +65,7 @@ async function transfer(dialog, direction) {
   await dialog.getByRole('status').filter({ hasText: direction === 'Upload' ? 'Cloud save replaced' : 'history was replaced' }).waitFor({ timeout: 30000 });
 }
 try {
-  assert.equal((await fetch(`${settings.apiUrl}/health`)).status, 200);
+  if (settings.mode !== 'signin-only') assert.equal((await fetch(`${settings.apiUrl}/health`)).status, 200);
   const marker = await (await fetch(`${settings.appUrl}/deployment.json`, { cache: 'no-store' })).json();
   assert.equal(marker.environment, 'staging'); assert.equal(marker.apiUrl, settings.apiUrl);
   browser = await chromium.launch({ ...(process.env.CCS_BROWSER_CHANNEL ? { channel: process.env.CCS_BROWSER_CHANNEL } : {}) });
@@ -76,6 +77,13 @@ try {
   stage = 'browser_sign_in_and_no_automatic_transfer';
   const aDialog = await signIn(a, accounts[0]); const bDialog = await signIn(b, accounts[1]);
   assert.deepEqual(await stored(a), [aRound]); assert.deepEqual(await stored(b), [bRound]);
+  if (settings.mode === 'signin-only') {
+    pass('deployed browser password sign-in preserves local history for two accounts');
+    await aDialog.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await aDialog.getByLabel('Email', { exact: true }).waitFor();
+    assert.deepEqual(await stored(a), [aRound]);
+    pass('deployed browser sign-out preserves local history');
+  } else {
   assert.equal((await api(a, '/v1/save/metadata')).save, null); assert.equal((await api(b, '/v1/save/metadata')).save, null);
   pass('browser sign-in preserves local history and creates no cloud save');
   stage = 'explicit_upload_and_account_isolation';
@@ -102,12 +110,13 @@ try {
   await replaced.getByLabel('Email', { exact: true }).waitFor();
   assert.deepEqual(await stored(a), [replacement]);
   pass('browser sign-out preserves local history');
+  }
 } catch {
   console.error(JSON.stringify({ status: 'failed', check: stage })); process.exitCode = 1;
 } finally {
   await browser?.close();
   const cleanup = [];
-  for (const account of accounts) {
+  for (const account of settings.mode === 'signin-only' ? [] : accounts) {
     try {
       const client = createClient(settings.supabaseUrl, settings.publicKey, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
       const { data, error } = await client.auth.signInWithPassword({ email: account.email, password: account.password });
@@ -118,8 +127,9 @@ try {
       cleanup.push(true);
     } catch { cleanup.push(false); process.exitCode = 1; }
   }
-  results.test_accounts_and_cloud_data_deleted = cleanup.every(Boolean);
+  results.test_accounts_and_cloud_data_deleted = settings.mode === 'signin-only' ? false : cleanup.every(Boolean);
+  if (settings.mode === 'signin-only') results.cleanup_method = 'pending private Auth-only cleanup';
   results.completed_at = new Date().toISOString(); results.passed = !process.exitCode;
   await writeFile(resultFile, JSON.stringify(results, null, 2) + '\n', { mode: 0o600 });
-  console.log(`Controlled-account cleanup: ${results.test_accounts_and_cloud_data_deleted ? 'passed' : 'requires retry'}`);
+  console.log(settings.mode === 'signin-only' ? 'Auth-only identity cleanup must run separately on the server.' : `Controlled-account cleanup: ${results.test_accounts_and_cloud_data_deleted ? 'passed' : 'requires retry'}`);
 }
