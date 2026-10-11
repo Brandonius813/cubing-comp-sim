@@ -26,12 +26,14 @@ else {
   if (current.service !== 'morning-base-55f2') throw new Error('Staging hostname points to an unexpected Worker; review before reassignment.');
   // The attach API rejects a hostname still assigned to another Worker (409).
   // Detach this exact staging mapping and restore it if the new attachment fails.
-  if (!/^[a-f0-9]{32}$/i.test(current.id ?? '') || !/^[a-f0-9]{32}$/i.test(current.zone_id ?? '')) throw new Error('Unexpected domain identifiers.');
-  await request(`domains/${current.id}`, 'DELETE');
+  // Domain IDs are opaque (some accounts return UUIDs); encode the selected ID.
+  if (typeof current.id !== 'string' || !current.id || current.id.length > 128) throw new Error('Unexpected domain identifier.');
+  const target = { hostname, enabled: true, previews_enabled: false, zone_name: 'cubingcompsim.com' };
+  await request(`domains/${encodeURIComponent(current.id)}`, 'DELETE');
   try {
-    await request('domains', 'PUT', { hostname, service: config.workerName, enabled: true, previews_enabled: false, zone_id: current.zone_id });
+    await request('domains', 'PUT', { ...target, service: config.workerName });
   } catch (error) {
-    await request('domains', 'PUT', { hostname, service: current.service, enabled: true, previews_enabled: false, zone_id: current.zone_id });
+    await request('domains', 'PUT', { ...target, service: current.service });
     console.log('Restored the previous staging hostname mapping after activation failed.');
     throw error;
   }
