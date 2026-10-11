@@ -15,8 +15,10 @@ export async function createApi(options: {
   deletions?: AccountDeletion;
   isAccountBlocked?: (userId: string) => Promise<boolean>;
   release?: string; logLevel?: string; logging?: boolean;
+  trustedProxyIps?: string[];
 }) {
   const app = Fastify({
+    trustProxy: options.trustedProxyIps?.length ? options.trustedProxyIps : false,
     bodyLimit: MAX_SAVE_BYTES, requestTimeout: 120_000, connectionTimeout: 10_000,
     disableRequestLogging: true,
     logger: options.logging === false ? false : {

@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
+import { isIP } from 'node:net';
 
 export interface ServerConfig {
-  port: number; host: string; origins: string[]; release: string; logLevel: string;
+  port: number; host: string; origins: string[]; release: string; logLevel: string; trustedProxyIps: string[];
   supabaseUrl: string; supabasePublicKey: string; supabaseServiceRoleKey?: string; databaseUrl: string;
   databaseSsl: false | { rejectUnauthorized: true; ca?: string };
   s3: { endpoint: string; bucket: string; accessKeyId: string; secretAccessKey: string; forcePathStyle: boolean };
@@ -16,6 +17,8 @@ function required(env: NodeJS.ProcessEnv, name: string): string {
 }
 
 export function readConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
+  const trustedProxyIps = env.TRUSTED_PROXY_IPS?.trim() ? env.TRUSTED_PROXY_IPS.split(',').map(value => value.trim()) : [];
+  if (trustedProxyIps.some(value => !isIP(value))) throw new Error('TRUSTED_PROXY_IPS must contain explicit proxy IP addresses');
   const supabaseUrl = required(env, 'SUPABASE_URL').replace(/\/$/, '');
   const url = new URL(supabaseUrl);
   if (url.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(url.hostname)) throw new Error('Supabase requires HTTPS');
@@ -29,7 +32,7 @@ export function readConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
   const dbHost = database.hostname;
   if (env.DATABASE_TLS === 'false' && !['localhost', '127.0.0.1', 'postgres'].includes(dbHost)) throw new Error('Remote database connections require TLS');
   return {
-    port, host: env.HOST || '127.0.0.1', origins, release: env.RELEASE || 'development', logLevel: env.LOG_LEVEL || 'info',
+    port, host: env.HOST || '127.0.0.1', origins, release: env.RELEASE || 'development', logLevel: env.LOG_LEVEL || 'info', trustedProxyIps,
     supabaseUrl, supabasePublicKey: required(env, 'SUPABASE_PUBLISHABLE_KEY'), databaseUrl,
     ...(env.SUPABASE_SERVICE_ROLE_KEY && !env.SUPABASE_SERVICE_ROLE_KEY.includes('replace-with') ? { supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY } : {}),
     databaseSsl: env.DATABASE_TLS === 'false' ? false : { rejectUnauthorized: true, ...(env.DATABASE_CA_FILE ? { ca: readFileSync(env.DATABASE_CA_FILE, 'utf8') } : {}) },
