@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { EVENTS, attemptTimeMs, editAttempt, formatAttempt, formatTime, getEvent, parseTimeInput, scoreRound, type EventId, type Penalty } from './core';
-import { auth, type AccountSession } from './cloud';
+import { auth, type AccountSession, type AccountCallback } from './cloud';
 import { registerOfflineSupport } from './platform/offline';
 import { AccountDialog } from './ui/AccountDialog';
 import { SettingsDialog } from './ui/SettingsDialog';
@@ -24,6 +24,7 @@ function App() {
   useEffect(() => { setLocale(sim.state.settings.language); }, [sim.state.settings.language]);
   const [session, setSession] = useState<AccountSession | null>(null);
   const [recovery, setRecovery] = useState(false);
+  const [accountCallback, setAccountCallback] = useState<AccountCallback | null>(null);
   const [timeInput, setTimeInput] = useState('');
   const [penalty, setPenalty] = useState<Penalty>('none');
   const [fieldError, setFieldError] = useState('');
@@ -41,10 +42,27 @@ function App() {
   const timerActive = ['inspection', 'solving'].includes(sim.phase);
   const editingRound = useMemo(() => editingId ? sim.state.rounds.find(value => value.attempts.some(attempt => attempt.id === editingId)) : null, [editingId, sim.state.rounds]);
   const editingAttempt = editingRound?.attempts.find(value => value.id === editingId);
-  useEffect(() => { void auth.getSession().then(setSession).catch(() => undefined); return auth.subscribe((value, event) => { setSession(value); if (event === 'PASSWORD_RECOVERY') { setRecovery(true); setModal('account'); } }); }, []);
-  useEffect(() => { telemetry.setConsent(loadMetricsConsent()); return registerOfflineSupport(status => { if (status === 'ready') telemetry.track('offline_assets_ready'); }); }, []);
+  useEffect(() => {
+    let mounted = true;
+    const unsubscribe = auth.subscribe((value, event) => {
+      if (!mounted) return;
+      setSession(value);
+      if (event === 'PASSWORD_RECOVERY') { setRecovery(true); setModal('account'); }
+      if (event === 'SIGNED_OUT') setRecovery(false);
+    });
+    void auth.completeRedirect().then(async callback => {
+      if (!mounted) return;
+      setAccountCallback(callback);
+      if (callback) setModal('account');
+      setSession(await auth.getSession());
+      // No diagnostics/analytics begin while auth credentials remain in the URL.
+      if (mounted) telemetry.setConsent(loadMetricsConsent());
+    }).catch(() => undefined);
+    return () => { mounted = false; unsubscribe(); };
+  }, []);
+  useEffect(() => registerOfflineSupport(status => { if (status === 'ready') telemetry.track('offline_assets_ready'); }), []);
   useEffect(() => { if (sim.phase === 'entry') { setTimeInput(''); setPenalty('none'); setFieldError(''); } }, [sim.phase]);
-  const close = () => { setModal(null); setPendingEvent(null); setFieldError(''); };
+  const close = () => { setModal(null); setPendingEvent(null); setFieldError(''); setAccountCallback(null); };
   const roundFocus = () => document.querySelector<HTMLElement>('#manual-time') ?? document.querySelector<HTMLElement>('.main-stage');
   const edit = (attemptId: string) => {
     const attempt = sim.state.rounds.flatMap(value => value.attempts).find(value => value.id === attemptId);
@@ -123,7 +141,7 @@ function App() {
     {sim.saving && sim.phase !== 'solving' && <span className="save-status" role="status">{t('saving')}</span>}
     {modal === 'events' && <Dialog title={t('chooseEvent')} onClose={close} className="event-picker"><div className="event-list">{[...EVENTS].sort((a, b) => a.id === '333' ? -1 : b.id === '333' ? 1 : 0).map(value => <button type="button" className={selectedEvent.id === value.id ? 'selected' : ''} key={value.id} onClick={() => requestEvent(value.id)}><Icon name={value.id} event /><span>{eventName(value.id)}</span></button>)}</div></Dialog>}
     {modal === 'settings' && <SettingsDialog settings={sim.state.settings} onUpdate={applySettings} onClose={close} />}
-    {modal === 'account' && <AccountDialog session={session} recovery={recovery} onClose={close} onExport={() => sim.store.exportJson()} onReplace={replaceHistory} localRevision={sim.state.revision} />}
+    {modal === 'account' && <AccountDialog session={session} recovery={recovery} onRecoveryComplete={() => setRecovery(false)} callback={accountCallback} onClose={close} onExport={() => sim.store.exportJson()} onReplace={replaceHistory} localRevision={sim.state.revision} />}
     {modal === 'help' && <HelpDialog onClose={close} />}
     {modal === 'event-confirm' && pendingEvent && <Dialog title={t('changeEventTitle')} onClose={close} className="confirm-dialog" returnFocus={roundFocus}><p>{t('changeEventDescription')}</p>{sim.error && <p className="error-text" role="alert">{sim.error}</p>}<div className="button-row"><button className="secondary-button" onClick={close} disabled={sim.saving}>{t('goBack')}</button><button className="primary-button" disabled={sim.saving} onClick={() => void chooseEvent(pendingEvent)}>{t('confirm')}</button></div></Dialog>}
     {modal === 'end-round' && <Dialog title={t('endRoundTitle')} onClose={close} className="confirm-dialog" returnFocus={roundFocus}><p>{t('endRoundDescription')}</p>{sim.error && <p className="error-text" role="alert">{sim.error}</p>}<div className="button-row"><button className="secondary-button" onClick={close} disabled={sim.saving}>{t('goBack')}</button><button className="danger-button" disabled={sim.saving} onClick={() => void endRound()}>{t('endRound')}</button></div></Dialog>}

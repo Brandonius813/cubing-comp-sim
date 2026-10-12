@@ -1,0 +1,27 @@
+Google sign-in assets
+
+Downloaded October 12, 2026 from Google's official branding resources.
+Google and the Google G logo are trademarks of Google LLC. The unmodified
+standard-color gradient logo is used solely within Google account action
+buttons, according to the Google Identity branding guidelines:
+https://developers.google.com/identity/branding-guidelines
+Logo source:
+https://developers.google.com/static/identity/images/g-logo.png
+
+Google Sans Medium is hosted locally for Google account button text. Its embedded
+copyright notice is Copyright 2025 The Google Sans Project Authors
+(github.com/googlefonts/googlesans). The font uses SIL Open Font License 1.1;
+the complete license and copyright notices are in GoogleSans-OFL.txt.
+Project and license source:
+https://github.com/googlefonts/googlesans
+https://raw.githubusercontent.com/googlefonts/googlesans/main/OFL.txt
+Font source, supplied by the official Google Fonts Google Sans CSS endpoint:
+https://fonts.googleapis.com/css2?family=Google+Sans:wght@500&display=swap&text=Continue%20with%20Google%20Connect%20Confirm%20WCA
+https://fonts.gstatic.com/l/font?kit=4Ua_rENHsxJlGDuGo1OIlJfC6l_24rlCK1Yo_Iqcsih3SAyH6cAwhX9RFD48TE63OOYKtrw2IKlntT_KUmF_AOipVKD6HyFo9PoHKRAz&skey=c30756b8cf584a60&v=v71
+This unmodified Google Fonts web subset contains the characters needed by the
+current provider labels. Request a broader subset when translating these labels.
+
+Buttons use the documented light theme: white fill, #747775 one-pixel border,
+#1F1F1F text, Google Sans Medium at 14px/20px, 12px side padding, and 10px gap
+following the 18px standard-color G. WCA has the same size and visual weight.
+No Google SDK or external font/image request is needed to render the buttons.

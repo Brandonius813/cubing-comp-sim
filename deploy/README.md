@@ -12,6 +12,8 @@ Public settings live in `environments/staging.json` and the `CCS_STAGING_SUPABAS
 
 Backend administrator keys, database passwords and R2 keys never enter a frontend job or artifact.
 
+Google and WCA are gated separately by the environment manifest's `authProviders` list, initially empty. See [social login setup](../docs/social-login-setup.md) for exact staging registration callbacks, required owner access, OIDC configuration, and acceptance steps. The frontend builder rechecks initial OAuth redirects for each enabled provider before publishing a build.
+
 ## API artifact and environment rendering
 
 `Cloud API checks` builds and tests an API image, then packages and reloads it to verify image identity as `api-release-<commit>` with a checksum and source SHA. Download that same image for staging and, after acceptance, production. Verify `SHA256SUMS` before loading it with Docker. Promote the image without rebuilding it against another moving base-image tag.
@@ -35,6 +37,8 @@ The currently prepared staging installer activates HTTPS, reboot recovery, daily
 After installing a release, verify certificate trust, exact frontend CORS origin, actual database/Auth/R2 operations and browser sign-in/upload/download/logout using disposable controlled accounts. Check that sign-in preserves local history, transfers occur only after confirmation, replacements never merge, and a second account sees only its own save. Process `/health` alone is insufficient. Email confirmation/recovery through a real inbox and large-save/failure/restore acceptance remain separate launch checks.
 
 `verify-cloud-browser.mjs` accepts a private fixture with `settings.mode` equal to `cloud` or `signin-only`. The latter permits checking actual deployed Auth independently of an unavailable API; its temporary identities require private server-side cleanup afterward. Never put fixtures or human credentials in source control. Auth-only success is not cloud-save acceptance.
+
+Select the browser with `BROWSER=chromium`, `BROWSER=firefox`, or `BROWSER=webkit` (Chromium is the default); `CCS_BROWSER_CHANNEL` applies only to Chromium. For example, run `BROWSER=firefox node deploy/verify-cloud-browser.mjs PRIVATE_FIXTURE PRIVATE_RESULT`. The safe result records the deployed source commit, provider gates, and per-page uncaught-error counts. Successful acceptance requires zero uncaught page errors as well as the account/history checks. Actual email delivery remains a separate check.
 
 Rollback uses the previous tested API image and frontend artifact, with the same environment resources and secret files. Keep migrations compatible with the previous image or restore into isolated recovery resources before changing schema destructively. Do not roll back databases by deleting current user data.
 

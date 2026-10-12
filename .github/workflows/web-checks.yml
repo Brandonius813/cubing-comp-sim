@@ -29,6 +29,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: node --test engine/scripts/svg-conformance.test.mjs scripts/assert-engine.test.mjs
+      - run: node --test deploy/auth-providers.test.mjs
       - run: npm run engine:verify
       - run: npm run build
       - name: Validate static asset deployment without publishing
@@ -41,6 +42,7 @@ jobs:
           for browser in chromium firefox webkit; do
             BROWSER="$browser" npm run test:browser
             BROWSER="$browser" node scripts/check-offline-navigation.mjs
+            BROWSER="$browser" node scripts/account-ui-check.mjs
           done
       - uses: actions/upload-artifact@v4
         if: always()

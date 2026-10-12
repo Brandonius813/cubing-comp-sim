@@ -48,9 +48,11 @@ jobs:
           run-id: ${{ inputs.verified_run_id || '38177898361' }}
       - run: npm ci --include=optional --no-fund
       - run: npm test
+      - run: node --test deploy/auth-providers.test.mjs
       - run: node deploy/build-frontend.mjs deploy/environments/staging.json verified
       - run: npx --yes wrangler@4 deploy --config wrangler.release.json --dry-run
       - run: npx playwright install --with-deps chromium
+      - run: node scripts/account-ui-check.mjs
       - run: node deploy/frontend-smoke.mjs
       - uses: actions/upload-artifact@v4
         with:

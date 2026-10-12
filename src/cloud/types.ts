@@ -1,7 +1,10 @@
 export interface AccountSession {
   accessToken: string;
-  user: { id: string; email: string; emailVerified: boolean };
+  user: { id: string; email: string; emailVerified: boolean; providers?: string[] };
 }
+
+export type AccountProvider = 'google' | 'wca';
+export interface AccountCallback { purpose: 'signin' | 'link' | 'delete'; status: 'success' | 'error'; provider?: AccountProvider; reason?: 'email_verification' }
 
 export interface SaveMetadata {
   revision: number;

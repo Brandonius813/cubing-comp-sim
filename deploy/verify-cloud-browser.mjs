@@ -2,17 +2,22 @@
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { chromium } from 'playwright';
+import { chromium, firefox, webkit } from 'playwright';
 import { createClient } from '@supabase/supabase-js';
 const [credentialFile, resultFile] = process.argv.slice(2);
 if (!credentialFile || !resultFile) throw new Error('Supply private controlled-account credentials and a result path.');
+const browserName = process.env.BROWSER || 'chromium';
+if (!['chromium', 'firefox', 'webkit'].includes(browserName)) throw new Error('BROWSER must be chromium, firefox, or webkit.');
+const browserType = { chromium, firefox, webkit }[browserName];
+if (process.env.CCS_BROWSER_CHANNEL && browserName !== 'chromium') throw new Error('CCS_BROWSER_CHANNEL is supported only with BROWSER=chromium.');
 const { settings, accounts } = JSON.parse(await readFile(credentialFile, 'utf8'));
 if (settings.appUrl !== 'https://staging.cubingcompsim.com' || accounts.length !== 2 || accounts.some(a => !/^ccs-check-[a-f0-9-]+@example\.test$/.test(a.email))) throw new Error('This check is restricted to disposable staging accounts.');
 if (!['cloud', 'signin-only'].includes(settings.mode)) throw new Error('Unknown verification mode.');
-const results = { environment: 'staging', url: settings.appUrl, confirmed_test_accounts: true, email_confirmation_delivery: 'not tested by this check', checks: [] };
+const results = { environment: 'staging', url: settings.appUrl, browser: browserName, confirmed_test_accounts: true, email_confirmation_delivery: 'not tested by this check', checks: [] };
 const pass = name => { results.checks.push(name); console.log(`Passed: ${name}`); };
 let stage = 'https_preflight';
 let browser;
+const pageErrorCounts = [];
 const token = async page => page.evaluate(() => JSON.parse(localStorage.getItem('ccs-auth-session') ?? 'null')?.access_token);
 async function api(page, path) {
   const response = await page.evaluate(async ({ url, accessToken }) => {
@@ -68,9 +73,18 @@ try {
   if (settings.mode !== 'signin-only') assert.equal((await fetch(`${settings.apiUrl}/health`)).status, 200);
   const marker = await (await fetch(`${settings.appUrl}/deployment.json`, { cache: 'no-store' })).json();
   assert.equal(marker.environment, 'staging'); assert.equal(marker.apiUrl, settings.apiUrl);
-  browser = await chromium.launch({ ...(process.env.CCS_BROWSER_CHANNEL ? { channel: process.env.CCS_BROWSER_CHANNEL } : {}) });
+  assert.match(marker.sourceCommit, /^[a-f0-9]{40}$/);
+  const authProviders = marker.authProviders ?? [];
+  assert.ok(Array.isArray(authProviders) && authProviders.every(provider => ['google', 'wca'].includes(provider)));
+  results.deployment = { sourceCommit: marker.sourceCommit, authProviders };
+  browser = await browserType.launch({ ...(process.env.CCS_BROWSER_CHANNEL ? { channel: process.env.CCS_BROWSER_CHANNEL } : {}) });
   const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
   const pages = await Promise.all(contexts.map(context => context.newPage()));
+  pages.forEach((page, index) => {
+    pageErrorCounts[index] = 0;
+    // Record only counts: exceptions can include credentials or callback URLs.
+    page.on('pageerror', () => { pageErrorCounts[index]++; });
+  });
   for (const page of pages) { await page.goto(settings.appUrl); await page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor(); }
   const [a, b] = pages; const aRound = fixture('account-a'); const bRound = fixture('account-b');
   await seed(a, aRound); await seed(b, bRound);
@@ -111,6 +125,9 @@ try {
   assert.deepEqual(await stored(a), [replacement]);
   pass('browser sign-out preserves local history');
   }
+  stage = 'browser_runtime_errors';
+  assert.deepEqual(pageErrorCounts, [0, 0]);
+  pass('deployed browser pages have no uncaught runtime errors');
 } catch {
   console.error(JSON.stringify({ status: 'failed', check: stage })); process.exitCode = 1;
 } finally {
@@ -128,6 +145,8 @@ try {
     } catch { cleanup.push(false); process.exitCode = 1; }
   }
   results.test_accounts_and_cloud_data_deleted = settings.mode === 'signin-only' ? false : cleanup.every(Boolean);
+  results.page_error_counts = pageErrorCounts;
+  if (pageErrorCounts.some(count => count > 0)) process.exitCode = 1;
   if (settings.mode === 'signin-only') results.cleanup_method = 'pending private Auth-only cleanup';
   results.completed_at = new Date().toISOString(); results.passed = !process.exitCode;
   await writeFile(resultFile, JSON.stringify(results, null, 2) + '\n', { mode: 0o600 });
