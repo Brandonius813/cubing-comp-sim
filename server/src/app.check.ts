@@ -5,6 +5,33 @@ import { ApiError } from './errors.js';
 import type { SaveService } from './saves.js';
 import type { AccountDeletion } from './deletion.js';
 
+test('forwarded client addresses are accepted only from the configured proxy', async () => {
+  for (const trustedProxyIps of [undefined, ['192.0.2.10']]) {
+    const app = await createApi({ saves: {} as SaveService, origins: ['https://example.test'], logging: false,
+      trustedProxyIps, verifyAccount: async () => ({ id: 'test-user', emailVerified: true }),
+    });
+    app.get('/test/client-ip', async request => ({ ip: request.ip }));
+    try {
+      const response = await app.inject({ url: '/test/client-ip', remoteAddress: '192.0.2.10', headers: { 'x-forwarded-for': '198.51.100.9, 203.0.113.11' } });
+      assert.equal(response.json().ip, trustedProxyIps ? '203.0.113.11' : '192.0.2.10');
+      const spoofed = await app.inject({ url: '/test/client-ip', remoteAddress: '192.0.2.20', headers: { 'x-forwarded-for': '198.51.100.9' } });
+      assert.equal(spoofed.json().ip, '192.0.2.20');
+    } finally { await app.close(); }
+  }
+});
+
+test('clients behind the trusted proxy have separate rate limits', async () => {
+  const app = await createApi({ saves: {} as SaveService, origins: ['https://example.test'], logging: false,
+    trustedProxyIps: ['192.0.2.10'], verifyAccount: async () => ({ id: 'test-user', emailVerified: true }),
+  });
+  try {
+    const request = { url: '/health', remoteAddress: '192.0.2.10', headers: { 'x-forwarded-for': '203.0.113.11' } };
+    for (let i = 0; i < 60; i++) assert.equal((await app.inject(request)).statusCode, 200);
+    assert.equal((await app.inject(request)).statusCode, 429);
+    assert.equal((await app.inject({ ...request, headers: { 'x-forwarded-for': '203.0.113.12' } })).statusCode, 200);
+  } finally { await app.close(); }
+});
+
 test('API rejects unauthenticated/unverified access and uses verified ownership only', async () => {
   const requestedUsers: string[] = [];
   const save = { revision: 1, savedAt: new Date().toISOString(), roundCount: 0, attemptCount: 0, bytes: 100, sha256: 'a'.repeat(64) };
