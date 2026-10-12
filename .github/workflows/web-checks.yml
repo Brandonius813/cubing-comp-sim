@@ -40,6 +40,7 @@ jobs:
       - run: |
           for browser in chromium firefox webkit; do
             BROWSER="$browser" npm run test:browser
+            BROWSER="$browser" node scripts/check-offline-navigation.mjs
           done
       - uses: actions/upload-artifact@v4
         if: always()
