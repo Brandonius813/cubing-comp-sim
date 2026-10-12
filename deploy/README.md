@@ -38,6 +38,8 @@ After installing a release, verify certificate trust, exact frontend CORS origin
 
 `verify-cloud-browser.mjs` accepts a private fixture with `settings.mode` equal to `cloud` or `signin-only`. The latter permits checking actual deployed Auth independently of an unavailable API; its temporary identities require private server-side cleanup afterward. Never put fixtures or human credentials in source control. Auth-only success is not cloud-save acceptance.
 
+Select the browser with `BROWSER=chromium`, `BROWSER=firefox`, or `BROWSER=webkit` (Chromium is the default); `CCS_BROWSER_CHANNEL` applies only to Chromium. For example, run `BROWSER=firefox node deploy/verify-cloud-browser.mjs PRIVATE_FIXTURE PRIVATE_RESULT`. The safe result records the deployed source commit, provider gates, and per-page uncaught-error counts. Successful acceptance requires zero uncaught page errors as well as the account/history checks. Actual email delivery remains a separate check.
+
 Rollback uses the previous tested API image and frontend artifact, with the same environment resources and secret files. Keep migrations compatible with the previous image or restore into isolated recovery resources before changing schema destructively. Do not roll back databases by deleting current user data.
 
 ## Production prerequisites

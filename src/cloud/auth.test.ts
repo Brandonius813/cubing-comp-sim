@@ -17,6 +17,7 @@ function sdk(id = 'user-a', providers = ['google']) {
   const session = { access_token: 'app-token', user: { id, email: 'solver@example.test', email_confirmed_at: '2026-01-01', identities: providers.map(provider => ({ provider })) } };
   const methods = {
     initialize: vi.fn().mockResolvedValue({ error: null }),
+    exchangeCodeForSession: vi.fn().mockResolvedValue({ data: { session }, error: null }),
     getSession: vi.fn().mockResolvedValue({ data: { session }, error: null }),
     signInWithOAuth: vi.fn().mockResolvedValue({ data: { url: 'https://provider.example.test' }, error: null }),
     linkIdentity: vi.fn().mockResolvedValue({ data: {}, error: null }),
@@ -85,6 +86,7 @@ describe('provider sign-in boundary', () => {
     expect(replaceState).toHaveBeenCalledWith(null, '', '/?other=keep');
     expect(storage.has('ccs-oauth-intent')).toBe(false);
     await account.completeRedirect(); expect(methods.initialize).toHaveBeenCalledTimes(1);
+    expect(methods.exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith('private-code', undefined);
   });
   it.each(['other-user', 'same-user-missing-code', 'expired', 'exchange-error'])('fails closed for %s deletion callbacks', async variant => {
     const { storage } = browser(`https://app.example.test/?account=delete${variant === 'same-user-missing-code' ? '' : '&code=private-code'}`);
@@ -114,5 +116,33 @@ describe('provider sign-in boundary', () => {
   it('drops provider API tokens without removing the app session or PKCE verifier', () => {
     expect(JSON.parse(withoutProviderTokens(JSON.stringify({ access_token: 'app', refresh_token: 'refresh', provider_token: 'provider', provider_refresh_token: 'provider-refresh' })))).toEqual({ access_token: 'app', refresh_token: 'refresh' });
     expect(withoutProviderTokens('verifier')).toBe('verifier');
+  });
+  it.each(['missing', 'expired', 'wrong-purpose'])('never exchanges a code with %s intent', async variant => {
+    const { storage } = browser('https://app.example.test/?account=delete&code=private-code');
+    if (variant !== 'missing') storage.set('ccs-oauth-intent', JSON.stringify({
+      purpose: variant === 'wrong-purpose' ? 'link' : 'delete', provider: 'google', userId: 'user-a',
+      startedAt: Date.now() - (variant === 'expired' ? 11 * 60_000 : 0),
+    }));
+    const { client, methods } = sdk();
+    expect(await new AccountAuth(config, client).completeRedirect()).toMatchObject({ status: 'error' });
+    expect(methods.exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+  it('passes the callback flow ID to the supported SDK exchange and removes it from the URL', async () => {
+    const flowId = 'a'.repeat(32);
+    const { storage, replaceState } = browser(`https://app.example.test/?account=delete&code=private-code&sb_flow_id=${flowId}`);
+    storage.set('ccs-oauth-intent', JSON.stringify({ purpose: 'delete', provider: 'google', userId: 'user-a', startedAt: Date.now() }));
+    const { client, methods } = sdk();
+    expect(await new AccountAuth(config, client).completeRedirect()).toMatchObject({ status: 'success' });
+    expect(methods.exchangeCodeForSession).toHaveBeenCalledExactlyOnceWith('private-code', { flowId });
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/');
+  });
+  it('an unsuccessful exchange never turns an existing cached session into deletion proof', async () => {
+    const { storage } = browser('https://app.example.test/?account=delete&code=private-code');
+    storage.set('ccs-oauth-intent', JSON.stringify({ purpose: 'delete', provider: 'google', userId: 'user-a', startedAt: Date.now() }));
+    const { client, methods } = sdk();
+    methods.exchangeCodeForSession.mockResolvedValue({ data: { session: null }, error: new Error('Missing verifier') });
+    const account = new AccountAuth(config, client);
+    expect(await account.completeRedirect()).toMatchObject({ status: 'error' });
+    await expect(account.reauthenticatedDeletionSession()).rejects.toMatchObject({ code: 'reauth_required' });
   });
 });

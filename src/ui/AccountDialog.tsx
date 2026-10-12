@@ -145,7 +145,8 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
         freshSession = providerConfirmed
           ? await auth.reauthenticatedDeletionSession()
           : await auth.reauthenticateForDeletion(deletePassword, session.user.id);
-        if (freshSession.user.id !== session.user.id) throw new CloudError('auth_required', 'The account changed. Sign in again before deleting it.');
+        const current = await auth.getSession();
+        if (freshSession.user.id !== session.user.id || displayedUserId.current !== session.user.id || current?.user.id !== session.user.id) throw new CloudError('auth_required', 'The account changed. Sign in again before deleting it.');
       } catch (cause) {
         setProviderConfirmed(false);
         throw cause;
@@ -153,6 +154,8 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
       const result = await cloud.deleteAccount(freshSession);
       // Account deletion never invokes a local-history mutation.
       await auth.signOutAfterDeletion(session.user.id);
+      const current = await auth.getSession();
+      if ((current && current.user.id !== session.user.id) || (displayedUserId.current && displayedUserId.current !== session.user.id)) return;
       setDeletePassword(''); setDeleteEmail(''); setPassword('');
       setDeletedResult(result.status); setDeleting(false); setProviderConfirmed(false); setMetadata(null);
     });

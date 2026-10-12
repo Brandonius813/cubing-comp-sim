@@ -6,7 +6,11 @@ import path from 'node:path';
 export async function checkAccountDialog(browser, origin, artifacts) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const errors = [];
+  const externalRequests = [];
   page.on('pageerror', error => errors.push(error.message));
+  page.on('request', request => {
+    if (new URL(request.url()).origin !== new URL(origin).origin) externalRequests.push(request.url());
+  });
   const button = name => page.getByRole('button', { name, exact: true });
   const render = async (providers, callback) => {
     const revision = await page.evaluate(([providers, callback]) => window.accountFixture.render(providers, callback), [providers, callback]);
@@ -17,6 +21,7 @@ export async function checkAccountDialog(browser, origin, artifacts) {
   try {
     await page.goto(`${origin}/tests/e2e/account.fixture.html`);
     await button('Continue with Google').waitFor();
+    assert.equal(await page.evaluate(() => window.accountFixture.sdkConfigured), false, 'The UI-only fixture must not construct a live SDK client.');
     await page.evaluate(() => localStorage.setItem('account-ui-local-history-sentinel', 'kept'));
     await button('Continue with Google').click();
     assert.deepEqual(await calls(), [{ method: 'signInWithProvider', provider: 'google' }]);
@@ -126,6 +131,31 @@ export async function checkAccountDialog(browser, origin, artifacts) {
     await page.getByText('different@example.test', { exact: true }).waitFor();
     assert.equal(await button('Permanently delete account').count(), 0, 'Changing displayed accounts must clear deletion confirmation and provider proof.');
     assert.deepEqual(await calls(), [{ method: 'recoveryComplete' }], 'Account switching must end the previous recovery context.');
+    await render(['google'], { purpose: 'delete', status: 'success', provider: 'google' });
+    await page.getByLabel('Type your account email to confirm', { exact: true }).fill('solver@example.test');
+    await page.evaluate(() => window.accountFixture.holdDeletion());
+    await button('Permanently delete account').click();
+    await page.waitForFunction(() => window.accountFixture.deletionStarted());
+    await page.evaluate(() => window.accountFixture.switchDisplayedUser());
+    await page.getByText('different@example.test', { exact: true }).waitFor();
+    await page.getByText('7 rounds · 0 solves', { exact: true }).waitFor();
+    await page.evaluate(() => window.accountFixture.releaseDeletion());
+    await page.waitForFunction(() => [...document.querySelectorAll('button')].some(button => button.textContent === 'Delete account' && !button.disabled));
+    assert.equal(await page.getByText('Your account and cloud save were deleted. Times on this device are kept.', { exact: true }).count(), 0, 'A completed deletion for the previous account must not replace the new account summary.');
+    assert.equal(await page.getByText('7 rounds · 0 solves', { exact: true }).count(), 1, 'The new account cloud metadata must remain visible.');
+    assert.equal(await page.evaluate(() => localStorage.getItem('account-ui-local-history-sentinel')), 'kept');
+    await render(['email']);
+    await button('Delete account').click();
+    await page.getByLabel('Type your account email to confirm', { exact: true }).fill('solver@example.test');
+    await page.getByLabel('Confirm your password', { exact: true }).fill('test-only-password');
+    await page.evaluate(() => window.accountFixture.holdPasswordReauth());
+    await button('Permanently delete account').click();
+    await page.waitForFunction(() => window.accountFixture.passwordReauthStarted());
+    await page.evaluate(() => window.accountFixture.switchDisplayedUser());
+    await page.getByText('different@example.test', { exact: true }).waitFor();
+    await page.evaluate(() => window.accountFixture.releasePasswordReauth());
+    await page.getByRole('alert').waitFor();
+    assert.equal((await calls()).some(call => call.method === 'deleteAccount'), false, 'An account change during password confirmation must prevent deletion even when confirmation returns the old account token.');
     const recovery = async () => {
       const revision = await page.evaluate(() => window.accountFixture.renderRecovery());
       await page.locator(`[data-account-fixture-revision="${revision}"]`).waitFor({ state: 'attached' });
@@ -175,6 +205,7 @@ export async function checkAccountDialog(browser, origin, artifacts) {
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Account dialog overflows on mobile.');
     if (artifacts) { await mkdir(artifacts, { recursive: true }); await page.screenshot({ path: path.join(artifacts, 'account-mobile.png'), fullPage: true }); }
     assert.deepEqual(errors, []);
+    assert.deepEqual(externalRequests, [], 'UI-only checks must not contact external auth or cloud services.');
     return 'Account provider sign-in, linking, password/provider deletion, callback safety, retries, configured providers and mobile layout passed.';
   } finally { await page.close(); }
 }

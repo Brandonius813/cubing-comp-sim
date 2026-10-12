@@ -2,6 +2,7 @@ import { chromium, firefox, webkit } from 'playwright';
 import { createServer } from 'vite';
 import { checkAccountDialog } from '../tests/e2e/account-check.mjs';
 import { checkRealAccountCallbacks } from '../tests/e2e/account-auth-check.mjs';
+import { checkAccountLifecycle, checkRecoveryThenOAuth } from '../tests/e2e/account-lifecycle-check.mjs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -14,12 +15,22 @@ let browser;
 let server;
 try {
   server = await createServer({ root, define: {
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://account-fixture.supabase.co'),
-    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify('test-only-public-key'),
-    'import.meta.env.VITE_API_URL': JSON.stringify('https://api.example.test'),
-  }, server: { host: '127.0.0.1', port: 0 } });
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(''),
+    'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(''),
+    'import.meta.env.VITE_API_URL': JSON.stringify(''),
+  }, plugins: [{
+    name: 'account-ui-fixture-cloud',
+    enforce: 'pre',
+    resolveId(source, importer) {
+      if (source === '../cloud' && importer?.split('?')[0].endsWith('/src/ui/AccountDialog.tsx')) {
+        return path.join(root, 'tests/e2e/account-cloud.fixture.ts');
+      }
+    },
+  }], server: { host: '127.0.0.1', port: 0 } });
   await server.listen();
   browser = await engines[browserName].launch({ headless: true, ...(process.env.CCS_BROWSER_EXECUTABLE ? { executablePath: process.env.CCS_BROWSER_EXECUTABLE } : {}), ...(process.env.CCS_BROWSER_CHANNEL ? { channel: process.env.CCS_BROWSER_CHANNEL } : {}) });
   console.log(await checkAccountDialog(browser, `http://127.0.0.1:${server.httpServer.address().port}`, process.env.CCS_BROWSER_ARTIFACT_DIR ?? path.join(root, 'test-results/browser')));
   console.log(await checkRealAccountCallbacks(browser, `http://127.0.0.1:${server.httpServer.address().port}`));
+  console.log(await checkAccountLifecycle(browser, `http://127.0.0.1:${server.httpServer.address().port}`));
+  console.log(await checkRecoveryThenOAuth(browser, `http://127.0.0.1:${server.httpServer.address().port}`));
 } finally { await browser?.close(); await server?.close(); }

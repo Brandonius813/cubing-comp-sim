@@ -5,10 +5,11 @@ export type AccountListener = (session: AccountSession | null, event: AuthChange
 export interface AuthConfiguration { url?: string; publicKey?: string; appUrl?: string; providers?: string }
 
 const INTENT_KEY = 'ccs-oauth-intent';
+const AUTH_STORAGE_KEY = 'ccs-auth-session';
 const MAX_REDIRECT_AGE = 10 * 60_000;
 const PROVIDERS = { google: 'google', wca: 'custom:wca' } as const;
 interface RedirectIntent { purpose: AccountCallback['purpose']; provider: AccountProvider; userId?: string; startedAt: number }
-const credentialKeys = ['code', 'error', 'error_code', 'error_description', 'access_token', 'refresh_token', 'provider_token', 'provider_refresh_token', 'expires_at', 'expires_in', 'token_type', 'type'];
+const credentialKeys = ['code', 'sb_flow_id', 'error', 'error_code', 'error_description', 'access_token', 'refresh_token', 'provider_token', 'provider_refresh_token', 'expires_at', 'expires_in', 'token_type', 'type'];
 
 /** Third-party API tokens are unnecessary for this app. Never persist them. */
 export function withoutProviderTokens(value: string): string {
@@ -41,10 +42,11 @@ export class AccountAuth {
   private client: SupabaseClient | null;
   private emailClient: SupabaseClient | null;
   private emailCallbackClient: SupabaseClient | null;
+  private readonly createIsolatedClient?: () => SupabaseClient;
   private readonly listeners = new Set<AccountListener>();
+  private storageListener?: (event: StorageEvent) => void;
   private readonly redirectBase: string;
   private readonly initialUrl: URL | null;
-  private readonly hadPkceVerifier: boolean;
   private redirectCompletion?: Promise<AccountCallback | null>;
   private deletionProof?: { userId: string; at: number };
 
@@ -52,16 +54,15 @@ export class AccountAuth {
     this.initialUrl = typeof location === 'undefined' ? null : new URL(location.href);
     this.providers = [...new Set((config.providers ?? '').split(',').filter((provider): provider is AccountProvider => provider === 'google' || provider === 'wca'))];
     this.redirectBase = typeof location === 'undefined' ? 'http://localhost:5173' : location.origin;
-    this.hadPkceVerifier = false;
     try {
-      // The SDK otherwise ignores a code without a verifier and can return an
-      // older cached session. Capture this before initialization consumes it.
-      this.hadPkceVerifier = typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('ccs-auth-session-code-verifier'));
       const base = new URL(config.appUrl || this.redirectBase);
       if ((base.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(base.hostname)) || base.username || base.password || base.pathname !== '/' || base.search || base.hash) throw new Error('Use a fixed app origin for account redirects.');
       this.redirectBase = base.origin;
       this.client = client ?? (config.url && config.publicKey ? createClient(config.url, config.publicKey, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: !this.initialUrl?.hash.includes('access_token='), storageKey: 'ccs-auth-session',
+        // Exchange provider codes explicitly after checking the local intent.
+        // Otherwise SDK initialization could consume an unrelated callback or
+        // quietly restore an old session when its verifier is missing.
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'ccs-auth-session',
           flowType: 'pkce',
           ...(typeof localStorage === 'undefined' ? {} : { storage: {
             getItem: (key: string) => localStorage.getItem(key),
@@ -75,6 +76,13 @@ export class AccountAuth {
       this.emailClient = client ?? (config.url && config.publicKey ? createClient(config.url, config.publicKey, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'implicit', storageKey: 'ccs-email-link-requests' },
       }) : null);
+      if (config.url && config.publicKey) {
+        const url = config.url; const publicKey = config.publicKey;
+        this.createIsolatedClient = () => createClient(url, publicKey, { auth: {
+          persistSession: false, autoRefreshToken: false, detectSessionInUrl: false,
+          storageKey: `ccs-account-operation-${crypto.randomUUID()}`,
+        } });
+      }
       // Consume cross-browser email links independently so the primary client
       // stays on PKCE even when a user starts OAuth after completing recovery.
       const emailHash = new URLSearchParams(this.initialUrl?.hash.slice(1));
@@ -127,11 +135,17 @@ export class AccountAuth {
         }
       }
       const initialized = await this.client?.auth.initialize();
-      if (initialized?.error || url?.searchParams.has('error') || hash.has('error')) throw new Error('Callback failed');
-      if (!isCallback || !intent) return isCallback && ['signin', 'link', 'delete'].includes(url?.searchParams.get('account') ?? '') ? { purpose: 'signin', status: 'error' } : null;
-      if (!url?.searchParams.has('code') || !this.hadPkceVerifier || url.searchParams.get('account') !== intent.purpose) throw new Error('Missing OAuth exchange');
+      if (initialized?.error || ['error', 'error_code', 'error_description'].some(key => url?.searchParams.has(key) || hash.has(key))) throw new Error('Callback failed');
+      if (!isCallback || !intent) return isCallback && (url?.searchParams.has('code') || ['signin', 'link', 'delete'].includes(url?.searchParams.get('account') ?? '')) ? { purpose: 'signin', status: 'error' } : null;
+      if (!url?.searchParams.get('code') || url.searchParams.get('account') !== intent.purpose) throw new Error('Missing OAuth exchange');
+      const flowId = url.searchParams.get('sb_flow_id');
+      // The supported SDK exchange checks legacy/per-flow verifier storage and
+      // rejects invalid flow IDs. Do not infer success from a cached session.
+      const exchanged = await this.sdk().auth.exchangeCodeForSession(url.searchParams.get('code')!,
+        flowId === null ? undefined : { flowId });
+      if (exchanged.error || !exchanged.data.session) throw new Error('OAuth exchange failed');
       const session = await this.getSession();
-      if (!session || (intent.userId && session.user.id !== intent.userId)
+      if (!session || session.user.id !== exchanged.data.session.user.id || (intent.userId && session.user.id !== intent.userId)
         || !session.user.providers?.includes(PROVIDERS[intent.provider])) throw new Error('Account mismatch');
       if (intent.purpose === 'delete') this.deletionProof = { userId: session.user.id, at: intent.startedAt };
       return { purpose: intent.purpose, provider: intent.provider, status: 'success' };
@@ -139,6 +153,10 @@ export class AccountAuth {
       const needsEmail = url?.searchParams.get('error_code') === 'provider_email_needs_verification' || hash.get('error_code') === 'provider_email_needs_verification';
       return isCallback ? { purpose: intent?.purpose ?? 'signin', provider: intent?.provider, status: 'error', ...(needsEmail ? { reason: 'email_verification' as const } : {}) } : null;
     } finally {
+      // This one-shot client only consumes an email link. Release its SDK
+      // listeners and in-memory session after restoring the primary client.
+      this.emailCallbackClient?.auth.dispose();
+      this.emailCallbackClient = null;
       if (isCallback && typeof window !== 'undefined') {
         const clean = new URL(window.location.href);
         credentialKeys.forEach(key => clean.searchParams.delete(key));
@@ -198,12 +216,32 @@ export class AccountAuth {
   subscribe(listener: AccountListener): () => void {
     if (!this.client) return () => undefined;
     this.listeners.add(listener);
+    if (!this.storageListener && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      // Deletion cleanup deliberately avoids SDK signOut's broad cache removal.
+      // Native storage events synchronize its guarded removal with other tabs.
+      this.storageListener = event => {
+        if (event.key !== AUTH_STORAGE_KEY || event.newValue !== null || typeof localStorage === 'undefined') return;
+        try {
+          // A newer sign-in may have overtaken this queued removal event.
+          if (localStorage.getItem(AUTH_STORAGE_KEY) !== null) return;
+          this.deletionProof = undefined;
+          for (const subscribed of this.listeners) subscribed(null, 'SIGNED_OUT');
+        } catch { /* Storage becoming unavailable must not affect guest use. */ }
+      };
+      window.addEventListener('storage', this.storageListener);
+    }
     const { data } = this.client.auth.onAuthStateChange((event, session) => {
       // Supabase consumes its callback credentials before emitting this event.
       // Never put asynchronous SDK calls inside this synchronous callback.
       listener(mapSession(session), event);
     });
-    return () => { this.listeners.delete(listener); data.subscription.unsubscribe(); };
+    return () => {
+      this.listeners.delete(listener); data.subscription.unsubscribe();
+      if (!this.listeners.size && this.storageListener && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+        window.removeEventListener('storage', this.storageListener);
+        this.storageListener = undefined;
+      }
+    };
   }
 
   async signUp(email: string, password: string): Promise<AccountSession | null> {
@@ -235,21 +273,63 @@ export class AccountAuth {
     const current = await this.getSession();
     if (!current?.user.email) throw new CloudError('auth_required', 'Sign in before deleting your account.');
     if (expectedUserId && current.user.id !== expectedUserId) throw new CloudError('auth_required', 'The account changed. Open account settings again.');
-    const session = await this.signIn(current.user.email, password);
-    if (session.user.id !== current.user.id) throw new CloudError('auth_required', 'The account changed. Sign in again before deleting it.');
-    return session;
+    if (!this.createIsolatedClient) throw new CloudError('not_configured', 'Account confirmation is not configured.');
+    const isolated = this.createIsolatedClient();
+    let proof: Session | null = null;
+    let accepted = false;
+    try {
+      // This credential check must not install A's fresh response over a newer
+      // B session. Its fresh token is returned only for the deletion request.
+      const { data, error } = await isolated.auth.signInWithPassword({ email: current.user.email, password });
+      proof = data.session;
+      if (error || !proof) throw new CloudError('auth_error', 'Could not confirm your account. Check your password.');
+      if (proof.user.id !== current.user.id || (await this.getSession())?.user.id !== current.user.id) {
+        throw new CloudError('auth_required', 'The account changed. Sign in again before deleting it.');
+      }
+      accepted = true;
+      return mapSession(proof)!;
+    } finally {
+      // A proof rejected after a switch is not needed. Revoke that new session
+      // alone; never let the primary client's current user choose its target.
+      if (proof && !accepted) {
+        try { await isolated.auth.admin.signOut(proof.access_token, 'local'); } catch { /* Best effort. */ }
+      }
+      isolated.auth.dispose();
+    }
   }
 
   async signOutAfterDeletion(expectedUserId?: string): Promise<void> {
-    // A deletion response for account A must not clear account B's new session.
-    if (expectedUserId && (await this.getSession())?.user.id !== expectedUserId) return;
+    const captured = await this.getSession();
+    // A deletion response for account A must not revoke account B's session.
+    if (expectedUserId && captured?.user.id !== expectedUserId) return;
     const client = this.sdk();
-    try { await client.auth.signOut({ scope: 'local' }); }
+    try {
+      // Public admin.signOut targets exactly this token and leaves browser
+      // storage alone. Ordinary signOut clears whichever session is current
+      // after its network response, which could now belong to another account.
+      if (captured) await client.auth.admin.signOut(captured.accessToken, 'local');
+    } catch { /* The identity may already be gone; local cleanup is still needed. */ }
     finally {
+      const current = await this.getSession().catch(() => null);
+      if (current && current.user.id !== captured?.user.id) return;
+      if (typeof localStorage !== 'undefined') {
+        const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (raw !== null) {
+          let storedUserId: unknown;
+          try { storedUserId = JSON.parse(raw)?.user?.id; }
+          catch { return; } // Never clear an unidentified or newer credential cache.
+          if (!captured || storedUserId !== captured.user.id) return;
+          // Recheck shared credentials immediately before local cleanup.
+          // Keep pending PKCE slots for other tabs intact.
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+        }
+      }
+      this.deletionProof = undefined;
+      for (const listener of this.listeners) listener(null, 'SIGNED_OUT');
       await client.auth.stopAutoRefresh();
-      // Auth deletion can make the provider reject logout, or its response can
-      // be lost. Remove only the auth credential cache, never history/settings.
-      if (typeof localStorage !== 'undefined') localStorage.removeItem('ccs-auth-session');
+      // A new sign-in may complete while stopping the old account's ticker.
+      const replacement = await this.getSession().catch(() => null);
+      if (replacement && replacement.user.id !== captured?.user.id) await client.auth.startAutoRefresh();
     }
   }
 
@@ -263,13 +343,34 @@ export class AccountAuth {
   }
 
   async updatePassword(password: string, expectedUserId?: string): Promise<void> {
-    const current = await this.getSession();
-    if (!current || (expectedUserId && current.user.id !== expectedUserId)) throw new CloudError('auth_required', 'The account changed. Open account settings again.');
-    const { error } = await this.sdk().auth.updateUser({ password });
-    if (error) throw new CloudError('auth_error', error.message);
-    // Revokes refresh sessions on other devices. Existing short-lived access
-    // tokens may remain valid until expiry; the UI must not claim instant expiry.
-    const { error: signOutError } = await this.sdk().auth.signOut({ scope: 'others' });
-    if (signOutError) throw new CloudError('auth_error', 'Password changed, but other sessions could not be signed out. Try again from account settings.');
+    const { data, error } = await this.sdk().auth.getSession();
+    const captured = data.session;
+    if (error || !captured || (expectedUserId && captured.user.id !== expectedUserId)) {
+      throw new CloudError('auth_required', 'The account changed. Open account settings again.');
+    }
+    if (!this.createIsolatedClient) throw new CloudError('not_configured', 'Password updates are not configured.');
+    const isolated = this.createIsolatedClient();
+    try {
+      // updateUser writes its response into its client's session. Isolate that
+      // write so a delayed account-A response cannot overwrite account B's
+      // shared browser credentials after a cross-tab switch.
+      const restored = await isolated.auth.setSession({ access_token: captured.access_token, refresh_token: captured.refresh_token });
+      if (restored.error || restored.data.session?.user.id !== captured.user.id) {
+        throw new CloudError('auth_required', 'Could not verify the account for this password update.');
+      }
+      if ((await this.getSession())?.user.id !== captured.user.id) {
+        throw new CloudError('auth_required', 'The account changed. Open account settings again.');
+      }
+      const updated = await isolated.auth.updateUser({ password });
+      if (updated.error) throw new CloudError('auth_error', updated.error.message);
+      if (updated.data.user?.id !== captured.user.id) throw new CloudError('auth_required', 'The account changed. Open account settings again.');
+      // Revoke other sessions using only the verified account-A token. Never
+      // let the current browser's possibly-new account choose the target.
+      const { error: signOutError } = await isolated.auth.admin.signOut(restored.data.session.access_token, 'others');
+      if (signOutError) throw new CloudError('auth_error', 'Password changed, but other sessions could not be signed out. Try again from account settings.');
+      if ((await this.getSession())?.user.id !== captured.user.id) {
+        throw new CloudError('auth_required', 'Password changed for the original account. The active account changed; open account settings again.');
+      }
+    } finally { isolated.auth.dispose(); }
   }
 }
