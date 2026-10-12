@@ -25,10 +25,15 @@ describe('time input and precision', () => {
   it.each([
     ['12.345', 12_345, 'none'], ['1:02.30', 62_300, 'none'], ['1:02:03.4', 3_723_400, 'none'],
     ['12.34 +2', 12_340, '+2'], ['dnf', null, 'DNF'], ['DNS', null, 'DNS'], ['DNF(12.34)', 12_340, 'DNF'],
+    ['10321', 63_210, 'none'], ['327', 3_270, 'none'], ['1234', 12_340, 'none'],
+    ['1', 10, 'none'], ['12', 120, 'none'], ['0', 0, 'none'], ['000327', 3_270, 'none'],
+    ['10000', 60_000, 'none'], ['6032', 60_320, 'none'], ['1234567', 7_425_670, 'none'],
+    ['14395999', 86_399_990, 'none'], ['327 +2', 3_270, '+2'], ['DNF(10321)', 63_210, 'DNF'],
+    [' 327 ', 3_270, 'none'], ['3.2', 3_200, 'none'], ['3:27', 207_000, 'none'],
   ] as const)('parses %s without discarding the original time', (text, rawMs, penalty) => {
     expect(parseTimeInput(text)).toEqual({ rawMs, penalty });
   });
-  it.each(['', '-1', 'NaN', 'Infinity', '1e5', '1:60', '0:99:00', '1:99:00', '1.2345', '12+', '24:00:00', '12.34 +2 +2', 'DNF(12) +2'])('rejects ambiguous or invalid input %s', text => {
+  it.each(['', '-1', 'NaN', 'Infinity', '1e5', '1:60', '0:99:00', '1:99:00', '1.2345', '12+', '24:00:00', '12.34 +2 +2', 'DNF(12) +2', '16000', '19999', '14400000', '999999999999999999999'])('rejects ambiguous or invalid input %s', text => {
     expect(parseTimeInput(text)).toBeNull();
   });
   it('truncates singles and retains the original value separately', () => {

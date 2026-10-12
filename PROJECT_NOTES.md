@@ -1,5 +1,11 @@
 # Cubing Comp Sim: project notes
 
+## Digit-only solve entry (October 12, 2026)
+
+The owner requested compact typing: `10321` becomes `1:03.21`, and `327` becomes `3.27`. For new manual solves and historical edits, the last two digits represent hundredths, the preceding two seconds, and the remaining digits minutes. Explicit decimal and colon formats, localized keyboard normalization, and penalty controls remain supported. To enter whole seconds explicitly, include a decimal point (for example, `12.00`). Existing saved times retain their stored milliseconds.
+
+Validation: all 183 application tests passed, the production build passed using the checksum-verified existing scramble engine, and the Chrome feedback suite verified both requested examples in persisted history and the scorecard plus digit-only historical editing. The change is prepared for GitHub review.
+
 ## Offline navigation repair (October 12, 2026)
 
 The public Cloudflare guest site reproduced a first-load success followed by Chrome `ERR_FAILED` on ordinary reload; bypassing the service worker loaded successfully. Cloudflare redirects `/index.html` to `/`, and the old offline worker cached that followed response with `redirected=true`. A navigation cannot reuse that response as its page. Cache the canonical `/` response instead and version the cache contract. During installation, normalize any redirected legacy shell in its existing cache, retaining that shell's own assets while the update waits for open tabs to close. Do not force activation or clear IndexedDB/localStorage.

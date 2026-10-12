@@ -38,6 +38,10 @@ describe('localized time input preserves integer millisecond scoring', () => {
   it('accepts full-width minute separators and preserves penalties', () => {
     expect(parseTimeInput(normalizeTimeInput('１：０２，３４＋２'))).toEqual({ rawMs: 62340, penalty: '+2' });
   });
+  it('accepts digit-only entry from full-width keyboards', () => {
+    expect(parseTimeInput(normalizeTimeInput('１０３２１'))).toEqual({ rawMs: 63210, penalty: 'none' });
+    expect(parseTimeInput(normalizeTimeInput('３２７'))).toEqual({ rawMs: 3270, penalty: 'none' });
+  });
   it('does not treat thousands separators or malformed times as valid', () => {
     for (const input of ['1,234,567', '12,.34', '1:99,00']) expect(parseTimeInput(normalizeTimeInput(input))).toBeNull();
   });

@@ -42,6 +42,7 @@ export function HelpDialog({ onClose, videos = {} }: { onClose: () => void; vide
           <p>Cubing Comp Sim helps you practice the rhythm of a competition round, from the first scramble to the final scorecard.</p>
           <ol><li>Choose your event, start a simulation, and apply the scramble. Use the drawing to check your puzzle.</li><li>Follow the on-screen controls to inspect, time, and confirm each solve. Choose Manual Entry in Settings if you use a separate timer.</li><li>Your scorecard fills in as you go. Hover over a result for penalty controls, or select it to edit the time.</li></ol>
           <p>Your results are saved on this device. Open Statistics to review your rounds, check your mean of three rounds, or export a backup.</p>
+          <p>For Manual Entry, type digits without punctuation: 327 becomes 3.27 and 10321 becomes 1:03.21. You can also enter a decimal point or minutes:seconds explicitly.</p>
           <p className="help-guide-note">Clearing your browser's site data can remove local results. Signing in does not automatically transfer them.</p>
         </div>}
         {topic === 'competitions' && <div className="help-guide">
