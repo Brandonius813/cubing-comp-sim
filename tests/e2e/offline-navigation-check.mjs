@@ -97,7 +97,9 @@ self.addEventListener('fetch',event=>{
     const revisit = await legacyContext.newPage();
     let failed = false;
     try { await revisit.goto(base, { timeout: 10000 }); } catch { failed = true; }
-    assert.ok(failed, `${browserName}: the legacy redirected shell should reproduce navigation failure.`);
+    // Chromium rejects the redirected navigation response; Firefox tolerates it.
+    // Require the reported Chrome failure, and verify repair/reloads in every engine.
+    if (browserName === 'chromium') assert.ok(failed, 'The legacy redirected shell must reproduce the Chrome navigation failure.');
 
     worker = fixedWorker;
     await original.evaluate(async () => {
@@ -136,7 +138,7 @@ self.addEventListener('fetch',event=>{
     await afterActivation.goto(base); await homepage(afterActivation); await waitControlled(afterActivation);
     await waitForState(afterActivation, async name => !(await caches.keys()).includes(name), legacyCache);
     await legacyContext.setOffline(true); await afterActivation.reload(); await homepage(afterActivation);
-    return 'redirected legacy failure reproduced; normal reload, reopen, offline routes, waiting-update repair, activation and stored-data preservation passed';
+    return `legacy redirected navigation ${failed ? 'rejected' : 'accepted'}; normal reload, reopen, offline routes, waiting-update repair, activation and stored-data preservation passed`;
   } finally {
     for (const context of contexts) await context.close();
     await new Promise(resolve => server.close(resolve));
