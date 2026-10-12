@@ -1,5 +1,13 @@
 # Cubing Comp Sim: project notes
 
+## Offline navigation repair (October 12, 2026)
+
+The public Cloudflare guest site reproduced a first-load success followed by Chrome `ERR_FAILED` on ordinary reload; bypassing the service worker loaded successfully. Cloudflare redirects `/index.html` to `/`, and the old offline worker cached that followed response with `redirected=true`. A navigation cannot reuse that response as its page. Cache the canonical `/` response instead and version the cache contract. During installation, normalize any redirected legacy shell in its existing cache, retaining that shell's own assets while the update waits for open tabs to close. Do not force activation or clear IndexedDB/localStorage.
+
+A browser regression server now reproduces Cloudflare's redirect, checks the legacy failure, repeated normal reloads, reopen, offline routes, waiting-update repair, activation, and retention of synthetic IndexedDB/localStorage data. Local Chromium checks passed, as did all 162 application tests, seven engine/integrity tests, and the production build using the checksum-verified existing engine. CI runs the navigation regression in Chromium, Firefox and WebKit before deployment. Publication remains subject to the workflow result.
+
+The separately repaired missing `www` DNS record and canonical HTTPS redirect do not explain this service-worker failure. A hard refresh is a temporary bypass, not the lasting repair.
+
 ## Approved implementation checkpoint (October 8, 2026)
 
 This section supersedes all older product/stack/checkpoint statements below. Brandon approved the architecture specification with the following amendments and explicitly authorized implementation, parallel agents, and as much progress as possible. The earlier planning-only boundary is no longer active.
