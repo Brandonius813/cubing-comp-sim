@@ -4,7 +4,8 @@ import { isLocale, type Locale } from '../locales';
 import type { MessageKey as BaseMessageKey } from './locales/en';
 import { feedbackEn } from './locales/feedback-en';
 import { workflowEn } from './locales/workflow-en';
-type MessageKey = BaseMessageKey | keyof typeof feedbackEn | keyof typeof workflowEn;
+import { accountEn } from './locales/account-en';
+type MessageKey = BaseMessageKey | keyof typeof feedbackEn | keyof typeof workflowEn | keyof typeof accountEn;
 import { en, enEvents, enInspection } from './locales/en';
 import { es, esEvents, esInspection } from './locales/es';
 import { fr, frEvents, frInspection } from './locales/fr';
@@ -91,7 +92,7 @@ export function useLocale() {
 }
 export function t(key: MessageKey, values: Record<string, string | number> = {}): string {
   const message = (catalogs[locale] as Partial<Record<MessageKey, string>>)[key]
-    ?? ({ ...feedbackEn, ...workflowEn } as Partial<Record<MessageKey, string>>)[key] ?? key;
+    ?? ({ ...feedbackEn, ...workflowEn, ...accountEn } as Partial<Record<MessageKey, string>>)[key] ?? key;
   return message.replace(/\{(\w+)\}/g, (token, name: string) => name in values ? String(values[name]) : token);
 }
 export const localizedDate = (date: string | number) => new Date(date).toLocaleString(locale);
@@ -104,8 +105,10 @@ const errorKeys: Record<string, MessageKey> = {
   email_unverified: 'cloudEmailUnverified', conflict: 'cloudConflict', no_save: 'cloudNoSave',
   invalid_save: 'cloudInvalid', too_large: 'cloudTooLarge', rate_limited: 'cloudRateLimited',
   auth_error: 'cloudAuthError', network_error: 'cloudNetworkError', server_error: 'cloudServerError',
-  reauthentication_required: 'cloudReauth', reauth_required: 'cloudReauth',
+  reauthentication_required: 'accountFreshConfirmationRequired', reauth_required: 'accountFreshConfirmationRequired',
   account_deleting: 'cloudAccountDeleting', deletion_not_configured: 'cloudDeletionUnavailable',
+  provider_unavailable: 'accountProviderUnavailable', provider_mismatch: 'accountProviderMismatch',
+  oauth_expired: 'accountCallbackExpired',
 };
 export function errorMessage(cause: unknown, fallback: MessageKey = 'requestError') {
   if (cause && typeof cause === 'object') {

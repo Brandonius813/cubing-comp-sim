@@ -46,3 +46,8 @@ body{background:var(--app);color:var(--text)}button,input,select,textarea{font-f
 .app[data-round-active=true] .scramble-stage{min-height:calc(100dvh - 156px)}
 .timer-block:has(.positive-text)>p,.timer-block:has(.positive-text)~.bottom-action .key-hint{color:var(--positive)}
 @media(max-width:700px){.end-round-button{left:108px;top:68px}.app[data-round-active=true]:not([data-phase=home]) .main-stage{padding-top:108px}.app[data-round-active=true] .scramble-stage{min-height:calc(85dvh - 132px)}}
+
+.provider-buttons{display:flex;flex-direction:column;gap:12px}.account-signin-providers{margin-top:24px}.account-dialog .account-email-alternative{margin:4px 0 0;text-align:center}.account-providers{border-top:1px solid var(--border);padding:24px 0}.account-providers .muted,.delete-confirmation .provider-buttons .muted{margin:12px 0}.provider-connected{font-size:14px;line-height:22px;color:var(--positive)}.account-summary p{overflow-wrap:anywhere}
+
+/* Google Identity light theme; fixed brand font and logo, equal provider prominence. */
+@font-face{font-family:"CCS Google Sans";src:url("/assets/google-sans-medium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}.provider-button{display:flex;align-items:center;gap:10px;height:40px;min-height:40px;padding:0 12px;background:#fff;color:#1f1f1f;border:1px solid #747775;border-radius:4px;font:500 14px/20px "CCS Google Sans",Arial,sans-serif;letter-spacing:0}.provider-button:hover:not(:disabled){background:#f7f7f7}.provider-button img{width:18px;height:18px;flex:0 0 18px;object-fit:contain;filter:none}.provider-button span{flex:1;text-align:center}.provider-button img+span{padding-right:28px}.provider-button:disabled{opacity:.6}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { auth, cloud, cloudConfigured, type AccountSession, type SaveMetadata } from '../cloud';
+import { auth, cloud, cloudConfigured, CloudError, type AccountCallback, type AccountProvider, type AccountSession, type SaveMetadata } from '../cloud';
 import { parseHistoryJson, type HistorySnapshot } from '../storage';
 import { telemetry } from '../telemetry';
 import { Dialog } from './primitives';
@@ -8,28 +8,38 @@ import { errorMessage, localizedDate, t, type MessageKey } from './i18n';
 interface AccountDialogProps {
   session: AccountSession | null;
   recovery: boolean;
+  callback?: AccountCallback | null;
+  onRecoveryComplete?: () => void;
   onClose: () => void;
   onExport: () => Promise<string>;
   onReplace: (json: string, expectedRevision: number) => Promise<unknown>;
   localRevision: number;
 }
-export function AccountDialog({ session, recovery, onClose, onExport, onReplace, localRevision }: AccountDialogProps) {
+export function AccountDialog({ session, recovery, callback, onRecoveryComplete, onClose, onExport, onReplace, localRevision }: AccountDialogProps) {
   const [mode, setMode] = useState<'signIn' | 'signUp' | 'reset' | 'password'>(recovery ? 'password' : 'signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [message, setMessage] = useState<MessageKey | null>(null);
-  const [error, setError] = useState('');
+  const [message, setMessage] = useState<MessageKey | null>(callback?.status === 'success' ? callback.purpose === 'delete' ? 'providerIdentityConfirmed' : callback.purpose === 'link' ? 'accountLinked' : 'accountSignedIn' : null);
+  const [error, setError] = useState(callback?.status === 'error' ? t(callback.reason === 'email_verification' ? 'accountEmailProviderVerification' : 'accountCallbackFailed') : '');
   const [busy, setBusy] = useState(false);
   const [metadata, setMetadata] = useState<SaveMetadata | null>(null);
   const [metadataLoaded, setMetadataLoaded] = useState(false);
   const [transfer, setTransfer] = useState<'upload' | 'download' | null>(null);
   const [transferRevision, setTransferRevision] = useState(0);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting, setDeleting] = useState(Boolean(session && callback?.purpose === 'delete' && callback.status === 'success'));
+  const [providerConfirmed, setProviderConfirmed] = useState(Boolean(session && callback?.purpose === 'delete' && callback.status === 'success'));
   const [deleteEmail, setDeleteEmail] = useState('');
   const [deletePassword, setDeletePassword] = useState('');
   const [deletedResult, setDeletedResult] = useState<'deleted' | 'pending' | null>(null);
   const pendingUpload = useRef<{ snapshot: HistorySnapshot; revision: number; operationId: string } | null>(null);
+  const transferUserId = useRef<string | null>(null);
+  const displayedUserId = useRef(session?.user.id);
+  const appliedCallback = useRef<AccountCallback | null>(null);
   const requestBusy = useRef(false);
+  const linkedProviders = session?.user.providers ?? [];
+  const providerIsLinked = (provider: AccountProvider) => linkedProviders.includes(provider === 'wca' ? 'custom:wca' : provider);
+  const passwordAvailable = linkedProviders.includes('email');
+  const deletionProviders = auth.providers.filter(providerIsLinked);
 
   const action = async (work: () => Promise<void>) => {
     if (requestBusy.current) return;
@@ -41,13 +51,39 @@ export function AccountDialog({ session, recovery, onClose, onExport, onReplace,
   };
   useEffect(() => { if (recovery) setMode('password'); }, [recovery]);
   useEffect(() => {
+    if (displayedUserId.current === session?.user.id) return;
+    const previousUserId = displayedUserId.current;
+    displayedUserId.current = session?.user.id;
+    pendingUpload.current = null; transferUserId.current = null;
+    setTransfer(null); setDeleting(false); setProviderConfirmed(false);
+    setDeleteEmail(''); setDeletePassword(''); setPassword(''); setMessage(null); setError('');
+    if (previousUserId) { setMode('signIn'); onRecoveryComplete?.(); }
+  }, [session?.user.id]);
+  useEffect(() => {
+    if (!callback || appliedCallback.current === callback || (callback.purpose === 'delete' && callback.status === 'success' && !session)) return;
+    appliedCallback.current = callback;
+    if (callback.status === 'error') { setError(t(callback.reason === 'email_verification' ? 'accountEmailProviderVerification' : 'accountCallbackFailed')); return; }
+    setMessage(callback.purpose === 'delete' ? 'providerIdentityConfirmed' : callback.purpose === 'link' ? 'accountLinked' : 'accountSignedIn');
+    if (callback.purpose === 'delete') { setDeleting(true); setProviderConfirmed(true); }
+  }, [callback, session?.user.id]);
+  useEffect(() => {
+    setMetadata(null); setMetadataLoaded(false);
     if (!session || !cloudConfigured) return;
     let mounted = true;
     cloud.getSaveMetadata(session).then(result => {
       if (mounted) { setMetadata(result); setMetadataLoaded(true); }
     }).catch(cause => { if (mounted) setError(errorMessage(cause, 'cloudCheckError')); });
     return () => { mounted = false; };
-  }, [session]);
+  }, [session?.user.id]);
+
+  const providerAction = (provider: AccountProvider, purpose: 'signin' | 'link' | 'delete') => {
+    void action(async () => {
+      if (purpose === 'link') await auth.linkProvider(provider, session?.user.id);
+      else if (purpose === 'delete') await auth.reauthenticateWithProvider(provider, session?.user.id);
+      else await auth.signInWithProvider(provider);
+      setMessage('oauthRedirect');
+    });
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -55,7 +91,7 @@ export function AccountDialog({ session, recovery, onClose, onExport, onReplace,
       if (mode === 'reset') {
         await auth.requestPasswordReset(email); setMessage('resetSent');
       } else if (mode === 'password') {
-        await auth.updatePassword(password); setPassword(''); setMessage('passwordUpdated'); setMode('signIn');
+        await auth.updatePassword(password, session?.user.id); setPassword(''); setMessage('passwordUpdated'); setMode('signIn'); onRecoveryComplete?.();
       } else if (mode === 'signUp') {
         await auth.signUp(email, password); setPassword(''); setMessage('verifyEmailMessage');
       } else {
@@ -66,6 +102,16 @@ export function AccountDialog({ session, recovery, onClose, onExport, onReplace,
   const confirmTransfer = () => {
     if (!session) return;
     void action(async () => {
+      const expectedUserId = transferUserId.current;
+      const transferSession = async () => {
+        const current = await auth.getSession();
+        if (!current || current.user.id !== session.user.id || current.user.id !== expectedUserId || displayedUserId.current !== expectedUserId) {
+          pendingUpload.current = null; transferUserId.current = null; setTransfer(null);
+          throw new CloudError('auth_required', 'The account changed. Review the cloud save before transferring.');
+        }
+        return current;
+      };
+      let current = await transferSession();
       if (transfer === 'upload') {
         pendingUpload.current ??= {
           snapshot: parseHistoryJson(await onExport()),
@@ -73,16 +119,19 @@ export function AccountDialog({ session, recovery, onClose, onExport, onReplace,
           operationId: crypto.randomUUID(),
         };
         const pending = pendingUpload.current;
-        const saved = await cloud.upload(pending.snapshot, pending.revision, pending.operationId, session);
+        current = await transferSession();
+        const saved = await cloud.upload(pending.snapshot, pending.revision, pending.operationId, current);
+        await transferSession();
         setMetadata(saved); pendingUpload.current = null; setMessage('uploadSuccess');
         telemetry.track('cloud_transfer_result', { direction: 'upload', status: 'success' });
       } else if (transfer === 'download') {
-        const saved = await cloud.download(session);
+        const saved = await cloud.download(current);
+        await transferSession();
         await onReplace(JSON.stringify(saved.snapshot), transferRevision);
         setMetadata(saved.metadata); setMessage('downloadSuccess');
         telemetry.track('cloud_transfer_result', { direction: 'download', status: 'success' });
       }
-      setTransfer(null);
+      setTransfer(null); transferUserId.current = null;
     });
   };
   const deleteAccount = (event: FormEvent) => {
@@ -91,12 +140,21 @@ export function AccountDialog({ session, recovery, onClose, onExport, onReplace,
       setError(t('deleteEmailMismatch')); return;
     }
     void action(async () => {
-      const freshSession = await auth.reauthenticateForDeletion(deletePassword);
+      let freshSession: AccountSession;
+      try {
+        freshSession = providerConfirmed
+          ? await auth.reauthenticatedDeletionSession()
+          : await auth.reauthenticateForDeletion(deletePassword, session.user.id);
+        if (freshSession.user.id !== session.user.id) throw new CloudError('auth_required', 'The account changed. Sign in again before deleting it.');
+      } catch (cause) {
+        setProviderConfirmed(false);
+        throw cause;
+      }
       const result = await cloud.deleteAccount(freshSession);
       // Account deletion never invokes a local-history mutation.
-      await auth.signOutAfterDeletion();
+      await auth.signOutAfterDeletion(session.user.id);
       setDeletePassword(''); setDeleteEmail(''); setPassword('');
-      setDeletedResult(result.status); setDeleting(false); setMetadata(null);
+      setDeletedResult(result.status); setDeleting(false); setProviderConfirmed(false); setMetadata(null);
     });
   };
 
@@ -116,12 +174,27 @@ export function AccountDialog({ session, recovery, onClose, onExport, onReplace,
         <h2>{t('deleteAccountTitle')}</h2>
         <p className="muted">{t('deleteDescription')}</p>
         <label>{t('deleteConfirmEmail')}<input type="email" required autoComplete="off" value={deleteEmail} disabled={busy} onChange={event => setDeleteEmail(event.target.value)} /></label>
-        <label>{t('deletePassword')}<input type="password" required autoComplete="current-password" value={deletePassword} disabled={busy} onChange={event => setDeletePassword(event.target.value)} /></label>
+        {providerConfirmed ? <p role="status" className="positive-text">{t('providerIdentityConfirmed')}</p> : <>
+          {passwordAvailable && <label>{t('deletePassword')}<input type="password" required autoComplete="current-password" value={deletePassword} disabled={busy} onChange={event => setDeletePassword(event.target.value)} /></label>}
+          {deletionProviders.length > 0 && <div className="provider-buttons">
+            <p className="muted">{t('providerDeleteDescription')}</p>
+            {deletionProviders.map(provider => <button key={provider} type="button" className="secondary-button provider-button" disabled={busy} onClick={() => providerAction(provider, 'delete')}>{provider === 'google' && <img src="/assets/google-g.png" width="18" height="18" alt="" aria-hidden="true" />}<span>{t(provider === 'google' ? 'confirmGoogleIdentity' : 'confirmWcaIdentity')}</span></button>)}
+          </div>}
+        </>}
         <div className="button-row">
-          <button type="submit" className="danger-button" disabled={busy || deleteEmail.trim() !== session.user.email || !deletePassword}>{t(busy ? 'working' : 'deleteAction')}</button>
-          <button type="button" className="secondary-button" disabled={busy} onClick={() => { setDeleting(false); setDeletePassword(''); setDeleteEmail(''); }}>{t('cancel')}</button>
+          <button type="submit" className="danger-button" disabled={busy || deleteEmail.trim() !== session.user.email || (!providerConfirmed && (!passwordAvailable || !deletePassword))}>{t(busy ? 'working' : 'deleteAction')}</button>
+          <button type="button" className="secondary-button" disabled={busy} onClick={() => { setDeleting(false); setProviderConfirmed(false); setDeletePassword(''); setDeleteEmail(''); }}>{t('cancel')}</button>
         </div>
       </form> : <>
+        {auth.providers.length > 0 && <section className="account-providers">
+          <h2>{t('signInMethods')}</h2>
+          <p className="muted">{t('providerLinkDescription')}</p>
+          <div className="provider-buttons">
+            {auth.providers.map(provider => providerIsLinked(provider)
+              ? <p key={provider} className="provider-connected">{t(provider === 'google' ? 'linkedGoogle' : 'linkedWca')}</p>
+              : <button key={provider} type="button" className="secondary-button provider-button" disabled={busy} onClick={() => providerAction(provider, 'link')}>{provider === 'google' && <img src="/assets/google-g.png" width="18" height="18" alt="" aria-hidden="true" />}<span>{t(provider === 'google' ? 'linkGoogle' : 'linkWca')}</span></button>)}
+          </div>
+        </section>}
         <div className="cloud-save-summary">
           <h2>{t('cloudSave')}</h2>
           <p>{metadata ? t('savedDate', { date: localizedDate(metadata.savedAt) }) : t(metadataLoaded ? 'noCloudSave' : 'cloudStatusUnavailable')}</p>
@@ -135,27 +208,31 @@ export function AccountDialog({ session, recovery, onClose, onExport, onReplace,
             <button type="button" className="secondary-button" disabled={busy} onClick={() => { pendingUpload.current = null; setTransfer(null); }}>{t('cancel')}</button>
           </div>
         </section> : <div className="button-row">
-          <button type="button" className="primary-button" disabled={!cloudConfigured || !metadataLoaded || !session.user.emailVerified || busy} onClick={() => { setTransferRevision(localRevision); setTransfer('upload'); }}>{t('upload')}</button>
-          <button type="button" className="secondary-button" disabled={!cloudConfigured || !metadata || !session.user.emailVerified || busy} onClick={() => { setTransferRevision(localRevision); setTransfer('download'); }}>{t('download')}</button>
+          <button type="button" className="primary-button" disabled={!cloudConfigured || !metadataLoaded || !session.user.emailVerified || busy} onClick={() => { transferUserId.current = session.user.id; setTransferRevision(localRevision); setTransfer('upload'); }}>{t('upload')}</button>
+          <button type="button" className="secondary-button" disabled={!cloudConfigured || !metadata || !session.user.emailVerified || busy} onClick={() => { transferUserId.current = session.user.id; setTransferRevision(localRevision); setTransfer('download'); }}>{t('download')}</button>
         </div>}
         <button type="button" className="text-button" disabled={busy || !cloudConfigured} onClick={() => void action(async () => { setMetadata(await cloud.getSaveMetadata(session)); setMetadataLoaded(true); pendingUpload.current = null; setTransfer(null); })}>{t('refreshCloud')}</button>
         <p className="muted">{t('cloudManual')}</p>
         <div className="button-row">
-          <button type="button" className="text-button" onClick={() => setMode('password')}>{t('changePassword')}</button>
+          {passwordAvailable && <button type="button" className="text-button" disabled={busy} onClick={() => setMode('password')}>{t('changePassword')}</button>}
           <button type="button" className="text-button" disabled={busy} onClick={() => void action(async () => { await auth.signOut(); setMetadata(null); })}>{t('signOut')}</button>
-          <button type="button" className="text-button error-text" disabled={busy || !cloudConfigured} onClick={() => { setTransfer(null); setDeleting(true); setError(''); }}>{t('deleteAccount')}</button>
+          <button type="button" className="text-button error-text" disabled={busy || !cloudConfigured} onClick={() => { setTransfer(null); setDeleting(true); setProviderConfirmed(false); setError(''); setMessage(null); }}>{t('deleteAccount')}</button>
         </div>
       </>}
     </> : <>
       {mode !== 'password' && <div className="settings-tabs">
-        <button type="button" aria-pressed={mode === 'signIn'} onClick={() => setMode('signIn')}>{t('signIn')}</button>
-        <button type="button" aria-pressed={mode === 'signUp'} onClick={() => setMode('signUp')}>{t('createAccount')}</button>
+        <button type="button" disabled={busy} aria-pressed={mode === 'signIn'} onClick={() => setMode('signIn')}>{t('signIn')}</button>
+        <button type="button" disabled={busy} aria-pressed={mode === 'signUp'} onClick={() => setMode('signUp')}>{t('createAccount')}</button>
+      </div>}
+      {(mode === 'signIn' || mode === 'signUp') && auth.providers.length > 0 && <div className="provider-buttons account-signin-providers">
+        {auth.providers.map(provider => <button key={provider} type="button" className="secondary-button provider-button" disabled={!auth.configured || busy} onClick={() => providerAction(provider, 'signin')}>{provider === 'google' && <img src="/assets/google-g.png" width="18" height="18" alt="" aria-hidden="true" />}<span>{t(provider === 'google' ? 'continueGoogle' : 'continueWca')}</span></button>)}
+        <p className="muted account-email-alternative">{t('emailAlternative')}</p>
       </div>}
       <form onSubmit={submit} className="account-form">
         {mode !== 'password' && <label>{t('email')}<input type="email" autoComplete="email" required value={email} onChange={event => setEmail(event.target.value)} disabled={!auth.configured || busy} /></label>}
         {mode !== 'reset' && <label>{t(mode === 'password' ? 'newPassword' : 'password')}<input type="password" minLength={mode === 'signIn' ? 1 : 12} autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'} required value={password} onChange={event => setPassword(event.target.value)} disabled={!auth.configured || busy} /></label>}
         <button type="submit" className="primary-button" disabled={!auth.configured || busy}>{t(busy ? 'working' : mode === 'reset' ? 'sendReset' : mode === 'password' ? 'updatePassword' : mode === 'signUp' ? 'createAccount' : 'signIn')}</button>
-        {mode === 'signIn' && <button type="button" className="text-button" onClick={() => setMode('reset')}>{t('forgotPassword')}</button>}
+        {mode === 'signIn' && <button type="button" className="text-button" disabled={busy} onClick={() => setMode('reset')}>{t('forgotPassword')}</button>}
       </form>
       <p className="muted">{t('accountOptional')}</p>
     </>}

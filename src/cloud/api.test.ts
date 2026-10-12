@@ -54,7 +54,7 @@ describe('optional cloud boundary', () => {
   });
   it('post-deletion signout clears only the auth cache, even if provider logout fails', async () => {
     const removeItem = vi.fn();
-    vi.stubGlobal('localStorage', { removeItem });
+    vi.stubGlobal('localStorage', { removeItem, getItem: vi.fn().mockReturnValue(null) });
     const client = { auth: { signOut: vi.fn().mockResolvedValue({ error: new Error('Already deleted') }), stopAutoRefresh: vi.fn().mockResolvedValue(undefined) } } as unknown as SupabaseClient;
     try {
       await new AccountAuth({}, client).signOutAfterDeletion();

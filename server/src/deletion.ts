@@ -14,10 +14,11 @@ export interface DeletionRepository {
 export type DeleteIdentity = (userId: string) => Promise<void>;
 export type DeletionResult = { status: 'deleted' | 'pending' };
 
-export function requireRecentPassword(account: VerifiedAccount, now = Date.now()): void {
-  const authenticatedAt = account.passwordAuthenticatedAt;
-  if (authenticatedAt === undefined || !Number.isFinite(authenticatedAt)
-    || authenticatedAt < now - 5 * 60 * 1000 || authenticatedAt > now + 30_000) {
+export function requireRecentAuthentication(account: VerifiedAccount, now = Date.now()): void {
+  const recent = [account.passwordAuthenticatedAt, account.oauthAuthenticatedAt].some(authenticatedAt =>
+    authenticatedAt !== undefined && Number.isFinite(authenticatedAt)
+    && authenticatedAt >= now - 5 * 60 * 1000 && authenticatedAt <= now + 30_000);
+  if (!recent) {
     throw new ApiError(403, 'reauth_required');
   }
 }
@@ -41,7 +42,7 @@ export class AccountDeletion {
 
   async request(account: VerifiedAccount, confirmation: unknown): Promise<DeletionResult> {
     if (confirmation !== 'DELETE_ACCOUNT') throw new ApiError(400, 'confirmation_required');
-    requireRecentPassword(account);
+    requireRecentAuthentication(account);
     // Persist the deletion request before contacting either external service.
     // Its per-account lock excludes any future cloud-save commit.
     await this.repository.request(account.id);

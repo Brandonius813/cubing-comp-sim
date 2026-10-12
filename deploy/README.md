@@ -12,6 +12,8 @@ Public settings live in `environments/staging.json` and the `CCS_STAGING_SUPABAS
 
 Backend administrator keys, database passwords and R2 keys never enter a frontend job or artifact.
 
+Google and WCA are gated separately by the environment manifest's `authProviders` list, initially empty. See [social login setup](../docs/social-login-setup.md) for exact staging registration callbacks, required owner access, OIDC configuration, and acceptance steps. The frontend builder rechecks initial OAuth redirects for each enabled provider before publishing a build.
+
 ## API artifact and environment rendering
 
 `Cloud API checks` builds and tests an API image, then packages and reloads it to verify image identity as `api-release-<commit>` with a checksum and source SHA. Download that same image for staging and, after acceptance, production. Verify `SHA256SUMS` before loading it with Docker. Promote the image without rebuilding it against another moving base-image tag.

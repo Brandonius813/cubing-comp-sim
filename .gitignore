@@ -5,7 +5,7 @@
 
 # macOS and common generated files
 .DS_Store
-node_modules/
+node_modules
 dist/
 build/
 coverage/
