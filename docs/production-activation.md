@@ -24,7 +24,7 @@ After replacement, a real user must receive the signup confirmation, follow the 
 ## Remaining acceptance
 
 1. Resolve the SMTP authentication failure and verify signup confirmation and cross-browser password recovery through a real inbox.
-2. Complete browser acceptance using a completed round: signing in preserves local history, explicit Save to cloud uploads it, and Load from cloud on another browser/device replaces local history only after confirmation. These workflows are manual replacements, not background synchronization.
+2. Complete browser acceptance using a completed round: signing in preserves local history, the account dialog’s **Upload** action saves it, and **Download** on another browser/device replaces local history only after confirmation. These workflows are manual replacements, not background synchronization.
 3. Record independent backup/restore acceptance and its operating procedure. Existing cleanup timers are not backups.
 4. Complete separate production Google/WCA registration and actual human consent/linking acceptance before enabling either manifest gate. The production manifest currently has `authProviders: []`; email/password is the active account path once SMTP works.
 5. Publish and verify the cache-update repair separately. Never instruct users to clear browser site data to pick up a release because that can delete their local history.
