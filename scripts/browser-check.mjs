@@ -51,6 +51,8 @@ try {
       }],
     });
     const address = production.httpServer.address();
+    const { checkInspectionVoices } = await import('../tests/e2e/inspection-voices-check.mjs');
+    if (!process.argv.includes('--feedback-only')) console.log(`[${browserName}] ${await checkInspectionVoices(browser, `http://127.0.0.1:${address.port}`)}`);
     if (!process.argv.includes('--feedback-only')) console.log(`[${browserName}] ${await checkDesktopApp(browser, `http://127.0.0.1:${address.port}`, {
       browserName,
       setConnectionAvailable: available => { connectionAvailable = available; },

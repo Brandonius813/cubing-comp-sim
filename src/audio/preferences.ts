@@ -1,25 +1,32 @@
 import { isLocale, type Locale } from '../locales';
+import { isInspectionVoice, type InspectionVoice } from './voices';
 
 export interface AudioPreferences {
   version: 1;
   voiceLanguage: Locale | 'follow';
+  inspectionVoices: Partial<Record<Locale, InspectionVoice>>;
   inspectionVolume: number;
   ambienceTrack: string | null;
   ambienceVolume: number;
 }
 export const AUDIO_PREFERENCES_KEY = 'cubing-comp-sim:audio:v1';
 export const DEFAULT_AUDIO_PREFERENCES: AudioPreferences = {
-  version: 1, voiceLanguage: 'follow',
+  version: 1, voiceLanguage: 'follow', inspectionVoices: {},
   inspectionVolume: 0.8, ambienceTrack: null, ambienceVolume: 0.25,
 };
 const volume = (value: unknown, fallback: number) =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1 ? value : fallback;
+export function selectedInspectionVoice(preferences: AudioPreferences, locale: Locale): InspectionVoice {
+  return preferences.inspectionVoices[locale] ?? 'male-1';
+}
 export function validateAudioPreferences(value: unknown): AudioPreferences {
   if (!value || typeof value !== 'object' || Array.isArray(value) || !('version' in value) || value.version !== 1) return { ...DEFAULT_AUDIO_PREFERENCES };
   const v = value as Record<string, unknown>;
   return {
     version: 1,
     voiceLanguage: v.voiceLanguage === 'follow' || isLocale(v.voiceLanguage) ? v.voiceLanguage : 'follow',
+    inspectionVoices: v.inspectionVoices && typeof v.inspectionVoices === 'object' && !Array.isArray(v.inspectionVoices)
+      ? Object.fromEntries(Object.entries(v.inspectionVoices).filter(([locale, voice]) => isLocale(locale) && isInspectionVoice(voice))) : {},
     inspectionVolume: volume(v.inspectionVolume, DEFAULT_AUDIO_PREFERENCES.inspectionVolume),
     ambienceTrack: typeof v.ambienceTrack === 'string' && /^[a-z0-9][a-z0-9-]{0,63}$/.test(v.ambienceTrack) ? v.ambienceTrack : null,
     ambienceVolume: volume(v.ambienceVolume, DEFAULT_AUDIO_PREFERENCES.ambienceVolume),

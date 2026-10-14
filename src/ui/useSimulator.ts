@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { addAttempt, createAttempt, createRound, getEvent, inspectionPenalty, type Attempt, type EventId, type Penalty, type Round, type Scramble } from '../core';
 import { BrowserStore, DEFAULT_SETTINGS, StorageConflictError, type LocalState, type Settings } from '../storage';
 import { createScrambleService } from '../scramble';
-import { inspectionPhrase, t } from './i18n';
+import { t } from './i18n';
 import { InspectionAudio, takeInspectionCue } from '../audio/inspection';
 import { getAudioPreferences } from '../audio/preferences';
 import { telemetry } from '../telemetry';
@@ -83,7 +83,11 @@ export function useSimulator(blockKeyboard: boolean) {
   useEffect(() => () => { engine.current?.dispose(); cancelHold(); audio.current?.dispose(); audio.current = null; }, [cancelHold]);
 
   const prepareAudio = () => {
-    try { audio.current ??= new InspectionAudio(); void audio.current.prepare(); } catch { /* Sound must not gate timing. */ }
+    try {
+      const preferences = getAudioPreferences();
+      const language = preferences.voiceLanguage === 'follow' ? current.current.settings.language : preferences.voiceLanguage;
+      audio.current ??= new InspectionAudio(); void audio.current.prepare(language, preferences);
+    } catch { /* Sound must not gate timing. */ }
   };
   const saveDraft = (stage: 'scramble' | 'waiting' | 'ready' | 'inspection' | 'solving') => {
     if (endingRound.current) return;
@@ -211,7 +215,7 @@ export function useSimulator(blockKeyboard: boolean) {
           if (cue !== null && !document.hidden) {
             const preferences = getAudioPreferences();
             const language = preferences.voiceLanguage === 'follow' ? current.current.settings.language : preferences.voiceLanguage;
-            audio.current?.cue(language, inspectionPhrase(language, cue), preferences,
+            void audio.current?.cue(language, cue, preferences,
               () => phaseRef.current === 'inspection' && !document.hidden);
           }
         }
