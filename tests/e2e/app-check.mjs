@@ -257,7 +257,8 @@ export async function checkDesktopApp(browser, baseUrl, { browserName = 'chromiu
       await phase(page, 'ready');
       await page.getByRole('button', { name: 'Ready', exact: true }).click();
       await phase(page, 'entry');
-      await page.getByLabel('Time', { exact: true }).fill(index === 0 ? '１０，００' : String(10 + index));
+      // Digit-only input fills hundredths, so 1100 represents the intended 11.00 seconds.
+      await page.getByLabel('Time', { exact: true }).fill(index === 0 ? '１０，００' : String((10 + index) * 100));
       await page.getByRole('button', { name: 'Submit', exact: true }).click();
       await savedAttemptCount(page, index + 1);
     }
