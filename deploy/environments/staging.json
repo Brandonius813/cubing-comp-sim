@@ -16,5 +16,9 @@
   "privateDirectory": "/home/brandon/ccs-staging/private",
   "proxyIp": "172.28.53.2",
   "apiIp": "172.28.53.3",
-  "networkSubnet": "172.28.53.0/24"
+  "networkSubnet": "172.28.53.0/24",
+  "gateway": {
+    "role": "external",
+    "ownerService": "ccs-production"
+  }
 }
