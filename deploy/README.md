@@ -2,7 +2,7 @@
 
 The staging target is `https://staging.cubingcompsim.com`, with API `https://api-staging.cubingcompsim.com`. A prepared configuration or passing build is not proof that either is deployed or that cloud saves work.
 
-On October 11, the independent staging frontend was deployed and its HTTPS hostname verified at source `60838e3b9142c27279e6493796b108705af12078`. Real browser password sign-in passed for two disposable confirmed accounts; sign-in and sign-out preserved local solve history. Both identities were removed afterward. This check did not exercise signup email delivery, recovery, or cloud transfers. The API remains pending the storage permission fix and administrator installation.
+On October 11, the independent staging frontend was deployed and its HTTPS hostname verified at source `60838e3b9142c27279e6493796b108705af12078`. Real browser password sign-in passed for two disposable confirmed accounts; sign-in and sign-out preserved local solve history. Both identities were removed afterward. This check did not exercise signup email delivery, recovery, or cloud transfers. This historical check was followed by the October 14 production activation described in [production account activation](../docs/production-activation.md). Both APIs and their storage credentials are now installed; real production email acceptance remains outstanding.
 
 ## Frontend
 
@@ -24,13 +24,17 @@ Render each environment's API/HTTPS configuration with:
 node deploy/render-api.mjs deploy/environments/staging.json ccs-api:SOURCE_SHA SOURCE_SHA prepared-staging
 ```
 
-This writes Compose, Caddy, environment and release files; it does not create resources or start services. Install them under `/etc/<serviceName>` owned by root. Store that environment's complete `server.env` and certificate under its owner-only private directory. The API image runs as UID/GID 1000, and its certificate file must be readable by that user. Compose reads credentials using `env_file` `format: raw`, preserving literal password characters. API ports remain private, and only the fixed HTTPS proxy address is trusted.
+This writes Compose, Caddy, environment, release and any required systemd drop-in files; it does not create resources or start services. Install them under `/etc/<serviceName>` owned by root. Store that environment's complete `server.env` and certificate under its owner-only private directory. The API image runs as UID/GID 1000, and its certificate file must be readable by that user. Compose reads credentials using `env_file` `format: raw`, preserving literal password characters. API ports remain private, and only the fixed HTTPS proxy address is trusted.
 
 Before activation, run `node deploy/validate-secrets.mjs ENVIRONMENT_JSON PRIVATE_SERVER_ENV` on the host. It checks that the URLs, bucket, runtime role/project, origin and verified TLS settings match the selected environment without displaying credentials. Actual provider access must still pass live checks.
 
 Use the same checked-in migrations for both environments. Create the private schema and restricted runtime role separately for each database. The one-time migration job uses an administrator connection with `MIGRATION_SCHEMA=ccs_backend`; the API uses its restricted connection. Remove the temporary administrator configuration after migration succeeds.
 
-The currently prepared staging installer activates HTTPS, reboot recovery, daily orphan cleanup and account-deletion retries every five minutes in one administrator operation. Its fixed control commands permit automated staging verification without general Docker access. Production installation and a full generic installer have not yet been validated.
+The live host uses one production-owned HTTPS gateway for both APIs. The checked-in manifests preserve that topology: production has `gateway.role: shared` and reads its sibling staging manifest; staging has `gateway.role: external` and has no proxy or published ports. Production's proxy joins both private networks and routes each hostname to its environment's fixed API IP. Using the ambiguous Compose alias `api` across both networks can send production traffic to staging, so the Caddy configuration uses explicit addresses.
+
+Render both environments into fresh output directories. Keep their manifests together because production validates and reads the staging peer. Install staging Compose first so its network exists, then production Compose. Copy each rendered `systemd/` tree into `/etc/systemd/system/`, retaining root ownership, and run `systemctl daemon-reload`. Production's drop-in uses `Wants` and `After` for staging: this establishes startup order without stopping production when staging is stopped. Both environments' cleanup and account-cleanup units use `Requires` and `After` for production so the shared proxy reserves its fixed addresses before maintenance containers receive dynamic addresses. These files complement the existing service/timer units; they do not create those base units or activate services.
+
+The existing services provide reboot recovery, daily orphan cleanup and account-deletion retries every five minutes. Do not run a legacy staging installer that replaces the rendered Compose file with its old standalone proxy. Do not run Compose `down` against staging while production's proxy uses its external network. Normal image promotion uses `up -d`; coordinate any network/topology change separately. A full generic installer has not been added.
 
 ## Verification and rollback
 
@@ -44,4 +48,4 @@ Rollback uses the previous tested API image and frontend artifact, with the same
 
 ## Production prerequisites
 
-`production.example.json` is a template, not a provisioned environment. Create a separate production Supabase project, restricted role and credentials, private R2 bucket, API host, frontend Worker, email redirects and monitoring/backup resources. Fill and validate the production manifest; do not reuse staging identities or secrets. Reuse the accepted API image, migrations, proven engine and configuration renderer. Rebuild the UI with production public settings and run the real production smoke checks before opening signup. No production resources are created by the staging workflow.
+`production.example.json` remains a standalone-host template. The checked-in `production.json` describes the provisioned production resources and shared gateway. Use the matching manifest for the intended topology; do not substitute the example on the live shared host. Staging and production have separate Supabase projects, restricted database roles, private R2 buckets and runtime credentials. Production frontend publication and signup status are recorded in [production account activation](../docs/production-activation.md). No production resources are created by the staging workflow.

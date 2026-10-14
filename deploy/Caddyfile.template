@@ -10,18 +10,4 @@
         }
     }
 }
-@@API_HOST@@ {
-    request_body {
-        max_size 104857600
-    }
-    header {
-        -Server
-        X-Content-Type-Options nosniff
-    }
-    reverse_proxy api:3001 {
-        transport http {
-            dial_timeout 5s
-            response_header_timeout 150s
-        }
-    }
-}
+@@API_HOSTS@@
