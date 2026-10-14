@@ -3,9 +3,8 @@ import { DEFAULT_SETTINGS, FONT_OPTIONS, MAX_RANDOM_WAIT_SECONDS, MAX_WAIT_SECON
 import { Dialog, Select, Toggle } from './primitives';
 import { normalizeTimeInput, t } from './i18n';
 import { LOCALES } from '../locales';
-import { AudioSettings } from './AudioSettings';
+import { InspectionVoiceSettings } from './InspectionVoiceSettings';
 import { DEFAULT_AUDIO_PREFERENCES, saveAudioPreferences } from '../audio/preferences';
-import { ambiencePlayer } from '../audio/ambience';
 import { telemetry } from '../telemetry';
 import { loadMetricsConsent, saveMetricsConsent } from './metricsConsent';
 import '../styles/settings.css';
@@ -74,7 +73,7 @@ function WaitRange({ settings, update }: { settings: Settings; update: (patch: P
   </div>;
 }
 
-const tabs = ['simulation', 'audioSettings', 'appearance', 'shortcuts', 'privacy'] as const;
+const tabs = ['simulation', 'appearance', 'shortcuts', 'privacy'] as const;
 export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Settings; onUpdate: (patch: Partial<Settings>) => Promise<unknown>; onClose: () => void }) {
   const [tab, setTab] = useState<typeof tabs[number]>('simulation');
   const tabId = useId();
@@ -88,7 +87,6 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
   const update = (patch: Partial<Settings>) => { setError(''); void onUpdate(patch).catch(() => setError(t('saveError'))); };
   const reset = async () => {
     setError('');
-    ambiencePlayer.pause();
     const audioSaved = saveAudioPreferences(DEFAULT_AUDIO_PREFERENCES);
     try { await onUpdate({ ...DEFAULT_SETTINGS, eventId: settings.eventId, language: settings.language }); }
     catch { setError(t('saveError')); }
@@ -120,11 +118,11 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
       {settings.waitEnabled && <><Row label={t('waitDuration')}><SegmentedControl label={t('waitDuration')} value={settings.waitMode} options={[{ value: 'fixed', label: t('fixedDuration') }, { value: 'random', label: t('randomDuration') }]} onChange={waitMode => update({ waitMode })} /></Row>
       {settings.waitMode === 'fixed' ? <Row label={t('fixedDuration')}><div className="number-unit"><input aria-label={t('waitDuration')} type="number" min="0" max={MAX_WAIT_SECONDS} step="1" value={settings.waitSeconds} onChange={event => { const value = Number(event.target.value); if (Number.isInteger(value) && value >= 0 && value <= MAX_WAIT_SECONDS) update({ waitSeconds: value }); }} /><span>s</span></div></Row> : <Row label={t('waitRange')}><WaitRange settings={settings} update={update} /></Row>}</>}
       <Row label={t('inspection')}><Toggle label={t('inspection')} checked={settings.inspection} onChange={value => update({ inspection: value })} /></Row>
+      <div className="audio-settings"><InspectionVoiceSettings locale={settings.language} /></div>
       <Row label={t('input')}><Select label={t('input')} value={settings.inputMethod} options={[{ value: 'timer', label: t('keyboard') }, { value: 'manual', label: t('manual') }]} onChange={inputMethod => update({ inputMethod: inputMethod as Settings['inputMethod'] })} /></Row>
       <Row label={t('holdDuration')}><div className="number-unit"><input aria-label={t('holdDuration')} type="number" min="0" max="5" step="0.05" value={settings.holdMs / 1000} onChange={event => { const value = Math.round(Number(event.target.value) * 1000); if (value >= 0 && value <= 5000) update({ holdMs: value }); }} /><span>s</span></div></Row>
       <Row label={t('goal')}><div className="number-unit"><input aria-label={t('goal')} placeholder={t('noGoal')} type="number" min="0" step="0.01" value={settings.goalMs === null ? '' : settings.goalMs / 1000} onChange={event => { const value = event.target.value === '' ? null : Math.round(Number(event.target.value) * 1000); if (value === null || value >= 0) update({ goalMs: value }); }} /><span>s</span></div></Row>
     </>}
-    {tab === 'audioSettings' && <div className="audio-settings"><AudioSettings locale={settings.language} /></div>}
     {tab === 'appearance' && <>
       <Row label={t('theme')}><SegmentedControl label={t('theme')} value={settings.theme} options={[{ value: 'dark', label: t('dark') }, { value: 'light', label: t('light') }, { value: 'system', label: t('systemTheme') }]} onChange={theme => update({ theme })} /></Row>
       <Row label={t('language')}><Select label={t('language')} value={settings.language} options={LOCALES.map(locale => ({ value: locale.id, label: locale.nativeName }))} onChange={language => update({ language: language as Settings['language'] })} /></Row>

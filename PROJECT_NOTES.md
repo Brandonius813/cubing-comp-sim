@@ -1,3 +1,7 @@
+## Inspection voice settings (October 14, 2026)
+
+The owner removed background audio from the app to simplify setup. Remove its controls, catalog loading, playback integration and dedicated Audio tab. Keep inspection voice language, volume and Test voice beside the inspection toggle in Simulation. Existing inspection voice preferences keep their storage key and values; reset still restores defaults. Retain the old background preference fields for compatibility, without importing or exposing background playback in the app.
+
 # Branding and sharing metadata (October 14, 2026)
 
 The owner approved the uploaded CCS cube and requested completion across the website. Rebuilt the symbol as flat SVG with light/dark background variants, kept Geist, and added a one-line header wordmark, 1200 × 630 sharing image, browser/home-screen icons, and a web manifest. The description is exactly “Simulate a Cubing Competition”. Metadata is generated in HTML with environment-specific absolute URLs, a canonical URL, WebSite structured data, robots.txt and sitemap.xml. Staging remains excluded from search indexing. Header layouts preserve the event selector and controls down to 320px. No account provider, timer, stored data, or DNS configuration is changed.
