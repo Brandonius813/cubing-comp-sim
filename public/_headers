@@ -1,7 +1,11 @@
 /sw.js
-  Cache-Control: no-cache
+  Cache-Control: no-store
+/
+  Cache-Control: no-store
 /index.html
-  Cache-Control: no-cache
+  Cache-Control: no-store
+/deployment.json
+  Cache-Control: no-store
 /engine/*
   Cache-Control: no-cache
 /connection-check.json

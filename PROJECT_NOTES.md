@@ -10,6 +10,16 @@ Local validation: all 216 application tests, three metadata checks, and the prod
 
 # Cubing Comp Sim: project notes
 
+## Current online releases and safe offline updates (October 14, 2026)
+
+The owner requested that cached older releases stop hiding published changes. Online navigations now request the current server page without HTTP caching, with the installed coherent shell retained for network failures, timeouts and server errors. The root HTML, service worker and deployment marker use no-store headers. Deployment markers are excluded from offline caching.
+
+Open pages check for updates on reconnect, becoming visible and every five minutes. A waiting update is explicit, with activation disabled during an unfinished round, local save or dialog. The worker declines activation while another app window exists. Applying an update locks the current UI until reload; localStorage and IndexedDB are retained. Existing cache-first installations receive this policy after their waiting worker activates, which may require closing all app tabs once.
+
+Production automation checks the evidence against current main both before building and immediately before publishing, so a queued or manually rerun older release cannot replace a newer main build. Rollback should use a reviewed revert on main.
+
+The browser regression covers fresh online navigation, server-failure and offline fallback, active-round/dialog/multiple-tab update guards, explicit activation, the earlier redirected-shell repair and saved-data retention. Publication evidence is recorded in the pull request and workflow results.
+
 ## Public accounts and cloud-save rollout (October 14, 2026)
 
 Brandon requested fully working public accounts and cloud saves and authorized production setup in the existing Cubing Comp Sim organization. The main domain currently serves a guest build without Auth/API browser configuration. Live staging checks confirm the restricted database role and Auth admin connection work; R2 uploads still fail with AccessDenied 403, so no cloud-save acceptance or production launch is asserted.
