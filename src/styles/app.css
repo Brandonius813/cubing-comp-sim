@@ -49,5 +49,10 @@ body{background:var(--app);color:var(--text)}button,input,select,textarea{font-f
 
 .provider-buttons{display:flex;flex-direction:column;gap:12px}.account-signin-providers{margin-top:24px}.account-dialog .account-email-alternative{margin:4px 0 0;text-align:center}.account-providers{border-top:1px solid var(--border);padding:24px 0}.account-providers .muted,.delete-confirmation .provider-buttons .muted{margin:12px 0}.provider-connected{font-size:14px;line-height:22px;color:var(--positive)}.account-summary p{overflow-wrap:anywhere}
 
+/* Size the account dialog to its content; scroll only when it exceeds the viewport. */
+.account-dialog[open]{display:flex;flex-direction:column;height:fit-content;min-height:0;max-height:calc(100dvh - 32px)}
+.account-dialog .dialog-body{height:auto;max-height:none;flex:0 1 auto;min-height:0}
+.account-dialog .account-form:last-child{margin-bottom:0}
+
 /* Google Identity light theme; fixed brand font and logo, equal provider prominence. */
 @font-face{font-family:"CCS Google Sans";src:url("/assets/google-sans-medium.woff2") format("woff2");font-weight:500;font-style:normal;font-display:swap}.provider-button{display:flex;align-items:center;gap:10px;height:40px;min-height:40px;padding:0 12px;background:#fff;color:#1f1f1f;border:1px solid #747775;border-radius:4px;font:500 14px/20px "CCS Google Sans",Arial,sans-serif;letter-spacing:0}.provider-button:hover:not(:disabled){background:#f7f7f7}.provider-button img{width:18px;height:18px;flex:0 0 18px;object-fit:contain;filter:none}.provider-button span{flex:1;text-align:center}.provider-button img+span{padding-right:28px}.provider-button:disabled{opacity:.6}
