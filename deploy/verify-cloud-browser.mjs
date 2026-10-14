@@ -68,7 +68,7 @@ async function signIn(page, account) {
 }
 async function transfer(dialog, direction) {
   await dialog.getByRole('button', { name: direction, exact: true }).click();
-  await dialog.getByRole('button', { name: 'Replace', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Replace history', exact: true }).click();
   await dialog.getByRole('status').filter({ hasText: direction === 'Upload' ? 'Cloud save replaced' : 'history was replaced' }).waitFor({ timeout: 30000 });
 }
 try {
@@ -108,6 +108,23 @@ try {
   const attemptedVictimRead = await api(a, `/v1/save?user_id=${accounts[1].id}`);
   assert.deepEqual(attemptedVictimRead.snapshot.rounds, [aRound]);
   pass('explicit browser uploads and separate saves for two accounts');
+  stage = 'fresh_device_sign_in_and_explicit_download';
+  const freshContext = await browser.newContext();
+  try {
+    const freshPage = await freshContext.newPage();
+    pageErrorCounts[2] = 0;
+    freshPage.on('pageerror', () => { pageErrorCounts[2]++; });
+    await freshPage.goto(settings.appUrl);
+    await freshPage.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
+    assert.deepEqual(await stored(freshPage), []);
+    const freshDialog = await signIn(freshPage, accounts[0]);
+    assert.deepEqual(await stored(freshPage), [], 'Signing in on a fresh device must not download history automatically.');
+    await transfer(freshDialog, 'Download');
+    assert.equal(aRound.attempts.length, 5);
+    assert.deepEqual(await stored(freshPage), [aRound]);
+    assert.equal(pageErrorCounts[2], 0);
+    pass('fresh device sign-in keeps local history empty until explicit download restores the exact five-attempt round');
+  } finally { await freshContext.close(); }
   stage = 'explicit_download_replaces_without_merge';
   await aDialog.getByRole('button', { name: 'Close', exact: true }).click();
   const replacement = fixture('local-replacement'); await seed(a, replacement);
@@ -128,7 +145,7 @@ try {
   pass('browser sign-out preserves local history');
   }
   stage = 'browser_runtime_errors';
-  assert.deepEqual(pageErrorCounts, [0, 0]);
+  assert.deepEqual(pageErrorCounts, settings.mode === 'signin-only' ? [0, 0] : [0, 0, 0]);
   pass('deployed browser pages have no uncaught runtime errors');
 } catch {
   console.error(JSON.stringify({ status: 'failed', check: stage })); process.exitCode = 1;
