@@ -41,11 +41,13 @@ export function InspectionVoiceSettings({ locale }: { locale: Locale }) {
       <Select label={t('inspectionVoice')} value={selectedVoice}
         onChange={value => update({ inspectionVoices: { ...preferences.inspectionVoices, [voiceLocale]: value as InspectionVoice } })}
         options={INSPECTION_VOICES.map((value, index) => ({ value, label: t((['maleVoice1', 'maleVoice2', 'femaleVoice1', 'femaleVoice2'] as const)[index]) }))} />
+      <button type="button" className="icon-button" aria-label={t('testVoice')} onClick={preview} style={{ width: 36, height: 36, flexShrink: 0 }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+      </button>
     </Row>
     {voiceUnavailable && <p role="status">{t('voiceUnavailable')}</p>}
     <Row label={t('inspectionVolume')}>
       <input type="range" aria-label={t('inspectionVolume')} min="0" max="1" step="0.05" value={preferences.inspectionVolume} onChange={event => update({ inspectionVolume: Number(event.target.value) })} />
-      <button type="button" className="secondary-button" onClick={preview}>{t('testVoice')}</button>
     </Row>
   </>;
 }
