@@ -1,6 +1,6 @@
 # Google and WCA account rollout
 
-Status: October 12, 2026. The owner requested staging acceptance before production. Neither Google nor WCA OAuth application has been registered. A read-only staging Auth settings check returned Google disabled; email sign-in is enabled. Both frontend manifests therefore start with `authProviders: []`. Provider setup, initial authorization redirect, human consent, and cloud acceptance are separate checks.
+Status: October 14, 2026. The owner registered the staging WCA application and supplied exact copied credentials after screenshot transcription failed. WCA client authentication passed an invalid-code check, while a deliberately wrong-secret control was rejected; no tokens or human sessions were issued. Supabase OIDC configuration was applied and read back, initial state/PKCE/callback/scope checks passed, and the staging browser button correctly starts the Supabase flow and reaches WCA. The staging manifest enables WCA for controlled human consent/code-exchange acceptance. Any additional email confirmation, linking and cloud acceptance remain pending. Start WCA sign-in from CompSim; WCA’s application-management Authorize shortcut bypasses that flow. Production and Google remain gated.
 
 ## What Brandon needs to provide
 
