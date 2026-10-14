@@ -30,8 +30,7 @@ jobs:
       - run: npm test
       - run: node --test scripts/site-metadata.test.mjs
       - run: node --test engine/scripts/svg-conformance.test.mjs scripts/assert-engine.test.mjs
-      - run: node --test deploy/auth-providers.test.mjs
-      - run: node --test deploy/domain.test.mjs
+      - run: node --test deploy/*.test.mjs
       - run: npm run engine:verify
       - run: npm run build
       - name: Validate static asset deployment without publishing
