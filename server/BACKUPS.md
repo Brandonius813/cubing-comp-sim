@@ -4,6 +4,12 @@
 
 This is a **cloud-save data backup**, not a complete Supabase project or Auth backup. It does not contain account passwords, OAuth configuration, private environment files, or database roles. Recovering a lost Supabase project still requires a separately verified database/Auth backup and private configuration recovery. Supabase recommends offsite database exports for Free projects. Its managed database backups do not cover separately stored objects. See [Supabase backups](https://supabase.com/docs/guides/platform/backups).
 
+## Verified deployment evidence, October 14, 2026
+
+The script ran inside the existing tested production API image using a disposable confirmed account. It captured and encrypted one cloud save containing five attempts. The isolated drill reconstructed that save and all five attempts in its temporary metadata table with zero production-table writes. The encrypted capture and a separate recovery-key file were copied privately to the owner's computer; the disposable account was then deleted successfully through the API.
+
+This establishes one real encrypted capture and isolated data restore. Independent remote backup storage, a daily schedule and failure alerts, and full Supabase/Auth disaster recovery remain unconfigured. The owner-computer copy is a manual second copy, not a scheduled offsite service. Private artifact locations and machine-readable evidence remain in private operational records.
+
 ## Consistency and limits
 
 - The backup briefly locks `account_deletions`, `cloud_saves`, and `cloud_upload_receipts` against writes before reading a repeatable snapshot. This keeps replacements and deletion from removing an object while it is copied. Readers continue normally.
@@ -50,4 +56,4 @@ The seven-day recovery window is an operator retention choice aligned with the e
 
 ## Verification
 
-`node --test server/backup.test.mjs` covers nonempty snapshot reconstruction, wrong-key and tamper rejection, deletion exclusions, checksum/count corruption, private output permissions, and refusal to overwrite an existing restore destination. CI runs this suite with API checks. These tests do not claim that production capture, offsite storage, scheduling, email delivery, or an Auth restore has succeeded.
+`node --test server/backup.test.mjs` covers nonempty snapshot reconstruction, wrong-key and tamper rejection, deletion exclusions, checksum/count corruption, private output permissions, and refusal to overwrite an existing restore destination. CI runs this suite with API checks. The local tests alone do not establish production capture, offsite storage, scheduling, email delivery, or Auth recovery; the specific production capture/drill evidence is recorded above.
