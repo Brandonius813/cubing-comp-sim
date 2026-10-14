@@ -9,6 +9,18 @@ const metadata = { revision: 1, savedAt: '2026-10-08T12:00:00.000Z', roundCount:
 const snapshot = { app: 'cubing-comp-sim' as const, schemaVersion: 1 as const, exportedAt: 1, rounds: [], activeRoundId: null };
 
 describe('optional cloud boundary', () => {
+  it('calls the default browser fetch with its global receiver', async () => {
+    const browserFetch = vi.fn(async function (this: unknown) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation');
+      return new Response(JSON.stringify({ save: metadata }));
+    });
+    vi.stubGlobal('fetch', browserFetch);
+    try {
+      await expect(new CloudSaves('https://api.example.test').getSaveMetadata(session)).resolves.toEqual(metadata);
+      expect(browserFetch).toHaveBeenCalledOnce();
+    } finally { vi.unstubAllGlobals(); }
+  });
+
   it('does not make requests when unconfigured', async () => {
     const fetcher = vi.fn();
     await expect(new CloudSaves(undefined, fetcher).getSaveMetadata(session)).rejects.toMatchObject({ code: 'not_configured' });

@@ -33,7 +33,7 @@ export function validateMetadata(value: unknown): SaveMetadata {
 export class CloudSaves {
   readonly configured: boolean;
   private readonly base: string;
-  constructor(apiUrl?: string, private readonly fetcher: typeof fetch = fetch) {
+  constructor(apiUrl?: string, private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis)) {
     this.base = apiUrl?.replace(/\/$/, '') ?? '';
     this.configured = Boolean(this.base);
   }
