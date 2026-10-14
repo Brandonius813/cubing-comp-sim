@@ -27,7 +27,7 @@ try {
       });
       assert.ok(layout.loaded, `Logo loads at ${width}px in ${theme}`);
       assert.equal(layout.source, `/brand/logo${theme === 'dark' ? '-dark' : ''}.svg`);
-      assert.ok(layout.scrollWidth <= width, `No horizontal overflow at ${width}px`);
+      assert.ok(layout.scrollWidth <= width, `No horizontal overflow at ${width}px: ${JSON.stringify(layout)}`);
       assert.ok(layout.boxes[0].right <= layout.boxes[1].left, `Brand does not overlap event selector at ${width}px`);
       assert.ok(layout.boxes[1].right <= layout.boxes[2].left, `Event selector does not overlap utilities at ${width}px`);
     }

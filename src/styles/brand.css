@@ -8,3 +8,5 @@
 @media(max-width:1100px){.brand-name{display:none}.logo-space{max-width:none}}
 @media(max-width:700px){.logo-space{left:12px;top:18px;height:40px}.brand-symbol{width:36px;height:36px;flex-basis:36px}.event-selector{left:64px;width:152px;padding:0 10px;gap:8px}.end-round-button{left:140px}}
 @media(max-width:380px){.logo-space{left:8px}.brand-symbol{width:32px;height:32px;flex-basis:32px}.event-selector{left:52px;width:148px}.utilities{right:8px;gap:2px}.utilities .icon-button{width:32px;height:32px}.end-round-button{left:126px}}
+/* Let the mobile scorecard shrink with the viewport rather than widen the page. */
+@media(max-width:700px){.workspace.with-scorecard{grid-template-columns:minmax(0,1fr)}.scorecard-wrap{min-width:0}}
