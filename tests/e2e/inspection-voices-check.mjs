@@ -6,6 +6,11 @@ export async function checkInspectionVoices(browser, baseUrl) {
   await page.addInitScript(() => {
     window.voiceStarts = [];
     window.voiceStops = 0;
+    const resume = AudioContext.prototype.resume;
+    AudioContext.prototype.resume = function (...args) {
+      window.lastVoiceContext = this;
+      return resume.apply(this, args);
+    };
     const start = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (...args) {
       window.voiceStarts.push({ time: performance.now(), duration: this.buffer?.duration });
@@ -47,7 +52,16 @@ export async function checkInspectionVoices(browser, baseUrl) {
     for (const [index, voice] of ['male-1', 'male-2', 'female-1', 'female-2'].entries()) {
       await select('Inspection voice', voice);
       await page.getByRole('button', { name: 'Test voice', exact: true }).click();
-      await page.waitForFunction(count => window.voiceStarts.length === count, index + 1);
+      try {
+        await page.waitForFunction(count => window.voiceStarts.length === count, index + 1);
+      } catch (error) {
+        const diagnostics = await page.evaluate(() => ({
+          starts: window.voiceStarts.length,
+          audioState: window.lastVoiceContext?.state,
+          messages: [...document.querySelectorAll('[role="status"]')].map(element => element.textContent),
+        }));
+        throw new Error(`Preview ${voice} did not play: ${JSON.stringify(diagnostics)}`, { cause: error });
+      }
     }
     const wait = page.getByRole('switch', { name: 'Wait between solves', exact: true });
     if (await wait.getAttribute('aria-checked') === 'true') await wait.click();
