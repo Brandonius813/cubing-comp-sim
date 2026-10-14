@@ -9,6 +9,32 @@ Status: October 14, 2026. The owner registered the staging WCA application and s
 3. Configure the client ID/secret in the staging Supabase provider dashboard, or provide controlled access/private credential files so the operator can do it. Provider secrets never enter chat, frontend environment variables, Git, or public workflow logs.
 4. Complete one real consent flow per provider using the staging site and a controlled account. WCA may also require an email confirmation; allow access to the chosen test inbox or complete that step yourself. Record acceptance without preserving email addresses, tokens, callback URLs containing codes, or personal profile data.
 
+## Production registration handoff
+
+The separate production Supabase project now exists. Both production provider buttons remain disabled until credentials and real consent are verified.
+
+| Production field | Value |
+| --- | --- |
+| App / Google JavaScript origin | `https://cubingcompsim.com` |
+| Google and WCA redirect URI | `https://mrxbjdkhtnojgoskhrfx.supabase.co/auth/v1/callback` |
+| Supabase provider settings | [Production Auth Providers](https://supabase.com/dashboard/project/mrxbjdkhtnojgoskhrfx/auth/providers) |
+
+For **WCA**:
+
+1. Open [WCA applications](https://www.worldcubeassociation.org/oauth/applications) and create a separate confidential production application named **Cubing Comp Sim**, using the production redirect above.
+2. In production Supabase Auth Providers, add an **Auto-discovery (OIDC)** provider. Set identifier `custom:wca`, name `World Cube Association`, issuer `https://www.worldcubeassociation.org`, and scopes `public openid profile email`.
+3. Copy the new application ID and secret directly into that provider. Enable PKCE; keep allowing missing email and skipping nonce checks disabled. Keep secrets out of chat and source control.
+4. Tell the operator configuration is saved. The operator checks the redirect, enables the production manifest gate and publishes the button. Complete real WCA consent and any confirmation email, then verify linking and cloud access. SMTP must work first.
+
+For **Google**:
+
+1. Create or select a separate production project in [Google Auth Platform](https://console.cloud.google.com/auth/overview). Configure Branding with owner-selected support/contact addresses and an External audience.
+2. Create a **Web application** OAuth client with the production origin and redirect above. Request only `openid`, `email`, and `profile`.
+3. Paste its ID and secret directly into the production Google provider and save. Finish any required domain/brand verification and publish the consent configuration so friends can use it. Public contact/policy content must be approved by the owner.
+4. Tell the operator configuration is saved. After redirect verification and button publication, complete a real Google consent flow and confirm linking and cloud access.
+
+The owner can configure provider credentials directly in the dashboards; the operator does not need them pasted into chat. Registration alone is not evidence of successful consent or linking.
+
 ## Exact staging addresses
 
 | Purpose | Value |
@@ -20,7 +46,7 @@ Status: October 14, 2026. The owner registered the staging WCA application and s
 | Supabase Auth Site URL | `https://staging.cubingcompsim.com` |
 | Supabase allowed app redirect | `https://staging.cubingcompsim.com` |
 
-Always compare the external provider callback to the read-only Callback URL shown in that project's Supabase provider form. An external provider returns to Supabase first; Supabase then returns to the app. The app uses its configured origin for its return URL. Production callbacks cannot be completed until the separate production Supabase project exists. They will have that project's own reference; do not register staging callbacks as production callbacks.
+Always compare the external provider callback to the read-only Callback URL shown in that project's Supabase provider form. An external provider returns to Supabase first; Supabase then returns to the app. The app uses its configured origin for its return URL. Use the separate production callback listed above for production; do not register staging callbacks as production callbacks.
 
 ## Google registration
 
