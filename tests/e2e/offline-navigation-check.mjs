@@ -21,6 +21,10 @@ self.addEventListener('fetch',event=>{
  else if(${JSON.stringify(legacyAssets)}.includes(new URL(event.request.url).pathname))event.respondWith(caches.open(CACHE).then(async cache=>(await cache.match(new URL(event.request.url).pathname))||fetch(event.request)));
 });`;
   let worker = fixedWorker;
+  let release = 'installed';
+  let shellUnavailable = false;
+  const html = async () => (await readFile(path.join(dist, 'index.html'), 'utf8'))
+    .replace('<html', `<html data-release="${release}"`);
   const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
     '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
   const server = createServer(async (request, response) => {
@@ -32,15 +36,19 @@ self.addEventListener('fetch',event=>{
       response.writeHead(200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-store' });
       response.end(worker); return;
     }
+    if (shellUnavailable && (url.pathname === '/' || url.pathname === '/saved-round')) {
+      response.writeHead(503, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' });
+      response.end('Temporarily unavailable'); return;
+    }
     const file = path.resolve(dist, '.' + (url.pathname === '/' ? '/index.html' : url.pathname));
     if (!file.startsWith(dist + path.sep)) { response.writeHead(404); response.end(); return; }
     try {
-      const body = await readFile(file);
+      const body = url.pathname === '/' ? await html() : await readFile(file);
       response.writeHead(200, { 'Content-Type': mime[path.extname(file)] ?? 'application/octet-stream', 'Cache-Control': 'no-store' });
       response.end(body);
     } catch {
       response.writeHead(200, { 'Content-Type': 'text/html' });
-      response.end(await readFile(path.join(dist, 'index.html')));
+      response.end(await html());
     }
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -68,11 +76,52 @@ self.addEventListener('fetch',event=>{
       return { redirected: response.redirected, status: response.status };
     });
     assert.deepEqual(cached, { redirected: false, status: 200 });
+    release = 'latest-online';
     for (let i = 0; i < 3; i++) { await page.reload(); await homepage(page); }
+    assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online', 'Online navigation must bypass the installed shell.');
+    shellUnavailable = true;
+    await page.reload(); await homepage(page);
+    assert.equal(await page.locator('html').getAttribute('data-release'), 'installed', 'A server failure must retain the complete installed release.');
+    shellUnavailable = false;
     await page.close(); page = await context.newPage(); await page.goto(base); await homepage(page);
     await context.setOffline(true);
     await page.reload(); await homepage(page);
     await page.goto(base + '/saved-round?fixture=offline'); await homepage(page);
+    assert.equal(await page.locator('html').getAttribute('data-release'), 'installed');
+    await context.setOffline(false);
+
+    // A new worker may download during a round, but updating requires a safe idle
+    // screen and one app window. Never discard browser data to fix a stale build.
+    await page.evaluate(() => localStorage.setItem('offline-update-fixture', 'keep-local-data'));
+    await page.getByRole('button', { name: 'Start CompSim', exact: true }).click();
+    await page.locator('[data-round-active="true"]').waitFor();
+    const oldCache = fixedWorker.match(/const CACHE='([^']+)'/)[1];
+    const updatedCache = oldCache + '-update-fixture';
+    worker = fixedWorker.replace(oldCache, updatedCache);
+    await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).update());
+    const updateButton = page.getByRole('button', { name: 'Update site', exact: true });
+    await updateButton.waitFor();
+    assert.ok(await updateButton.isDisabled(), 'A pending update must never interrupt an unfinished round.');
+    assert.ok(await page.evaluate(async name => (await caches.keys()).includes(name), oldCache));
+    await page.getByRole('button', { name: 'End Round', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'End Round', exact: true }).click();
+    await homepage(page);
+    const anotherTab = await context.newPage(); await anotherTab.goto(base); await homepage(anotherTab);
+    await page.bringToFront();
+    await updateButton.click();
+    await page.getByText('Close other CompSim tabs, then try again.', { exact: true }).waitFor();
+    assert.ok(await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration()).waiting));
+    await anotherTab.close();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    assert.ok(await updateButton.isDisabled(), 'Updating must not interrupt a settings/account dialog.');
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    await Promise.all([page.waitForEvent('load'), updateButton.click()]);
+    await homepage(page);
+    await waitForState(page, async name => !(await caches.keys()).includes(name), oldCache);
+    assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online');
+    assert.equal(await page.evaluate(() => localStorage.getItem('offline-update-fixture')), 'keep-local-data');
+    await context.setOffline(true); await page.reload(); await homepage(page);
+    assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online', 'Explicit activation must make the new release available offline.');
     await context.setOffline(false);
     await context.close();
 
@@ -138,7 +187,7 @@ self.addEventListener('fetch',event=>{
     await afterActivation.goto(base); await homepage(afterActivation); await waitControlled(afterActivation);
     await waitForState(afterActivation, async name => !(await caches.keys()).includes(name), legacyCache);
     await legacyContext.setOffline(true); await afterActivation.reload(); await homepage(afterActivation);
-    return `legacy redirected navigation ${failed ? 'rejected' : 'accepted'}; normal reload, reopen, offline routes, waiting-update repair, activation and stored-data preservation passed`;
+    return `legacy redirected navigation ${failed ? 'rejected' : 'accepted'}; latest online shell, server-failure/offline fallback, active-round/dialog/multitab update guards, explicit activation, legacy repair and stored-data preservation passed`;
   } finally {
     for (const context of contexts) await context.close();
     await new Promise(resolve => server.close(resolve));

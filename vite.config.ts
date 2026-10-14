@@ -17,11 +17,11 @@ function offlineCache(): Plugin {
       }
       const paths = files(outDir).filter(path => !path.endsWith('/sw.js') && !path.endsWith('.map')
         && !path.replaceAll(String.fromCharCode(92), '/').includes('/audio/background/')
-        && !path.endsWith('/connection-check.json') && !path.endsWith('/_headers'));
+        && !path.endsWith('/connection-check.json') && !path.endsWith('/deployment.json') && !path.endsWith('/_headers'));
       if (!paths.some(path => path.endsWith('/engine/tnoodle.js'))) return;
       const digest = createHash('sha256');
       // Change the cache identity when the navigation/cache contract changes.
-      digest.update('canonical-navigation-v2');
+      digest.update('online-navigation-v3');
       for (const path of paths.sort()) digest.update(readFileSync(path));
       const version = digest.digest('hex').slice(0, 16);
       const assets = paths.map(path => {
@@ -52,12 +52,29 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
 })()));
 self.addEventListener('message',event=>{
  if(event.data==='OFFLINE_STATUS') event.source?.postMessage({type:'OFFLINE_READY',version:CACHE});
+ if(event.data==='APPLY_UPDATE') event.waitUntil((async()=>{
+   // Never replace the worker underneath another tab's running round.
+   const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+   if(windows.length!==1||windows[0].id!==event.source?.id){
+     event.ports[0]?.postMessage('other-tabs');return;
+   }
+   event.ports[0]?.postMessage('accepted');
+   await self.skipWaiting();
+ })());
 });
 self.addEventListener('fetch',event=>{
  const url=new URL(event.request.url);
  if(event.request.method!=='GET'||url.origin!==self.location.origin)return;
  if(event.request.mode==='navigate'){
-   event.respondWith(caches.open(CACHE).then(async cache=>(await cache.match('/'))||fetch(event.request)));
+   event.respondWith((async()=>{
+     try {
+       const response=await fetch(event.request,{cache:'no-store',signal:AbortSignal.timeout(5000)});
+       if(response.ok)return response;
+     }catch{ /* Offline, timeout or a failed deployment: use the coherent installed release. */ }
+     const shell=await (await caches.open(CACHE)).match('/');
+     if(shell)return shell;
+     return Response.error();
+   })());
  }else if(ASSETS.includes(url.pathname)){
    event.respondWith(caches.open(CACHE).then(async cache=>(await cache.match(url.pathname))||fetch(event.request)));
  }

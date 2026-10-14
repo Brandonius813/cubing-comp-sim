@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { EVENTS, attemptTimeMs, editAttempt, formatAttempt, formatTime, getEvent, parseTimeInput, scoreRound, type EventId, type Penalty } from './core';
 import { auth, type AccountSession, type AccountCallback } from './cloud';
-import { registerOfflineSupport } from './platform/offline';
+import { applyOfflineUpdate, registerOfflineSupport } from './platform/offline';
 import { AccountDialog } from './ui/AccountDialog';
 import { SettingsDialog } from './ui/SettingsDialog';
 import { Dialog, FlowButton, Icon, IconButton } from './ui/primitives';
@@ -19,7 +19,10 @@ import './styles/brand.css';
 type Modal = 'settings' | 'account' | 'help' | 'stats' | 'events' | 'edit' | 'event-confirm' | 'end-round' | null;
 function App() {
   const [modal, setModal] = useState<Modal>(null);
-  const sim = useSimulator(modal !== null);
+  const [updateReady, setUpdateReady] = useState(false);
+  const [applyingUpdate, setApplyingUpdate] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState('');
+  const sim = useSimulator(modal !== null || applyingUpdate);
   useLocale();
   useAppearance(sim.state.settings);
   useEffect(() => { setLocale(sim.state.settings.language); }, [sim.state.settings.language]);
@@ -61,7 +64,20 @@ function App() {
     }).catch(() => undefined);
     return () => { mounted = false; unsubscribe(); };
   }, []);
-  useEffect(() => registerOfflineSupport(status => { if (status === 'ready') telemetry.track('offline_assets_ready'); }), []);
+  useEffect(() => registerOfflineSupport(status => {
+    if (status === 'ready') telemetry.track('offline_assets_ready');
+    if (status === 'update-ready') setUpdateReady(true);
+  }), []);
+  const updateSite = async () => {
+    if (roundActive || sim.saving || modal !== null || !sim.loaded || applyingUpdate) return;
+    setApplyingUpdate(true); setUpdateMessage('');
+    try {
+      const result = await applyOfflineUpdate();
+      if (result === 'applied') { window.location.reload(); return; }
+      setUpdateMessage(t(result === 'other-tabs' ? 'updateOtherTabs' : 'updateRetry'));
+    } catch { setUpdateMessage(t('updateRetry')); }
+    setApplyingUpdate(false);
+  };
   useEffect(() => { if (sim.phase === 'entry') { setTimeInput(''); setPenalty('none'); setFieldError(''); } }, [sim.phase]);
   const close = () => { setModal(null); setPendingEvent(null); setFieldError(''); setAccountCallback(null); };
   const roundFocus = () => document.querySelector<HTMLElement>('#manual-time') ?? document.querySelector<HTMLElement>('.main-stage');
@@ -113,13 +129,14 @@ function App() {
   };
   const displayAttempt = sim.lastAttempt && round?.attempts.find(value => value.id === sim.lastAttempt?.id) || sim.lastAttempt;
   const roundTimes = round?.attempts.map(attemptTimeMs).filter((value): value is number => value !== null) ?? [];
-  return <div className="app" data-phase={sim.phase} data-round-active={roundActive}>
+  return <><div className="app" data-phase={sim.phase} data-round-active={roundActive} inert={applyingUpdate}>
     <header className="app-header">
       <div className="logo-space" aria-label="Cubing Comp Sim"><img className="brand-symbol brand-symbol-light" src="/brand/logo.svg" width="44" height="44" alt="" /><img className="brand-symbol brand-symbol-dark" src="/brand/logo-dark.svg" width="44" height="44" alt="" /><h1 className="brand-name">Cubing Comp Sim</h1></div>
       <button type="button" className="event-selector" aria-haspopup="dialog" disabled={timerActive || sim.phase === 'loading' || sim.saving} onClick={() => setModal('events')}><Icon name={selectedEvent.id} event /><span>{eventName(selectedEvent.id)}</span><Icon name="chevron" /></button>
       {roundActive && <button type="button" className="end-round-button" aria-haspopup="dialog" disabled={sim.saving} onClick={() => setModal('end-round')}>{t('endRound')}</button>}
       <nav className="utilities" aria-label={t('utilities')}><IconButton name="account" label={t('account')} disabled={timerActive} onClick={() => setModal('account')} /><IconButton name="help" label={t('help')} disabled={timerActive} onClick={() => setModal('help')} /><IconButton name="settings" label={t('settings')} disabled={timerActive} onClick={() => setModal('settings')} /></nav>
     </header>
+    {updateReady && <div className="site-update" role="status"><span>{t(roundActive ? 'updateAfterRound' : 'siteUpdateAvailable')}</span><button type="button" className="text-button" disabled={roundActive || sim.saving || modal !== null || !sim.loaded || applyingUpdate} onClick={() => void updateSite()}>{t('updateSite')}</button>{updateMessage && <span>{updateMessage}</span>}</div>}
     <main className={`workspace ${cardVisible ? 'with-scorecard' : ''}`}>
       <div className="main-stage" tabIndex={-1}>
         {sim.phase === 'home' && <FlowButton onClick={sim.primary} disabled={!sim.loaded || sim.saving} shortcut={`Enter / ${t('spaceKey')}`}>{round && round.completedAt === undefined && round.attempts.length > 0 && round.eventId === selectedEvent.id ? t('resume') : t('start')}</FlowButton>}
@@ -148,7 +165,7 @@ function App() {
     {modal === 'end-round' && <Dialog title={t('endRoundTitle')} onClose={close} className="confirm-dialog" returnFocus={roundFocus}><p>{t('endRoundDescription')}</p>{sim.error && <p className="error-text" role="alert">{sim.error}</p>}<div className="button-row"><button className="secondary-button" onClick={close} disabled={sim.saving}>{t('goBack')}</button><button className="danger-button" disabled={sim.saving} onClick={() => void endRound()}>{t('endRound')}</button></div></Dialog>}
     {modal === 'edit' && editingAttempt && <Dialog title={`${t('editTime')} · ${editingAttempt.index + 1}`} onClose={close} className="edit-dialog"><form onSubmit={saveEdit} className="edit-form"><label>{t('time')}<input autoFocus className="time-input" autoComplete="off" value={editTimeInput} onChange={event => setEditTimeInput(event.target.value)} /></label><PenaltyButtons penalty={editPenalty} onChange={setEditPenalty} />{editingAttempt.inspectionPenalty !== 'none' && <p className="muted">{t('inspectionEdit', { penalty: editingAttempt.inspectionPenalty })}</p>}{editFieldError && <p className="error-text" role="alert">{editFieldError}</p>}<button className="primary-button" disabled={sim.saving} type="submit">{t('save')}</button><p className="muted scramble-detail">{editingAttempt.scramble.notation}</p></form></Dialog>}
     {modal === 'stats' && <StatisticsDialog rounds={sim.state.rounds} onEdit={edit} onExport={() => void downloadExport()} onClose={close} />}
-  </div>;
+  </div>{applyingUpdate && <div className="site-update-overlay" role="status">{t('updatingSite')}</div>}</>;
 }
 
 function PenaltyButtons({ penalty, onChange }: { penalty: Penalty; onChange: (value: Penalty) => void }) {

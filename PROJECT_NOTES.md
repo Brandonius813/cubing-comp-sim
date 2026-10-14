@@ -10,6 +10,16 @@ Local validation: all 216 application tests, three metadata checks, and the prod
 
 # Cubing Comp Sim: project notes
 
+## Current online releases and safe offline updates (October 14, 2026)
+
+The owner requested that cached older releases stop hiding published changes. Online navigations now request the current server page without HTTP caching, with the installed coherent shell retained for network failures, timeouts and server errors. The root HTML, service worker and deployment marker use no-store headers. Deployment markers are excluded from offline caching.
+
+Open pages check for updates on reconnect, becoming visible and every five minutes. A waiting update is explicit, with activation disabled during an unfinished round, local save or dialog. The worker declines activation while another app window exists. Applying an update locks the current UI until reload; localStorage and IndexedDB are retained. Existing cache-first installations receive this policy after their waiting worker activates, which may require closing all app tabs once.
+
+Production automation checks the evidence against current main both before building and immediately before publishing, so a queued or manually rerun older release cannot replace a newer main build. Rollback should use a reviewed revert on main.
+
+The browser regression covers fresh online navigation, server-failure and offline fallback, active-round/dialog/multiple-tab update guards, explicit activation, the earlier redirected-shell repair and saved-data retention. Publication evidence is recorded in the pull request and workflow results.
+
 ## Public accounts and cloud-save rollout (October 14, 2026)
 
 Brandon authorized production setup and public accounts/cloud saves, with parallel work on caching and launch acceptance. Production Supabase, restricted TLS database access, private R2 write credentials, API HTTPS, frontend public settings and the production Worker are now installed. Both APIs run the accepted `eb1916b` image, whose API code matches frontend source `f7f1663`. Production frontend run `38595686402` published that source. Synthetic API checks passed revisions, retries, conflicts, account isolation, replacement and deletion; test accounts were removed.

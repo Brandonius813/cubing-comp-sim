@@ -6,4 +6,10 @@ export const workflowEn = {
   endRoundDescription: 'This will discard your unfinished round and all of its times.',
   goBack: 'Go back',
   confirm: 'Confirm',
+  siteUpdateAvailable: 'Update available.',
+  updateAfterRound: 'Update available after this round.',
+  updateSite: 'Update site',
+  updatingSite: 'Updating site…',
+  updateOtherTabs: 'Close other CompSim tabs, then try again.',
+  updateRetry: 'Reconnect and try again, or close all CompSim tabs and reopen.',
 } as const;
