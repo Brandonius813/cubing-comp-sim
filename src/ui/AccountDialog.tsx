@@ -215,7 +215,6 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
           <button type="button" className="secondary-button" disabled={!cloudConfigured || !metadata || !session.user.emailVerified || busy} onClick={() => { transferUserId.current = session.user.id; setTransferRevision(localRevision); setTransfer('download'); }}>{t('download')}</button>
         </div>}
         <button type="button" className="text-button" disabled={busy || !cloudConfigured} onClick={() => void action(async () => { setMetadata(await cloud.getSaveMetadata(session)); setMetadataLoaded(true); pendingUpload.current = null; setTransfer(null); })}>{t('refreshCloud')}</button>
-        <p className="muted">{t('cloudManual')}</p>
         <div className="button-row">
           {passwordAvailable && <button type="button" className="text-button" disabled={busy} onClick={() => setMode('password')}>{t('changePassword')}</button>}
           <button type="button" className="text-button" disabled={busy} onClick={() => void action(async () => { await auth.signOut(); setMetadata(null); })}>{t('signOut')}</button>
