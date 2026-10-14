@@ -125,7 +125,9 @@ async function checkExpandedLanguagesAndAudio(page, artifacts) {
   assert.equal(await dialog.getByLabel('Inspection sound', { exact: true }).count(), 0);
   await selectValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true }), 'pl');
   assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'pl');
-  await dialog.getByRole('slider', { name: 'Inspection volume', exact: true }).fill('0.35');
+  const volume = dialog.getByRole('slider', { name: 'Inspection volume', exact: true });
+  await volume.press('Home');
+  for (let step = 0; step < 7; step++) await volume.press('ArrowRight');
   await dialog.getByRole('button', { name: 'Test voice', exact: true }).click();
   assert.equal(await dialog.getByRole('tab', { name: 'Audio', exact: true }).count(), 0);
   assert.equal(await dialog.getByText('Background recordings have not been configured yet.', { exact: true }).count(), 0);
