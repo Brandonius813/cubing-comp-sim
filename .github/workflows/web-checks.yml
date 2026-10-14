@@ -28,6 +28,7 @@ jobs:
       - run: npm ci --include=optional --no-fund
       - run: npm run typecheck
       - run: npm test
+      - run: node --test scripts/site-metadata.test.mjs
       - run: node --test engine/scripts/svg-conformance.test.mjs scripts/assert-engine.test.mjs
       - run: node --test deploy/auth-providers.test.mjs
       - run: node --test deploy/domain.test.mjs
@@ -39,6 +40,7 @@ jobs:
           WRANGLER_SEND_METRICS: 'false'
           WRANGLER_SEND_ERROR_REPORTS: 'false'
       - run: npx playwright install --with-deps chromium firefox webkit
+      - run: node scripts/branding-check.mjs
       - run: |
           for browser in chromium firefox webkit; do
             BROWSER="$browser" npm run test:browser

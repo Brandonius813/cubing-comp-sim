@@ -12,7 +12,9 @@
     "engine:build": "node scripts/build-engine.mjs",
     "engine:verify": "node engine/scripts/reference.mjs 2 && node scripts/build-engine.mjs && node engine/scripts/conformance.mjs",
     "build:ui": "tsc -b && vite build",
-    "test:browser": "node scripts/browser-check.mjs"
+    "test:browser": "node scripts/browser-check.mjs",
+    "brand:build": "node scripts/build-brand-assets.mjs",
+    "test:branding": "node --test scripts/site-metadata.test.mjs && node scripts/branding-check.mjs"
   },
   "dependencies": {
     "@sentry/browser": "11.6.0",

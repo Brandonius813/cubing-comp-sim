@@ -1,3 +1,9 @@
+# Branding and sharing metadata (October 14, 2026)
+
+The owner approved the uploaded CCS cube and requested completion across the website. Rebuilt the symbol as flat SVG with light/dark background variants, kept Geist, and added a one-line header wordmark, 1200 × 630 sharing image, browser/home-screen icons, and a web manifest. The description is exactly “Simulate a Cubing Competition”. Metadata is generated in HTML with environment-specific absolute URLs, a canonical URL, WebSite structured data, robots.txt and sitemap.xml. Staging remains excluded from search indexing. Header layouts preserve the event selector and controls down to 320px. No account provider, timer, stored data, or DNS configuration is changed.
+
+Local validation: all 216 application tests, three metadata checks, and the production build passed with the existing verified engine. This host could not launch the browser or bind a preview server. CI includes a dedicated check for 12 theme/width combinations, preview dimensions, metadata, and icon availability. Publication evidence belongs to the pull request and resulting workflow run.
+
 # Cubing Comp Sim: project notes
 
 ## Public accounts and cloud-save rollout (October 14, 2026)
