@@ -50,7 +50,7 @@ jobs:
       - run: |
           for browser in chromium firefox webkit; do
             BROWSER="$browser" npm run test:browser
-            BROWSER="$browser" node scripts/check-offline-navigation.mjs
+            BROWSER="$browser" timeout --kill-after=10s 180s node scripts/check-offline-navigation.mjs
             BROWSER="$browser" node scripts/account-ui-check.mjs
           done
       - uses: actions/upload-artifact@v4
