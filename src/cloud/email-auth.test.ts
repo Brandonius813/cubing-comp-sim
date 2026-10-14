@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AccountAuth } from './auth';
+import { errorMessage } from '../ui/i18n';
 
 const configuration = { url: 'https://ccs-auth.example.test', publicKey: 'test-publishable-key',
   appUrl: 'https://app.example.test', providers: 'google,wca' };
@@ -54,6 +55,17 @@ afterEach(async () => {
 });
 
 describe('real Supabase SDK email flow compatibility', () => {
+  it('reports a signup service failure without blaming details or exposing provider errors', async () => {
+    const { account } = setup();
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({
+      code: 'unexpected_failure', msg: 'Internal mail provider details',
+    }), { status: 500 }));
+    const error = await account.signUp('solver@example.test', 'test-password-placeholder').catch(cause => cause);
+    expect(error).toMatchObject({ code: 'server_error' });
+    expect(error.message).not.toContain('Internal mail provider');
+    expect(errorMessage(error)).toBe('The cloud service is unavailable. Your local times are unchanged.');
+  });
+
   it('sends email signup without a browser-bound PKCE challenge', async () => {
     const { account, requests, authStorage } = setup();
     expect(await account.signUp(' solver@example.test ', 'test-password-placeholder')).toBeNull();

@@ -247,7 +247,11 @@ export class AccountAuth {
   async signUp(email: string, password: string): Promise<AccountSession | null> {
     this.sdk();
     const { data, error } = await this.emailClient!.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${this.redirectBase}/` } });
-    if (error) throw new CloudError('auth_error', error.message);
+    if (error) {
+      const code = error.status && error.status >= 500 || error.code === 'unexpected_failure'
+        ? 'server_error' : error.status === 429 ? 'rate_limited' : 'auth_error';
+      throw new CloudError(code, 'Could not create your account. Please try again.');
+    }
     if (data.session && this.emailClient !== this.client) {
       const restored = await this.sdk().auth.setSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
       if (restored.error) throw new CloudError('auth_error', 'Could not restore your new account session.');
