@@ -23,11 +23,15 @@ self.addEventListener('fetch',event=>{
   let worker = fixedWorker;
   let release = 'installed';
   let shellUnavailable = false;
+  let networkUnavailable = false;
   const html = async () => (await readFile(path.join(dist, 'index.html'), 'utf8'))
     .replace('<html', `<html data-release="${release}"`);
   const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
     '.json': 'application/json', '.svg': 'image/svg+xml', '.woff2': 'font/woff2' };
   const server = createServer(async (request, response) => {
+    // Firefox service-worker requests can bypass Playwright's simulated offline
+    // mode. Reject the connection too, so every engine tests a failed fetch.
+    if (networkUnavailable) { request.socket.destroy(); return; }
     const url = new URL(request.url, 'http://localhost');
     if (url.pathname === '/index.html') {
       response.writeHead(307, { Location: '/' + url.search }); response.end(); return;
@@ -54,6 +58,10 @@ self.addEventListener('fetch',event=>{
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
   const contexts = [];
+  const setOffline = async (context, offline) => {
+    networkUnavailable = offline;
+    await context.setOffline(offline);
+  };
   const waitControlled = page => page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 60000 });
   const homepage = page => page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
   // Playwright's waitForFunction treats a returned Promise as truthy; explicitly
@@ -84,11 +92,11 @@ self.addEventListener('fetch',event=>{
     assert.equal(await page.locator('html').getAttribute('data-release'), 'installed', 'A server failure must retain the complete installed release.');
     shellUnavailable = false;
     await page.close(); page = await context.newPage(); await page.goto(base); await homepage(page);
-    await context.setOffline(true);
+    await setOffline(context, true);
     await page.reload(); await homepage(page);
     await page.goto(base + '/saved-round?fixture=offline'); await homepage(page);
     assert.equal(await page.locator('html').getAttribute('data-release'), 'installed');
-    await context.setOffline(false);
+    await setOffline(context, false);
 
     // A new worker may download during a round, but updating requires a safe idle
     // screen and one app window. Never discard browser data to fix a stale build.
@@ -120,9 +128,9 @@ self.addEventListener('fetch',event=>{
     await waitForState(page, async name => !(await caches.keys()).includes(name), oldCache);
     assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online');
     assert.equal(await page.evaluate(() => localStorage.getItem('offline-update-fixture')), 'keep-local-data');
-    await context.setOffline(true); await page.reload(); await homepage(page);
+    await setOffline(context, true); await page.reload(); await homepage(page);
     assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online', 'Explicit activation must make the new release available offline.');
-    await context.setOffline(false);
+    await setOffline(context, false);
     await context.close();
 
     worker = legacyWorker;
@@ -166,7 +174,7 @@ self.addEventListener('fetch',event=>{
     assert.deepEqual(repaired, { redirected: false, activeIsLegacy: true });
     await revisit.goto(base); await homepage(revisit);
     await revisit.reload(); await homepage(revisit);
-    await legacyContext.setOffline(true);
+    await setOffline(legacyContext, true);
     await revisit.reload(); await homepage(revisit);
     const retained = await revisit.evaluate(async () => {
       const round = await new Promise((resolve, reject) => {
@@ -181,12 +189,12 @@ self.addEventListener('fetch',event=>{
       return { local: localStorage.getItem('offline-navigation-fixture'), round };
     });
     assert.deepEqual(retained, { local: 'keep-local-data', round: { attempts: [12.34] } });
-    await legacyContext.setOffline(false);
+    await setOffline(legacyContext, false);
     await original.close(); await revisit.close();
     const afterActivation = await legacyContext.newPage();
     await afterActivation.goto(base); await homepage(afterActivation); await waitControlled(afterActivation);
     await waitForState(afterActivation, async name => !(await caches.keys()).includes(name), legacyCache);
-    await legacyContext.setOffline(true); await afterActivation.reload(); await homepage(afterActivation);
+    await setOffline(legacyContext, true); await afterActivation.reload(); await homepage(afterActivation);
     return `legacy redirected navigation ${failed ? 'rejected' : 'accepted'}; latest online shell, server-failure/offline fallback, active-round/dialog/multitab update guards, explicit activation, legacy repair and stored-data preservation passed`;
   } finally {
     for (const context of contexts) await context.close();
