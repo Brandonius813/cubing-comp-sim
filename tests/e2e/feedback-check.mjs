@@ -347,7 +347,7 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     await advance(page, 'Enter'); await phase(page, 'scramble'); await assertCard(page);
     dialog = await settings(page);
     await choose(page, 'Solve input', 'manual'); await toggle(dialog, 'Inspection', false); await closeSettings(dialog);
-    for (const [key, value] of [['Space', '12.34'], ['Enter', '14.56']]) {
+    for (const [key, value, rawMs, formatted] of [['Space', '10321', 63_210, '1:03.21'], ['Enter', '327', 3_270, '3.27']]) {
       await advance(page, key); await phase(page, 'ready'); await advance(page, key); await phase(page, 'entry'); await assertCard(page);
       await page.getByLabel('Time', { exact: true }).fill(value);
       if (key === 'Space') {
@@ -365,8 +365,17 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
       }
       await page.keyboard.press(key);
       await phase(page, 'scramble'); await assertCard(page);
+      assert.equal((await savedAttempts(page)).at(-1).rawMs, rawMs, 'Digit-only entry saved the wrong time.');
+      assert.equal(await page.locator('.scorecard-time').nth(key === 'Space' ? 2 : 3).innerText(), formatted);
     }
     assert.equal((await savedAttempts(page)).length, 4);
+    await page.locator('.scorecard-time').nth(3).click();
+    const digitEdit = page.getByRole('dialog', { name: /^Edit time/ });
+    await digitEdit.getByLabel('Time', { exact: true }).fill('10321');
+    await digitEdit.getByRole('button', { name: 'Save changes', exact: true }).click();
+    await digitEdit.waitFor({ state: 'hidden' }); await settled(page);
+    assert.equal((await savedAttempts(page)).at(-1).rawMs, 63_210, 'Digit-only edit saved the wrong time.');
+    assert.equal(await page.locator('.scorecard-time').nth(3).innerText(), '1:03.21');
     await page.getByRole('button', { name: 'Hide scorecard', exact: true }).click();
     const show = page.getByRole('button', { name: 'Show scorecard', exact: true });
     const showBox = await show.boundingBox();

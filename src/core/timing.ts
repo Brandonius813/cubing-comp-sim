@@ -42,7 +42,7 @@ export function attemptTimeMs(attempt: AttemptResult): number | null {
   return recordedTimeMs(attempt.rawMs, attempt.penalty, attempt.inspectionPenalty);
 }
 
-/** Seconds, m:ss, or h:mm:ss, with an optional decimal fraction of up to 3 digits. */
+/** Digits fill hundredths, seconds, then minutes; explicit decimal/colon formats also work. */
 export function parseTimeInput(input: string): ParsedTime | null {
   let text = input.trim().toUpperCase();
   if (text === 'DNF' || text === 'DNS') return { rawMs: null, penalty: text };
@@ -56,6 +56,15 @@ export function parseTimeInput(input: string): ParsedTime | null {
     if (penalty !== 'none') return null;
     penalty = 'DNF';
     text = dnf[1];
+  }
+  if (/^\d+$/.test(text)) {
+    const digits = text.padStart(3, '0');
+    const hundredths = Number(digits.slice(-2));
+    const seconds = Number(digits.slice(-4, -2));
+    const minutes = Number(digits.slice(0, -4));
+    if (digits.length > 4 && seconds >= 60) return null;
+    const rawMs = (minutes * 60 + seconds) * 1_000 + hundredths * 10;
+    return isValidTime(rawMs) ? { rawMs, penalty } : null;
   }
   if (!/^\d+(?::\d{1,2}){0,2}(?:\.\d{1,3})?$/.test(text)) return null;
   const pieces = text.split(':');
