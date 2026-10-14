@@ -63,7 +63,7 @@ export function useSimulator(blockKeyboard: boolean) {
     browserStore.load().then(next => {
       if (!mounted) return;
       apply(next); setLoaded(true);
-      if (next.draft) { setScramble(next.draft.scramble); setNotice(t('recovered')); setPhase('scramble'); }
+      if (next.draft) { setScramble(next.draft.scramble); setPhase('scramble'); }
     }).catch(() => { if (mounted) setError(t('loadError')); });
     return () => { mounted = false; };
   }, [apply, setPhase]);
