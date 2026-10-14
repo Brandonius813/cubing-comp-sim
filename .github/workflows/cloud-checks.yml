@@ -37,6 +37,7 @@ jobs:
       - run: npm ci --no-fund
       - run: npm run build
       - run: npm test
+      - run: node --test backup.test.mjs
       - run: docker build -f Dockerfile -t cubing-comp-sim-api:ci ..
       - name: Package the tested API image for promotion
         run: |

@@ -1,6 +1,8 @@
 # Cloud API activation
 
-The guest website works without this server. Cloud operations are disabled until a real Supabase project, PostgreSQL database, private S3-compatible bucket, and server are configured. No production service or email sender has been provisioned.
+The guest website works without this server. See [production activation](../docs/production-activation.md) for current infrastructure, email delivery, and acceptance status. Configuration alone does not establish successful signup or cloud-save delivery.
+
+Cloud-save backup and isolated recovery commands are in [backup operations](BACKUPS.md). These protect history and save metadata; they do not replace a Supabase Auth/database disaster-recovery backup.
 
 ## Run and verify
 
