@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "environment": "production",
+  "appUrl": "https://cubingcompsim.com",
+  "apiUrl": "https://api.cubingcompsim.com",
+  "workerName": "ccs-production-frontend",
+  "supabaseUrl": "https://mrxbjdkhtnojgoskhrfx.supabase.co",
+  "publicKeyVariable": "CCS_PRODUCTION_SUPABASE_PUBLISHABLE_KEY",
+  "authProviders": [],
+  "bucket": "cubing-comp-sim-saves-production",
+  "databaseSchema": "ccs_backend",
+  "databaseRole": "ccs_api_production",
+  "serviceName": "ccs-production",
+  "privateDirectory": "/home/brandon/ccs-production/private",
+  "proxyIp": "172.28.54.2",
+  "apiIp": "172.28.54.3",
+  "networkSubnet": "172.28.54.0/24"
+}
