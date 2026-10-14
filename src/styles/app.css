@@ -39,6 +39,9 @@ body{background:var(--app);color:var(--text)}button,input,select,textarea{font-f
 :root[data-theme=light] .flow-button:hover:not(:disabled){background:#1d4eae}:root[data-theme=light] .flow-button.secondary:hover:not(:disabled){background:var(--hover)}
 .app[data-phase=home] .main-stage{padding-top:40px;padding-bottom:40px}
 
+/* This focus return target is a layout container, not an interactive control. */
+.main-stage:focus{outline:none}
+
 /* Reserve a small row under the event selector while a round is active. */
 .end-round-button{position:absolute;left:50%;transform:translateX(-50%);top:76px;min-height:28px;padding:4px 12px;border-radius:6px;background:transparent;color:var(--muted);font-size:12px;line-height:20px}
 .end-round-button:hover:not(:disabled){color:var(--text);background:var(--raised)}

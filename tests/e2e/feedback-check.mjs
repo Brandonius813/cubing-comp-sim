@@ -30,6 +30,14 @@ async function assertCard(page) {
   assert.equal(await page.locator('.scorecard-wrap').count(), 1, 'Every phase must show the shared scorecard.');
   assert.ok(await page.evaluate(() => window.feedbackCard === document.querySelector('.scorecard-wrap')), 'The scorecard was replaced between phases.');
 }
+async function assertTimerFocus(page) {
+  const focus = await page.locator('.main-stage').evaluate(element => ({
+    focused: document.activeElement === element,
+    outline: getComputedStyle(element).outlineStyle,
+  }));
+  assert.equal(focus.focused, true, 'Closing the round dialog must return focus to the timer area.');
+  assert.equal(focus.outline, 'none', 'Timer keyboard focus must not draw a box around the whole timer area.');
+}
 async function capture(page, name, directory) {
   await page.evaluate(() => document.fonts.ready.then(() => true));
   await page.screenshot({ path: path.join(directory, `${name}.png`), fullPage: true });
@@ -209,6 +217,14 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
   try {
     await page.goto(baseUrl);
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
+    await page.locator('.main-stage').focus();
+    await page.keyboard.press('Tab');
+    const startFocus = await page.getByRole('button', { name: 'Start CompSim', exact: true }).evaluate(element => ({
+      focused: document.activeElement === element,
+      visible: element.matches(':focus-visible'),
+      outline: getComputedStyle(element).outlineStyle,
+    }));
+    assert.deepEqual(startFocus, { focused: true, visible: true, outline: 'solid' }, 'Tab navigation must retain the button focus indicator.');
     let dialog = await settings(page);
     assert.equal(await dialog.getByLabel('Hold to start', { exact: true }).inputValue(), '0.55');
     const header = dialog.locator('.dialog-header');
@@ -293,8 +309,10 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     assert.match(await page.locator('.timer-number').innerText(), /^\d+$/, 'Inspection should show whole seconds.');
     const inspectionExit = await openEndRound(page);
     await inspectionExit.getByRole('button', { name: 'Close', exact: true }).click();
+    await assertTimerFocus(page);
     // Deliberately keep the restored focus: Space must resume the timer control.
     await page.keyboard.down('Space');
+    await assertTimerFocus(page);
     await page.waitForFunction(() => document.querySelector('.timer-number')?.classList.contains('error-text'));
     await page.waitForTimeout(150);
     await page.keyboard.up('Space');
@@ -309,7 +327,9 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     await compactCentered(endDuringSolve);
     await endDuringSolve.getByRole('button', { name: 'Go back', exact: true }).click();
     await phase(page, 'solving');
+    await assertTimerFocus(page);
     await page.keyboard.press('Space'); await phase(page, 'confirm'); await settled(page); await assertCard(page);
+    await assertTimerFocus(page);
     assert.equal((await savedAttempts(page)).length, 1);
     const first = page.locator('.scorecard-result').first();
     await first.hover();
@@ -336,7 +356,9 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     await advance(page, 'Enter'); await phase(page, 'ready');
     const readyExit = await openEndRound(page);
     await page.keyboard.press('Escape'); await readyExit.waitFor({ state: 'hidden' });
+    await assertTimerFocus(page);
     await page.keyboard.down('Space');
+    await assertTimerFocus(page);
     await page.waitForFunction(() => document.querySelector('.timer-number')?.classList.contains('error-text'));
     await page.waitForTimeout(150); await page.keyboard.up('Space'); await phase(page, 'ready');
     await page.keyboard.down('Space'); await page.getByText('Release to start', { exact: true }).first().waitFor();
