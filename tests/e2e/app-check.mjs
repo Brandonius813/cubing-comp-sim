@@ -99,7 +99,7 @@ async function checkExpandedLanguagesAndAudio(page, artifacts) {
     return page.getByRole('dialog');
   };
   let dialog = await openSettings();
-  await dialog.getByRole('tab').nth(2).click();
+  await dialog.getByRole('tab').nth(1).click();
   // Language is the first Appearance combobox, before the two font families.
   await dialog.getByRole('combobox').first().click();
   assert.equal(await page.getByRole('option').count(), languages.length);
@@ -117,25 +117,30 @@ async function checkExpandedLanguagesAndAudio(page, artifacts) {
   await page.reload();
   await page.waitForFunction(() => document.documentElement.lang === 'ja');
   dialog = await openSettings();
-  await dialog.getByRole('tab').nth(2).click();
+  await dialog.getByRole('tab').nth(1).click();
   assert.equal(await selectedValue(dialog.getByRole('combobox').first()), 'ja');
   await selectValue(dialog.getByRole('combobox').first(), 'en');
   await page.waitForFunction(() => document.documentElement.lang === 'en');
-  await dialog.getByRole('tab', { name: 'Audio', exact: true }).click();
+  await dialog.getByRole('tab', { name: 'Simulation', exact: true }).click();
   assert.equal(await dialog.getByLabel('Inspection sound', { exact: true }).count(), 0);
   await selectValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true }), 'pl');
   assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'pl');
+  await dialog.getByRole('slider', { name: 'Inspection volume', exact: true }).fill('0.35');
   await dialog.getByRole('button', { name: 'Test voice', exact: true }).click();
-  await dialog.getByText('Background recordings have not been configured yet.', { exact: true }).waitFor();
+  assert.equal(await dialog.getByRole('tab', { name: 'Audio', exact: true }).count(), 0);
+  assert.equal(await dialog.getByText('Background recordings have not been configured yet.', { exact: true }).count(), 0);
+  assert.equal(await dialog.getByRole('heading', { name: 'Background sound', exact: true }).count(), 0);
   await screenshots(page, 'audio-settings', artifacts);
   await page.keyboard.press('Escape');
   await page.reload();
   dialog = await openSettings();
-  await dialog.getByRole('tab', { name: 'Audio', exact: true }).click();
+  await dialog.getByRole('tab', { name: 'Simulation', exact: true }).click();
   assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'pl');
+  assert.equal(await dialog.getByRole('slider', { name: 'Inspection volume', exact: true }).inputValue(), '0.35');
   await dialog.getByRole('button', { name: 'Reset defaults', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('[role="combobox"][aria-label="Voice language"]')?.getAttribute('data-value') === 'follow');
   assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'follow');
+  assert.equal(await dialog.getByRole('slider', { name: 'Inspection volume', exact: true }).inputValue(), '0.8');
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
 }
 
