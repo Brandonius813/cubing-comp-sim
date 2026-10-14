@@ -6,7 +6,7 @@
   "workerName": "ccs-production-frontend",
   "supabaseUrl": "https://mrxbjdkhtnojgoskhrfx.supabase.co",
   "publicKeyVariable": "CCS_PRODUCTION_SUPABASE_PUBLISHABLE_KEY",
-  "authProviders": [],
+  "authProviders": ["wca"],
   "bucket": "cubing-comp-sim-saves-production",
   "databaseSchema": "ccs_backend",
   "databaseRole": "ccs_api_production",

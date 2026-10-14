@@ -1,3 +1,9 @@
+## Production WCA sign-in (October 14, 2026)
+
+The owner supplied a separate production WCA OAuth application and explicitly requested public signup/sign-in. Its client credentials passed a token-endpoint invalid-code check; an incorrect-secret control was rejected. Production Supabase now has the enabled `custom:wca` OIDC provider, with public/openid/profile/email scopes, provider PKCE and nonce validation enabled, and email confirmation retained. Manual identity linking is enabled for the existing Connect controls.
+
+Enable WCA in the production frontend manifest. Live initial redirects passed the expected issuer, callback, state, scope and PKCE checks. This records provider configuration and authorizes the requested public rollout; a completed human consent/code exchange remains unverified and must not be claimed from these checks. Google remains disabled until the owner supplies its separate production client. No credentials belong in this repository. Publication evidence belongs to the release workflow.
+
 ## Four recorded voices per language (October 14, 2026)
 
 The owner approved the four English ElevenLabs auditions and requested the same simple Male 1 / Male 2 / Female 1 / Female 2 choices in every supported language, with Male 1 as every locale's default. Implement the 128 short recordings as bundled assets, selected separately per voice language under Settings → Simulation. Preserve the existing audio preference key, language and volume; the new per-language choices default safely for existing users. Keep all clips in the offline release cache and keep timing independent of audio. Do not restore background audio. The provider connection is for generating build assets only; the deployed app needs no ElevenLabs key or runtime API.
