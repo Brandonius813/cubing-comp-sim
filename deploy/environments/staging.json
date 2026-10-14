@@ -6,7 +6,9 @@
   "workerName": "ccs-staging-frontend",
   "supabaseUrl": "https://sgagluvbcsndtnwnmzbb.supabase.co",
   "publicKeyVariable": "CCS_STAGING_SUPABASE_PUBLISHABLE_KEY",
-  "authProviders": [],
+  "authProviders": [
+    "wca"
+  ],
   "bucket": "cubing-comp-sim-saves-staging",
   "databaseSchema": "ccs_backend",
   "databaseRole": "ccs_api_staging",
