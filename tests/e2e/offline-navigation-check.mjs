@@ -3,6 +3,16 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
+async function bounded(promise, label, milliseconds = 30_000) {
+  let timer;
+  try {
+    return await Promise.race([promise, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Timed out: ${label}`)), milliseconds);
+    })]);
+  } finally { clearTimeout(timer); }
+}
+const evaluate = (page, predicate, arg) => bounded(page.evaluate(predicate, arg), 'offline fixture evaluation');
+
 /** Match Cloudflare's /index.html redirect, absent from Vite's preview server. */
 export async function checkOfflineNavigation(browser, root, browserName) {
   const dist = path.join(root, 'dist');
@@ -60,7 +70,7 @@ self.addEventListener('fetch',event=>{
   const contexts = [];
   const setOffline = async (context, offline) => {
     networkUnavailable = offline;
-    await context.setOffline(offline);
+    await bounded(context.setOffline(offline), 'offline fixture network transition');
   };
   const waitControlled = page => page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 60000 });
   const homepage = page => page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
@@ -69,21 +79,23 @@ self.addEventListener('fetch',event=>{
   async function waitForState(page, predicate, arg) {
     const deadline = Date.now() + 60000;
     while (Date.now() < deadline) {
-      if (await page.evaluate(predicate, arg)) return;
+      if (await evaluate(page, predicate, arg)) return;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
     throw new Error('Offline update did not reach its expected state.');
   }
   try {
+    console.log(`[${browserName}] Offline navigation: installing the current release.`);
     const context = await browser.newContext(); contexts.push(context);
     let page = await context.newPage();
     await page.goto(base); await homepage(page); await waitControlled(page);
-    const cached = await page.evaluate(async () => {
+    const cached = await evaluate(page, async () => {
       const names = await caches.keys();
       const response = await (await caches.open(names.find(name => name.startsWith('comp-sim-')))).match('/');
       return { redirected: response.redirected, status: response.status };
     });
     assert.deepEqual(cached, { redirected: false, status: 200 });
+    console.log(`[${browserName}] Offline navigation: online reloads and failed-network fallback.`);
     release = 'latest-online';
     for (let i = 0; i < 3; i++) { await page.reload(); await homepage(page); }
     assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online', 'Online navigation must bypass the installed shell.');
@@ -98,19 +110,20 @@ self.addEventListener('fetch',event=>{
     assert.equal(await page.locator('html').getAttribute('data-release'), 'installed');
     await setOffline(context, false);
 
+    console.log(`[${browserName}] Offline navigation: safe waiting-worker activation.`);
     // A new worker may download during a round, but updating requires a safe idle
     // screen and one app window. Never discard browser data to fix a stale build.
-    await page.evaluate(() => localStorage.setItem('offline-update-fixture', 'keep-local-data'));
+    await evaluate(page, () => localStorage.setItem('offline-update-fixture', 'keep-local-data'));
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).click();
     await page.locator('[data-round-active="true"]').waitFor();
     const oldCache = fixedWorker.match(/const CACHE='([^']+)'/)[1];
     const updatedCache = oldCache + '-update-fixture';
     worker = fixedWorker.replace(oldCache, updatedCache);
-    await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).update());
+    await evaluate(page, async () => (await navigator.serviceWorker.getRegistration()).update());
     const updateButton = page.getByRole('button', { name: 'Update site', exact: true });
     await updateButton.waitFor();
     assert.ok(await updateButton.isDisabled(), 'A pending update must never interrupt an unfinished round.');
-    assert.ok(await page.evaluate(async name => (await caches.keys()).includes(name), oldCache));
+    assert.ok(await evaluate(page, async name => (await caches.keys()).includes(name), oldCache));
     await page.getByRole('button', { name: 'End Round', exact: true }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'End Round', exact: true }).click();
     await homepage(page);
@@ -118,7 +131,7 @@ self.addEventListener('fetch',event=>{
     await page.bringToFront();
     await updateButton.click();
     await page.getByText('Close other CompSim tabs, then try again.', { exact: true }).waitFor();
-    assert.ok(await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration()).waiting));
+    assert.ok(await evaluate(page, async () => !!(await navigator.serviceWorker.getRegistration()).waiting));
     await anotherTab.close();
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     assert.ok(await updateButton.isDisabled(), 'Updating must not interrupt a settings/account dialog.');
@@ -127,17 +140,18 @@ self.addEventListener('fetch',event=>{
     await homepage(page);
     await waitForState(page, async name => !(await caches.keys()).includes(name), oldCache);
     assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online');
-    assert.equal(await page.evaluate(() => localStorage.getItem('offline-update-fixture')), 'keep-local-data');
+    assert.equal(await evaluate(page, () => localStorage.getItem('offline-update-fixture')), 'keep-local-data');
     await setOffline(context, true); await page.reload(); await homepage(page);
     assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online', 'Explicit activation must make the new release available offline.');
     await setOffline(context, false);
     await context.close();
 
+    console.log(`[${browserName}] Offline navigation: legacy redirected-cache repair.`);
     worker = legacyWorker;
     const legacyContext = await browser.newContext(); contexts.push(legacyContext);
     const original = await legacyContext.newPage();
     await original.goto(base); await homepage(original); await waitControlled(original);
-    await original.evaluate(async () => {
+    await evaluate(original, async () => {
       localStorage.setItem('offline-navigation-fixture', 'keep-local-data');
       await new Promise((resolve, reject) => {
         const request = indexedDB.open('offline-navigation-fixture', 1);
@@ -150,7 +164,7 @@ self.addEventListener('fetch',event=>{
         };
       });
     });
-    assert.equal(await original.evaluate(async name => (await (await caches.open(name)).match('/index.html')).redirected, legacyCache), true);
+    assert.equal(await evaluate(original, async name => (await (await caches.open(name)).match('/index.html')).redirected, legacyCache), true);
     const revisit = await legacyContext.newPage();
     let failed = false;
     try { await revisit.goto(base, { timeout: 10000 }); } catch { failed = true; }
@@ -159,7 +173,7 @@ self.addEventListener('fetch',event=>{
     if (browserName === 'chromium') assert.ok(failed, 'The legacy redirected shell must reproduce the Chrome navigation failure.');
 
     worker = fixedWorker;
-    await original.evaluate(async () => {
+    await evaluate(original, async () => {
       const registration = await navigator.serviceWorker.getRegistration();
       await registration.update();
     });
@@ -167,7 +181,7 @@ self.addEventListener('fetch',event=>{
       const response = await (await caches.open(name)).match('/index.html');
       return !!(await navigator.serviceWorker.getRegistration()).waiting && response?.redirected === false;
     }, legacyCache);
-    const repaired = await original.evaluate(async name => ({
+    const repaired = await evaluate(original, async name => ({
       redirected: (await (await caches.open(name)).match('/index.html')).redirected,
       activeIsLegacy: (await caches.keys()).includes(name),
     }), legacyCache);
@@ -176,7 +190,7 @@ self.addEventListener('fetch',event=>{
     await revisit.reload(); await homepage(revisit);
     await setOffline(legacyContext, true);
     await revisit.reload(); await homepage(revisit);
-    const retained = await revisit.evaluate(async () => {
+    const retained = await evaluate(revisit, async () => {
       const round = await new Promise((resolve, reject) => {
         const request = indexedDB.open('offline-navigation-fixture', 1);
         request.onerror = () => reject(request.error);
@@ -190,14 +204,30 @@ self.addEventListener('fetch',event=>{
     });
     assert.deepEqual(retained, { local: 'keep-local-data', round: { attempts: [12.34] } });
     await setOffline(legacyContext, false);
+    console.log(`[${browserName}] Offline navigation: legacy activation and final offline reload.`);
     await original.close(); await revisit.close();
     const afterActivation = await legacyContext.newPage();
     await afterActivation.goto(base); await homepage(afterActivation); await waitControlled(afterActivation);
     await waitForState(afterActivation, async name => !(await caches.keys()).includes(name), legacyCache);
     await setOffline(legacyContext, true); await afterActivation.reload(); await homepage(afterActivation);
     return `legacy redirected navigation ${failed ? 'rejected' : 'accepted'}; latest online shell, server-failure/offline fallback, active-round/dialog/multitab update guards, explicit activation, legacy repair and stored-data preservation passed`;
+  } catch (error) {
+    console.error(`[${browserName}] Offline navigation failed:`, error);
+    throw error;
   } finally {
-    for (const context of contexts) await context.close();
-    await new Promise(resolve => server.close(resolve));
+    console.log(`[${browserName}] Offline navigation: restoring networking and closing fixtures.`);
+    // WebKit can leave pending service-worker requests while emulated offline.
+    // Restore the fixture connection before closing contexts, then terminate
+    // remaining HTTP sockets so cleanup cannot conceal an assertion failure.
+    networkUnavailable = false;
+    try {
+      for (const context of contexts) {
+        await bounded(context.setOffline(false).catch(() => undefined), 'offline cleanup network restore', 10_000);
+        await bounded(context.close(), 'offline browser-context cleanup', 10_000);
+      }
+    } finally {
+      server.closeAllConnections();
+      await bounded(new Promise(resolve => server.close(resolve)), 'offline HTTP server cleanup', 10_000);
+    }
   }
 }

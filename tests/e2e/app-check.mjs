@@ -125,6 +125,17 @@ async function checkExpandedLanguagesAndAudio(page, artifacts) {
   assert.equal(await dialog.getByLabel('Inspection sound', { exact: true }).count(), 0);
   await selectValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true }), 'pl');
   assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'pl');
+  const voiceChoice = dialog.getByRole('combobox', { name: 'Inspection voice', exact: true });
+  assert.equal(await selectedValue(voiceChoice), 'male-1');
+  await voiceChoice.click();
+  assert.deepEqual((await page.getByRole('option').allTextContents()).map(text => text.replace('✓', '').trim()), ['Male 1', 'Male 2', 'Female 1', 'Female 2']);
+  await page.keyboard.press('Escape');
+  await selectValue(voiceChoice, 'female-2');
+  await selectValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true }), 'ja');
+  assert.equal(await selectedValue(voiceChoice), 'male-1');
+  await selectValue(voiceChoice, 'male-2');
+  await selectValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true }), 'pl');
+  assert.equal(await selectedValue(voiceChoice), 'female-2');
   const volume = dialog.getByRole('slider', { name: 'Inspection volume', exact: true });
   await volume.press('Home');
   for (let step = 0; step < 7; step++) await volume.press('ArrowRight');
@@ -138,10 +149,12 @@ async function checkExpandedLanguagesAndAudio(page, artifacts) {
   dialog = await openSettings();
   await dialog.getByRole('tab', { name: 'Simulation', exact: true }).click();
   assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'pl');
+  assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Inspection voice', exact: true })), 'female-2');
   assert.equal(await dialog.getByRole('slider', { name: 'Inspection volume', exact: true }).inputValue(), '0.35');
   await dialog.getByRole('button', { name: 'Reset defaults', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('[role="combobox"][aria-label="Voice language"]')?.getAttribute('data-value') === 'follow');
   assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Voice language', exact: true })), 'follow');
+  assert.equal(await selectedValue(dialog.getByRole('combobox', { name: 'Inspection voice', exact: true })), 'male-1');
   assert.equal(await dialog.getByRole('slider', { name: 'Inspection volume', exact: true }).inputValue(), '0.8');
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
 }

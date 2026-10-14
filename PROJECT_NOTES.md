@@ -1,3 +1,9 @@
+## Four recorded voices per language (October 14, 2026)
+
+The owner approved the four English ElevenLabs auditions and requested the same simple Male 1 / Male 2 / Female 1 / Female 2 choices in every supported language, with Male 1 as every locale's default. Implement the 128 short recordings as bundled assets, selected separately per voice language under Settings → Simulation. Preserve the existing audio preference key, language and volume; the new per-language choices default safely for existing users. Keep all clips in the offline release cache and keep timing independent of audio. Do not restore background audio. The provider connection is for generating build assets only; the deployed app needs no ElevenLabs key or runtime API.
+
+Provenance, immutable pack versioning and processing details are in `docs/audio-assets.md` and the pack manifest. The owner confirmed Starter before generation. Verification and publication evidence will be recorded with the pull request.
+
 ## Inspection voice settings (October 14, 2026)
 
 The owner removed background audio from the app to simplify setup. Remove its controls, catalog loading, playback integration and dedicated Audio tab. Keep inspection voice language, volume and Test voice beside the inspection toggle in Simulation. Existing inspection voice preferences keep their storage key and values; reset still restores defaults. Retain the old background preference fields for compatibility, without importing or exposing background playback in the app.

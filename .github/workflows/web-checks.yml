@@ -39,11 +39,18 @@ jobs:
           WRANGLER_SEND_METRICS: 'false'
           WRANGLER_SEND_ERROR_REPORTS: 'false'
       - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Provide an audio output for headless browser playback
+        run: |
+          sudo apt-get install -y pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=inspection_tests
+          pactl set-default-sink inspection_tests
+          pactl info
       - run: node scripts/branding-check.mjs
       - run: |
           for browser in chromium firefox webkit; do
             BROWSER="$browser" npm run test:browser
-            BROWSER="$browser" node scripts/check-offline-navigation.mjs
+            BROWSER="$browser" timeout --kill-after=10s 180s node scripts/check-offline-navigation.mjs
             BROWSER="$browser" node scripts/account-ui-check.mjs
           done
       - uses: actions/upload-artifact@v4

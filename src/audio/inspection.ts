@@ -1,24 +1,9 @@
-import { LOCALES, type Locale } from '../locales';
-import type { AudioPreferences } from './preferences';
+import type { Locale } from '../locales';
+import { selectedInspectionVoice, type AudioPreferences } from './preferences';
+import { inspectionClipUrl } from './voices';
 
 export type InspectionSeconds = 8 | 12;
 const MAX_CUE_DELAY_MS = 500;
-function normalized(tag: string): string { return tag.replace(/_/g, '-').toLowerCase(); }
-
-/** Local voices only. Mandarin never falls back to Cantonese or ambiguous zh. */
-export function selectLocalVoice(voices: readonly SpeechSynthesisVoice[], locale: Locale): SpeechSynthesisVoice | undefined {
-  const wanted = normalized(LOCALES.find(item => item.id === locale)!.speechTag);
-  const local = voices.filter(voice => voice.localService === true);
-  const exact = local.find(voice => normalized(voice.lang) === wanted);
-  if (exact) return exact;
-  if (locale === 'zh-Hans' || locale === 'zh-Hant') {
-    const permitted = locale === 'zh-Hans' ? ['zh-cn', 'zh-sg', 'cmn-cn', 'cmn-hans-cn'] : ['zh-tw', 'cmn-tw', 'cmn-hant-tw'];
-    return local.find(voice => permitted.includes(normalized(voice.lang)));
-  }
-  const language = wanted.split('-')[0];
-  return local.find(voice => normalized(voice.lang).split('-')[0] === language);
-}
-
 /** Consume missed thresholds without replaying both callouts after a suspended tab. */
 export function takeInspectionCue(elapsedMs: number, consumed: Set<number>): InspectionSeconds | null {
   let cue: InspectionSeconds | null = null;
@@ -31,74 +16,86 @@ export function takeInspectionCue(elapsedMs: number, consumed: Set<number>): Ins
   return cue;
 }
 interface AudioDependencies {
-  synthesis?: SpeechSynthesis | null;
-  utterance?: (text: string) => SpeechSynthesisUtterance;
+  context?: AudioContext | null;
+  fetch?: typeof fetch;
   now?: () => number;
 }
+/** Small recordings are decoded ahead of inspection; audio never controls the clock. */
 export class InspectionAudio {
   private token = 0;
-  private pending: ReturnType<typeof setTimeout> | null = null;
-  private ownsSpeech = false;
-  private readonly synthesis: SpeechSynthesis | null;
-  private readonly makeUtterance: (text: string) => SpeechSynthesisUtterance;
+  private context: AudioContext | null | undefined;
+  private source: AudioBufferSourceNode | null = null;
+  private readonly buffers = new Map<string, Promise<AudioBuffer>>();
+  private readonly fetchAudio: typeof fetch;
   private readonly now: () => number;
   constructor(dependencies: AudioDependencies = {}) {
-    this.synthesis = dependencies.synthesis === undefined
-      ? (typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null)
-      : dependencies.synthesis;
-    this.makeUtterance = dependencies.utterance ?? (text => new SpeechSynthesisUtterance(text));
+    this.context = dependencies.context;
+    this.fetchAudio = dependencies.fetch ?? ((...args) => fetch(...args));
     this.now = dependencies.now ?? (() => performance.now());
   }
-  prepare(): Promise<void> {
-    // Ask for local voices during the initiating gesture. Voice installation is
-    // controlled by the device; unavailable speech never changes the clock.
-    this.voices();
-    try { this.synthesis?.resume(); } catch { /* Unsupported device. */ }
-    return Promise.resolve();
+  private getContext(): AudioContext | null {
+    if (this.context === undefined) {
+      try { this.context = new AudioContext(); } catch { this.context = null; }
+    }
+    return this.context;
   }
-  voices(): SpeechSynthesisVoice[] {
-    try { return this.synthesis?.getVoices() ?? []; } catch { return []; }
+  private load(url: string, context: AudioContext): Promise<AudioBuffer> {
+    let buffer = this.buffers.get(url);
+    if (!buffer) {
+      buffer = this.fetchAudio(url).then(response => {
+        if (!response.ok) throw new Error('Inspection recording unavailable');
+        return response.arrayBuffer();
+      }).then(bytes => context.decodeAudioData(bytes)).catch(error => {
+        this.buffers.delete(url); throw error;
+      });
+      this.buffers.set(url, buffer);
+    }
+    return buffer;
   }
-  onVoicesChanged(listener: () => void): () => void {
-    this.synthesis?.addEventListener('voiceschanged', listener);
-    return () => this.synthesis?.removeEventListener('voiceschanged', listener);
+  async prepare(locale: Locale, preferences: AudioPreferences): Promise<boolean> {
+    const context = this.getContext();
+    if (!context) return false;
+    try {
+      // Call resume synchronously from the initiating click/key gesture.
+      const resume = context.state === 'running' ? Promise.resolve() : context.resume();
+      const voice = selectedInspectionVoice(preferences, locale);
+      await Promise.all([resume, ...([8, 12] as const).map(seconds => this.load(inspectionClipUrl(locale, voice, seconds), context))]);
+      return context.state === 'running';
+    } catch { return false; }
   }
   cancel(): void {
     this.token++;
-    if (this.pending !== null) clearTimeout(this.pending);
-    this.pending = null;
-    if (this.ownsSpeech) { this.ownsSpeech = false; try { this.synthesis?.cancel(); } catch { /* Unsupported device. */ } }
-  }
-  cue(locale: Locale, phrase: string, preferences: AudioPreferences, stillValid: () => boolean = () => true): 'voice' | 'unavailable' | 'muted' {
-    this.cancel();
-    if (!stillValid() || preferences.inspectionVolume <= 0) return 'muted';
-    const voice = selectLocalVoice(this.voices(), locale);
-    if (!voice || !this.synthesis) return 'unavailable';
-    const token = this.token;
-    const requestedAt = this.now();
-    const valid = () => this.token === token && stillValid() && this.now() - requestedAt <= MAX_CUE_DELAY_MS;
-    let started = false;
-    const finishPending = () => { if (this.pending !== null) clearTimeout(this.pending); this.pending = null; };
-    try {
-      const utterance = this.makeUtterance(phrase);
-      utterance.voice = voice; utterance.lang = voice.lang; utterance.volume = preferences.inspectionVolume;
-      utterance.rate = 1; utterance.pitch = 1;
-      utterance.onstart = () => { if (!valid()) { if (token === this.token) this.cancel(); return; } started = true; finishPending(); };
-      utterance.onend = () => { if (token === this.token) { finishPending(); this.ownsSpeech = false; } };
-      utterance.onerror = () => {
-        if (token !== this.token) return;
-        finishPending(); this.ownsSpeech = false;
-      };
-      this.ownsSpeech = true;
-      this.pending = setTimeout(() => { if (token === this.token && !started) this.cancel(); }, MAX_CUE_DELAY_MS);
-      this.synthesis.speak(utterance);
-      return 'voice';
-    } catch {
-      this.cancel();
-      return 'unavailable';
+    if (this.source) {
+      try { this.source.stop(); } catch { /* Already ended. */ }
+      this.source.disconnect(); this.source = null;
     }
   }
-  dispose(): void {
+  async cue(locale: Locale, seconds: InspectionSeconds, preferences: AudioPreferences, stillValid: () => boolean = () => true): Promise<'voice' | 'unavailable' | 'muted'> {
     this.cancel();
+    if (!stillValid() || preferences.inspectionVolume <= 0) return 'muted';
+    const context = this.getContext();
+    if (!context || context.state !== 'running') return 'unavailable';
+    const token = this.token;
+    const requestedAt = this.now();
+    try {
+      const buffer = await this.load(inspectionClipUrl(locale, selectedInspectionVoice(preferences, locale), seconds), context);
+      if (token !== this.token || !stillValid() || this.now() - requestedAt > MAX_CUE_DELAY_MS) return 'muted';
+      if (context.state !== 'running') return 'unavailable';
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      source.buffer = buffer; gain.gain.value = preferences.inspectionVolume;
+      source.connect(gain); gain.connect(context.destination);
+      source.onended = () => {
+        source.disconnect(); gain.disconnect();
+        if (this.source === source) this.source = null;
+      };
+      this.source = source; source.start();
+      return 'voice';
+    } catch { return 'unavailable'; }
+  }
+  dispose(): void {
+    this.cancel(); this.buffers.clear();
+    const context = this.context; this.context = undefined;
+    if (context && context.state !== 'closed') void context.close().catch(() => undefined);
   }
 }
