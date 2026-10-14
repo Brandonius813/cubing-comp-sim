@@ -14,6 +14,7 @@ import { HelpDialog } from './ui/HelpDialog';
 import { StatisticsDialog } from './ui/StatisticsDialog';
 import { useAppearance } from './ui/appearance';
 import './styles/app.css';
+import './styles/brand.css';
 
 type Modal = 'settings' | 'account' | 'help' | 'stats' | 'events' | 'edit' | 'event-confirm' | 'end-round' | null;
 function App() {
@@ -114,7 +115,7 @@ function App() {
   const roundTimes = round?.attempts.map(attemptTimeMs).filter((value): value is number => value !== null) ?? [];
   return <div className="app" data-phase={sim.phase} data-round-active={roundActive}>
     <header className="app-header">
-      <div className="logo-space" aria-label={t('app')} />
+      <div className="logo-space" aria-label="Cubing Comp Sim"><img className="brand-symbol brand-symbol-light" src="/brand/logo.svg" width="44" height="44" alt="" /><img className="brand-symbol brand-symbol-dark" src="/brand/logo-dark.svg" width="44" height="44" alt="" /><h1 className="brand-name">Cubing Comp Sim</h1></div>
       <button type="button" className="event-selector" aria-haspopup="dialog" disabled={timerActive || sim.phase === 'loading' || sim.saving} onClick={() => setModal('events')}><Icon name={selectedEvent.id} event /><span>{eventName(selectedEvent.id)}</span><Icon name="chevron" /></button>
       {roundActive && <button type="button" className="end-round-button" aria-haspopup="dialog" disabled={sim.saving} onClick={() => setModal('end-round')}>{t('endRound')}</button>}
       <nav className="utilities" aria-label={t('utilities')}><IconButton name="account" label={t('account')} disabled={timerActive} onClick={() => setModal('account')} /><IconButton name="help" label={t('help')} disabled={timerActive} onClick={() => setModal('help')} /><IconButton name="settings" label={t('settings')} disabled={timerActive} onClick={() => setModal('settings')} /></nav>

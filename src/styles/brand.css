@@ -1,0 +1,10 @@
+/* Keep the approved wordmark in Geist across user font settings. */
+.logo-space{display:flex;align-items:center;gap:12px;width:auto;max-width:calc(50vw - 156px);height:48px}
+.brand-symbol{display:block;flex:0 0 44px;width:44px;height:44px;object-fit:contain;filter:none}
+.brand-symbol-light{display:none}
+.brand-name{font:500 20px/28px Geist,Arial,sans-serif;white-space:nowrap;letter-spacing:-.5px;color:var(--text)}
+:root[data-theme=light] .brand-symbol-light{display:block}
+:root[data-theme=light] .brand-symbol-dark{display:none}
+@media(max-width:1100px){.brand-name{display:none}.logo-space{max-width:none}}
+@media(max-width:700px){.logo-space{left:12px;top:18px;height:40px}.brand-symbol{width:36px;height:36px;flex-basis:36px}.event-selector{left:64px;width:152px;padding:0 10px;gap:8px}.end-round-button{left:140px}}
+@media(max-width:380px){.logo-space{left:8px}.brand-symbol{width:32px;height:32px;flex-basis:32px}.event-selector{left:52px;width:148px}.utilities{right:8px;gap:2px}.utilities .icon-button{width:32px;height:32px}.end-round-button{left:126px}}

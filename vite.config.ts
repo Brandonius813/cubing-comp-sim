@@ -1,3 +1,4 @@
+import { siteMetadataPlugin } from './scripts/site-metadata.mjs';
 import { defineConfig, type Plugin } from 'vite';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -66,4 +67,4 @@ self.addEventListener('fetch',event=>{
     },
   };
 }
-export default defineConfig({ plugins: [offlineCache()], build: { target: 'es2022', sourcemap: true } });
+export default defineConfig({ plugins: [siteMetadataPlugin(), offlineCache()], build: { target: 'es2022', sourcemap: true } });
