@@ -49,7 +49,7 @@ export function AudioSettings({ locale }: { locale: Locale }) {
   };
   return <>
     {saveError && <p className="error-text" role="alert">{t('saveError')}</p>}
-    <Row label={t('voiceLanguage')} hint={t('voiceDeviceHint')}>
+    <Row label={t('voiceLanguage')}>
       <Select label={t('voiceLanguage')} value={preferences.voiceLanguage} onChange={value => update({ voiceLanguage: value as AudioPreferences['voiceLanguage'] })}
         options={[{ value: 'follow', label: t('followLanguage') }, ...LOCALES.map(item => ({ value: item.id, label: item.nativeName }))]} />
     </Row>

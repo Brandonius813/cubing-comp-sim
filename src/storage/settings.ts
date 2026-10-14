@@ -21,8 +21,9 @@ export const FONT_OPTIONS = [
 export type FontFamily = typeof FONT_OPTIONS[number]['value'];
 export type Theme = 'dark' | 'light' | 'system';
 export const MAX_WAIT_SECONDS = 300;
+export const MAX_RANDOM_WAIT_SECONDS = 180;
 // Existing previews allowed up to ten minutes. Read those settings safely, then
-// cap them to the current five-minute limit without discarding other preferences.
+// cap fixed waits to five minutes and random waits to three minutes.
 const LEGACY_MAX_WAIT_SECONDS = 600;
 export function isShortcutCode(value: unknown): value is string {
   return typeof value === 'string' && /^(Enter|Space|Key[A-Z]|Digit[0-9]|Numpad[0-9]|NumpadEnter|Arrow(Up|Down|Left|Right)|Backquote|Minus|Equal|BracketLeft|BracketRight|Backslash|Semicolon|Quote|Comma|Period|Slash)$/.test(value);
@@ -53,7 +54,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = {
   eventId: '333', inputMethod: 'timer', inspection: true, waitSeconds: 0, holdMs: 550,
   waitEnabled: false, waitMode: 'fixed', waitMinSeconds: 15, waitMaxSeconds: 45,
   goalMs: null, audioCallouts: true, ambience: false, showScorecard: true, language: 'en',
-  theme: 'dark', textFont: 'geist', numberFont: 'geist-mono', shortcuts: { advance: 'Enter', submit: 'Enter' },
+  theme: 'system', textFont: 'geist', numberFont: 'geist-mono', shortcuts: { advance: 'Enter', submit: 'Enter' },
 };
 
 export interface SolveDraft {
@@ -93,8 +94,8 @@ export function validateSettings(value: Settings): Settings {
     waitSeconds: Math.min(value.waitSeconds, MAX_WAIT_SECONDS), holdMs: value.holdMs, goalMs: value.goalMs,
     audioCallouts: value.audioCallouts, ambience: value.ambience,
     showScorecard: value.showScorecard, language: value.language,
-    waitEnabled, waitMode, waitMinSeconds: Math.min(waitMinSeconds, MAX_WAIT_SECONDS),
-    waitMaxSeconds: Math.min(waitMaxSeconds, MAX_WAIT_SECONDS), theme, textFont, numberFont,
+    waitEnabled, waitMode, waitMinSeconds: Math.min(waitMinSeconds, MAX_RANDOM_WAIT_SECONDS),
+    waitMaxSeconds: Math.min(waitMaxSeconds, MAX_RANDOM_WAIT_SECONDS), theme, textFont, numberFont,
     shortcuts: { advance: shortcuts.advance, submit: shortcuts.submit },
   };
 }

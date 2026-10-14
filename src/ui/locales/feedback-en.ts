@@ -15,7 +15,7 @@ export const feedbackEn = {
   fontFallbackHint: 'Fonts use the closest available device font when needed. Unsupported characters use your device’s language fonts. Geist fonts are included for offline use.',
   fontPreview: 'The quick brown fox · ABC abc · 你好 · 日本語 · 한국어',
   privacy: 'Privacy',
-  privacyHint: 'These optional settings help improve the app. Usage metrics show which features people use; error reports help find and fix bugs. Both are off unless you choose to enable them.',
+  privacyHint: 'These optional settings help improve the app.',
   additionalShortcut: 'Additional shortcut',
   fixedShortcutsHint: 'Space and Enter always advance or submit outside text fields. Add another key here. Timing always starts with Space and stops with any key.',
   changeShortcut: 'Change {action} shortcut',

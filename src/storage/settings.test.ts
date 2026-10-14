@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, MAX_WAIT_SECONDS, validateSettings, type Settings } from './settings';
+import { DEFAULT_SETTINGS, MAX_RANDOM_WAIT_SECONDS, MAX_WAIT_SECONDS, validateSettings, type Settings } from './settings';
 
 const legacy = {
   eventId: '333', inputMethod: 'timer', inspection: true, waitSeconds: 0, holdMs: 300,
@@ -11,12 +11,18 @@ describe('settings migration and persistence', () => {
   it('opens the old device format while preserving chosen settings', () => {
     const migrated = read(legacy);
     expect(migrated).toMatchObject(legacy);
-    expect(migrated).toMatchObject({ waitEnabled: false, waitMode: 'fixed', waitMinSeconds: 15, waitMaxSeconds: 45, theme: 'dark', textFont: 'geist', numberFont: 'geist-mono', shortcuts: { advance: 'Enter', submit: 'Enter' } });
+    expect(migrated).toMatchObject({ waitEnabled: false, waitMode: 'fixed', waitMinSeconds: 15, waitMaxSeconds: 45, theme: 'system', textFont: 'geist', numberFont: 'geist-mono', shortcuts: { advance: 'Enter', submit: 'Enter' } });
     expect(read({ ...legacy, waitSeconds: 25 })).toMatchObject({ waitEnabled: true, waitSeconds: 25 });
   });
   it('keeps the new default hold separate from existing saved choices', () => {
     expect(DEFAULT_SETTINGS.holdMs).toBe(550);
     expect(read(legacy).holdMs).toBe(300);
+  });
+  it('defaults to the system theme while retaining saved theme choices', () => {
+    expect(DEFAULT_SETTINGS.theme).toBe('system');
+    for (const theme of ['dark', 'light', 'system']) {
+      expect(read({ ...legacy, theme }).theme).toBe(theme);
+    }
   });
   it('round-trips custom fonts, theme, keybindings and disabled random waits', () => {
     const settings: Settings = { ...DEFAULT_SETTINGS, waitEnabled: false, waitMode: 'random', waitMinSeconds: 7, waitMaxSeconds: 9, theme: 'system', numberFont: 'arial', textFont: 'georgia', shortcuts: { advance: 'KeyN', submit: 'ArrowRight' } };
@@ -31,14 +37,15 @@ describe('settings migration and persistence', () => {
       { waitMode: 'sometimes' }, { waitMode: null }, { waitEnabled: 1 },
     ]) expect(() => read({ ...DEFAULT_SETTINGS, ...patch })).toThrow('Invalid settings');
   });
-  it('caps saved ten-minute settings at five minutes without losing other preferences', () => {
+  it('caps saved fixed waits at five minutes and random waits at three without losing other preferences', () => {
     const fixed = read({ ...legacy, waitSeconds: 600 });
     expect(MAX_WAIT_SECONDS).toBe(300);
+    expect(MAX_RANDOM_WAIT_SECONDS).toBe(180);
     expect(fixed).toMatchObject({ ...legacy, waitSeconds: 300, waitEnabled: true });
     const random = { ...DEFAULT_SETTINGS, waitMode: 'random', waitEnabled: true, waitSeconds: 599, waitMinSeconds: 240, waitMaxSeconds: 600, holdMs: 1250, theme: 'light', textFont: 'georgia', language: 'ja' };
-    expect(read(random)).toMatchObject({ ...random, waitSeconds: 300, waitMaxSeconds: 300 });
-    expect(read({ ...random, waitMinSeconds: 450 })).toMatchObject({ waitMinSeconds: 300, waitMaxSeconds: 300 });
-    expect(read({ ...random, waitMaxSeconds: 300 })).toMatchObject({ waitMinSeconds: 240, waitMaxSeconds: 300 });
+    expect(read(random)).toMatchObject({ ...random, waitSeconds: 300, waitMinSeconds: 180, waitMaxSeconds: 180 });
+    expect(read({ ...random, waitMinSeconds: 450 })).toMatchObject({ waitMinSeconds: 180, waitMaxSeconds: 180 });
+    expect(read({ ...random, waitMaxSeconds: 300 })).toMatchObject({ waitMinSeconds: 180, waitMaxSeconds: 180 });
   });
   it('rejects malformed appearance and shortcut values rather than resetting them', () => {
     for (const patch of [
