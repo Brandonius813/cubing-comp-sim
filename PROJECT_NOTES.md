@@ -1,5 +1,13 @@
 # Cubing Comp Sim: project notes
 
+## Settings copy cleanup (October 14, 2026)
+
+The owner requested a shorter Settings interface: remove the offline explanation beneath connection status, shortcut instructions, font fallback note, device-voice explanation, random-wait explanation, and Privacy explanations after its opening sentence. Keep the existing controls and font selectors. End Round keeps its discard warning without the completed-history sentence. Background sound setup is deferred to a separate task.
+
+Statistics displays the latest mean of three completed rounds as a single Mo3R summary column, with no sidebar or explanation. Use the selected event; the all-events view shows a value only when its history contains one event, preserving separation between puzzles.
+
+New and reset settings default to System theme; saved theme choices remain intact. Random wait endpoints now cap at three minutes in the slider, typed inputs, and saved-settings migration. Fixed waits retain their five-minute cap. Clamp older random ranges without clearing other preferences.
+
 ## Digit-only solve entry (October 12, 2026)
 
 The owner requested compact typing: `10321` becomes `1:03.21`, and `327` becomes `3.27`. For new manual solves and historical edits, the last two digits represent hundredths, the preceding two seconds, and the remaining digits minutes. Explicit decimal and colon formats, localized keyboard normalization, and penalty controls remain supported. To enter whole seconds explicitly, include a decimal point (for example, `12.00`). Existing saved times retain their stored milliseconds.

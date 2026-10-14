@@ -7,7 +7,7 @@ import { localizedDate, t, useLocale } from './i18n';
 import '../styles/statistics.css';
 
 const PAGE_SIZE = 50;
-const meanText = (mean: RoundMean) => mean.status === 'DNF' ? 'DNF' : mean.status === 'incomplete' ? '—' : formatTime(mean.valueMs);
+const meanText = (mean: RoundMean | undefined) => !mean || mean.status === 'incomplete' ? '—' : mean.status === 'DNF' ? 'DNF' : formatTime(mean.valueMs);
 
 export function StatisticsDialog({ rounds, onEdit, onExport, onClose }: {
   rounds: readonly Round[];
@@ -36,6 +36,7 @@ export function StatisticsDialog({ rounds, onEdit, onExport, onClose }: {
   const roundStatistics = useMemo(() => eventFilter === 'all'
     ? getRoundStatisticsByEvent(rounds)
     : [getEventRoundStatistics(rounds, eventFilter)], [rounds, eventFilter]);
+  const currentMean = roundStatistics.length === 1 ? roundStatistics[0].current : undefined;
   const pageCount = Math.max(1, Math.ceil(filteredRounds.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const visibleRounds = filteredRounds.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
@@ -45,30 +46,19 @@ export function StatisticsDialog({ rounds, onEdit, onExport, onClose }: {
       <Select label={t('event')} value={eventFilter} options={[{ value: 'all', label: t('allEvents') }, ...EVENTS.map(event => ({ value: event.id, label: eventName(event.id) }))]} onChange={value => { setEventFilter(value as EventId | 'all'); setPage(0); }} />
       <button type="button" className="secondary-button" onClick={() => void onExport()}>{t('export')}</button>
     </div>
-    <div className="statistics-layout">
-      <div className="statistics-history">
-        <dl className="statistics-summary">
-          <div><dt>{t('solves')}</dt><dd>{summary.solves}</dd></div>
-          <div><dt>{t('completedRounds')}</dt><dd>{summary.completed}</dd></div>
-          <div><dt>{t('bestSingle')}</dt><dd>{formatTime(summary.best)}</dd></div>
-        </dl>
-        {visibleRounds.length === 0 ? <p className="statistics-empty">{t('noHistory')}</p> : <div className="statistics-rounds">{visibleRounds.map(round => <StatisticsRound key={round.id} round={round} onEdit={onEdit} />)}</div>}
-        {pageCount > 1 && <nav className="statistics-pagination" aria-label="Statistics pages">
-          <button type="button" className="secondary-button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t('previous')}</button>
-          <span className="statistics-page-number">{currentPage + 1} / {pageCount}</span>
-          <button type="button" className="secondary-button" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>{t('nextPage')}</button>
-        </nav>}
-      </div>
-      <aside className="round-means-panel" aria-label="Mean of 3 rounds">
-        <h2>Mean of 3 rounds</h2>
-        <p className="round-means-description">The mean of three consecutive completed round results for the same event.</p>
-        {roundStatistics.length === 0 ? <p className="round-means-empty">Complete three rounds in an event to see your first mean.</p> : roundStatistics.map(statistics => <section className="round-mean-event" key={statistics.eventId} aria-label={`${eventName(statistics.eventId)} mean of 3 rounds`}>
-          <h3>{eventName(statistics.eventId)}</h3>
-          <dl className="round-mean-values"><div><dt>Current</dt><dd className={statistics.current.status === 'DNF' ? 'error-text' : undefined}>{meanText(statistics.current)}</dd></div><div><dt>Best</dt><dd className={statistics.best.status === 'ok' ? 'positive-text' : statistics.best.status === 'DNF' ? 'error-text' : undefined}>{meanText(statistics.best)}</dd></div></dl>
-          {statistics.completedRounds < 3 && <p className="round-mean-progress">{statistics.completedRounds} / 3 completed rounds</p>}
-        </section>)}
-        <p className="round-means-footnote">Current uses the last three completed rounds. Best uses the fastest consecutive set of three. A DNF round makes that mean DNF. This is a practice statistic.</p>
-      </aside>
+    <div className="statistics-history">
+      <dl className="statistics-summary">
+        <div><dt>{t('solves')}</dt><dd>{summary.solves}</dd></div>
+        <div><dt>{t('completedRounds')}</dt><dd>{summary.completed}</dd></div>
+        <div><dt>{t('bestSingle')}</dt><dd>{formatTime(summary.best)}</dd></div>
+        <div><dt>Mo3R</dt><dd className={currentMean?.status === 'DNF' ? 'error-text' : undefined}>{meanText(currentMean)}</dd></div>
+      </dl>
+      {visibleRounds.length === 0 ? <p className="statistics-empty">{t('noHistory')}</p> : <div className="statistics-rounds">{visibleRounds.map(round => <StatisticsRound key={round.id} round={round} onEdit={onEdit} />)}</div>}
+      {pageCount > 1 && <nav className="statistics-pagination" aria-label="Statistics pages">
+        <button type="button" className="secondary-button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t('previous')}</button>
+        <span className="statistics-page-number">{currentPage + 1} / {pageCount}</span>
+        <button type="button" className="secondary-button" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>{t('nextPage')}</button>
+      </nav>}
     </div>
   </Dialog>;
 }

@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { DEFAULT_SETTINGS, FONT_OPTIONS, MAX_WAIT_SECONDS, isShortcutCode, type Settings } from '../storage';
-import { registerOfflineSupport, type OfflineStatus } from '../platform/offline';
+import { DEFAULT_SETTINGS, FONT_OPTIONS, MAX_RANDOM_WAIT_SECONDS, MAX_WAIT_SECONDS, isShortcutCode, type Settings } from '../storage';
 import { Dialog, Select, Toggle } from './primitives';
 import { normalizeTimeInput, t } from './i18n';
 import { LOCALES } from '../locales';
@@ -65,15 +64,13 @@ function WaitTimeInput({ label, value, min, max, onChange }: { label: string; va
   }} />{invalid && <span id={errorId} role="alert" className="error-text">{t('waitTimeInvalid', { min: waitTime(min), max: waitTime(max) })}</span>}</label>;
 }
 function WaitRange({ settings, update }: { settings: Settings; update: (patch: Partial<Settings>) => void }) {
-  const rangeId = useId();
-  return <div className="wait-range" aria-describedby={rangeId}>
+  return <div className="wait-range">
     <div className="wait-range-slider">
-      <div className="wait-range-track"><span style={{ left: `${settings.waitMinSeconds / MAX_WAIT_SECONDS * 100}%`, right: `${100 - settings.waitMaxSeconds / MAX_WAIT_SECONDS * 100}%` }} /></div>
-      <input type="range" aria-label={t('minimumWait')} aria-valuemax={settings.waitMaxSeconds} aria-valuetext={t('secondsValue', { value: settings.waitMinSeconds })} min="0" max={MAX_WAIT_SECONDS} step="1" value={settings.waitMinSeconds} onChange={event => update({ waitMinSeconds: Math.min(Number(event.target.value), settings.waitMaxSeconds) })} />
-      <input type="range" aria-label={t('maximumWait')} aria-valuemin={settings.waitMinSeconds} aria-valuetext={t('secondsValue', { value: settings.waitMaxSeconds })} min="0" max={MAX_WAIT_SECONDS} step="1" value={settings.waitMaxSeconds} onChange={event => update({ waitMaxSeconds: Math.max(Number(event.target.value), settings.waitMinSeconds) })} />
+      <div className="wait-range-track"><span style={{ left: `${settings.waitMinSeconds / MAX_RANDOM_WAIT_SECONDS * 100}%`, right: `${100 - settings.waitMaxSeconds / MAX_RANDOM_WAIT_SECONDS * 100}%` }} /></div>
+      <input type="range" aria-label={t('minimumWait')} aria-valuemax={settings.waitMaxSeconds} aria-valuetext={t('secondsValue', { value: settings.waitMinSeconds })} min="0" max={MAX_RANDOM_WAIT_SECONDS} step="1" value={settings.waitMinSeconds} onChange={event => update({ waitMinSeconds: Math.min(Number(event.target.value), settings.waitMaxSeconds) })} />
+      <input type="range" aria-label={t('maximumWait')} aria-valuemin={settings.waitMinSeconds} aria-valuetext={t('secondsValue', { value: settings.waitMaxSeconds })} min="0" max={MAX_RANDOM_WAIT_SECONDS} step="1" value={settings.waitMaxSeconds} onChange={event => update({ waitMaxSeconds: Math.max(Number(event.target.value), settings.waitMinSeconds) })} />
     </div>
-    <div className="wait-range-inputs"><WaitTimeInput label={t('minimumWait')} value={settings.waitMinSeconds} min={0} max={settings.waitMaxSeconds} onChange={waitMinSeconds => update({ waitMinSeconds })} /><WaitTimeInput label={t('maximumWait')} value={settings.waitMaxSeconds} min={settings.waitMinSeconds} max={MAX_WAIT_SECONDS} onChange={waitMaxSeconds => update({ waitMaxSeconds })} /></div>
-    <p id={rangeId}>{t('waitRangeHint')}</p>
+    <div className="wait-range-inputs"><WaitTimeInput label={t('minimumWait')} value={settings.waitMinSeconds} min={0} max={settings.waitMaxSeconds} onChange={waitMinSeconds => update({ waitMinSeconds })} /><WaitTimeInput label={t('maximumWait')} value={settings.waitMaxSeconds} min={settings.waitMinSeconds} max={MAX_RANDOM_WAIT_SECONDS} onChange={waitMaxSeconds => update({ waitMaxSeconds })} /></div>
   </div>;
 }
 
@@ -84,7 +81,6 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
   const [connection, setConnection] = useState<'online' | 'offline' | 'connectionUnknown'>(navigator.onLine ? 'connectionUnknown' : 'offline');
   const [checking, setChecking] = useState(false);
   const connectionRequest = useRef(0);
-  const [offlineStatus, setOfflineStatus] = useState<OfflineStatus>('unavailable');
   const [error, setError] = useState('');
   const [consent, setConsent] = useState(loadMetricsConsent);
   const telemetryStatus = telemetry.getStatus();
@@ -110,8 +106,7 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
     finally { if (request === connectionRequest.current) setChecking(false); }
   };
   useEffect(() => { void check(); const online = () => void check(); const offline = () => { connectionRequest.current++; setConnection('offline'); setChecking(false); }; window.addEventListener('online', online); window.addEventListener('offline', offline); return () => { connectionRequest.current++; window.removeEventListener('online', online); window.removeEventListener('offline', offline); }; }, []);
-  useEffect(() => registerOfflineSupport(setOfflineStatus), []);
-  const connectionHeader = <div className="settings-connection"><div><span className={`status-dot ${connection}`} /><span role="status">{t(connection)}</span><button type="button" className="text-button" disabled={checking} onClick={() => void check()}>{t(checking ? 'checkingConnection' : 'checkConnection')}</button></div><p>{t('localAlways')} {offlineStatus === 'ready' ? t('offlineReady') : offlineStatus === 'downloading' ? t('offlinePreparing') : offlineStatus === 'update-ready' ? t('offlineUpdate') : ''}</p>{error && <p role="alert" className="error-text">{error}</p>}</div>;
+  const connectionHeader = <div className="settings-connection"><div><span className={`status-dot ${connection}`} /><span role="status">{t(connection)}</span><button type="button" className="text-button" disabled={checking} onClick={() => void check()}>{t(checking ? 'checkingConnection' : 'checkConnection')}</button></div>{error && <p role="alert" className="error-text">{error}</p>}</div>;
   return <Dialog title={t('settings')} onClose={onClose} className="settings-dialog" headerContent={connectionHeader}>
     <div className="settings-tabs" role="tablist" aria-label={t('settings')}>{tabs.map((key, index) => <button type="button" key={key} id={`${tabId}-${key}`} role="tab" aria-selected={tab === key} aria-controls={`${tabId}-panel`} tabIndex={tab === key ? 0 : -1} onClick={() => setTab(key)} onKeyDown={event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -135,10 +130,10 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
       <Row label={t('language')}><Select label={t('language')} value={settings.language} options={LOCALES.map(locale => ({ value: locale.id, label: locale.nativeName }))} onChange={language => update({ language: language as Settings['language'] })} /></Row>
       <Row label={t('textFont')}><Select label={t('textFont')} value={settings.textFont} options={FONT_OPTIONS} onChange={textFont => update({ textFont: textFont as Settings['textFont'] })} /></Row>
       <Row label={t('numberFont')}><Select label={t('numberFont')} value={settings.numberFont} options={FONT_OPTIONS} onChange={numberFont => update({ numberFont: numberFont as Settings['numberFont'] })} /></Row>
-      <div className="font-preview"><p>{t('fontPreview')}</p><div>0:12.34 · 56789</div></div><p className="settings-hint">{t('fontFallbackHint')}</p>
+      <div className="font-preview"><p>{t('fontPreview')}</p><div>0:12.34 · 56789</div></div>
     </>}
-    {tab === 'shortcuts' && <div className="shortcut-settings"><p className="settings-hint">{t('fixedShortcutsHint')}</p><Row label={`${t('advance')} · ${t('additionalShortcut')}`} hint={t('outsideFields')}><ShortcutControl action={t('advance')} value={settings.shortcuts.advance} onChange={advance => update({ shortcuts: { ...settings.shortcuts, advance } })} /></Row><Row label={t('startTimer')} hint={t('holdInstruction')}><kbd>{t('spaceKey')}</kbd></Row><Row label={t('stopTimer')}><kbd>{t('anyKey')}</kbd></Row><Row label={`${t('submitSolve')} · ${t('additionalShortcut')}`}><ShortcutControl action={t('submitSolve')} value={settings.shortcuts.submit} onChange={submit => update({ shortcuts: { ...settings.shortcuts, submit } })} /></Row><p className="settings-hint">{t('shortcutHint')}</p></div>}
-    {tab === 'privacy' && <><p className="settings-hint">{t('privacyHint')}</p><Row label={t('usageMetrics')} hint={telemetryStatus.productConfigured ? t('usageMetricsHint') : t('previewUnavailable')}><Toggle label={t('usageMetrics')} checked={consent.product} disabled={!telemetryStatus.productConfigured} onChange={product => updateConsent({ ...consent, product })} /></Row><Row label={t('errorReports')} hint={telemetryStatus.diagnosticsConfigured ? t('errorReportsHint') : t('previewUnavailable')}><Toggle label={t('errorReports')} checked={consent.diagnostics} disabled={!telemetryStatus.diagnosticsConfigured} onChange={diagnostics => updateConsent({ ...consent, diagnostics })} /></Row></>}
+    {tab === 'shortcuts' && <div className="shortcut-settings"><Row label={`${t('advance')} · ${t('additionalShortcut')}`}><ShortcutControl action={t('advance')} value={settings.shortcuts.advance} onChange={advance => update({ shortcuts: { ...settings.shortcuts, advance } })} /></Row><Row label={t('startTimer')}><kbd>{t('spaceKey')}</kbd></Row><Row label={t('stopTimer')}><kbd>{t('anyKey')}</kbd></Row><Row label={`${t('submitSolve')} · ${t('additionalShortcut')}`}><ShortcutControl action={t('submitSolve')} value={settings.shortcuts.submit} onChange={submit => update({ shortcuts: { ...settings.shortcuts, submit } })} /></Row></div>}
+    {tab === 'privacy' && <><p className="settings-hint">{t('privacyHint')}</p><Row label={t('usageMetrics')}><Toggle label={t('usageMetrics')} checked={consent.product} disabled={!telemetryStatus.productConfigured} onChange={product => updateConsent({ ...consent, product })} /></Row><Row label={t('errorReports')}><Toggle label={t('errorReports')} checked={consent.diagnostics} disabled={!telemetryStatus.diagnosticsConfigured} onChange={diagnostics => updateConsent({ ...consent, diagnostics })} /></Row></>}
     </div>
     <button type="button" className="secondary-button settings-reset" onClick={() => void reset()}>{t('resetSettings')}</button>
   </Dialog>;

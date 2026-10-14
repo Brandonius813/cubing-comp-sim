@@ -174,7 +174,7 @@ async function checkSettingsWidth(page, dialog) {
     await dialog.getByRole('tab', { name: 'Simulation', exact: true }).click();
     const returned = await snapshot();
     assert.ok(Math.abs(baseline.x - returned.x) < 1 && Math.abs(baseline.width - returned.width) < 1, 'Settings content does not return to the same position.');
-    if (!simulationOverflow && shortcutsOverflow) { exercisedOverflow = true; break; }
+    if (simulationOverflow !== shortcutsOverflow) { exercisedOverflow = true; break; }
   }
   assert.ok(exercisedOverflow, 'The width regression must exercise a tab that introduces a vertical scrollbar.');
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -409,16 +409,16 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     await maximumWait.fill('00:20'); await maximumWait.press('Enter'); await settled(page);
     assert.equal(await minimumWait.inputValue(), '00:10');
     assert.equal(await maximumWait.inputValue(), '00:20');
-    await maximumWait.fill('05:01'); await maximumWait.press('Enter');
+    await maximumWait.fill('03:01'); await maximumWait.press('Enter');
     assert.equal(await maximumWait.getAttribute('aria-invalid'), 'true');
     assert.equal((await persistedRoundState(page)).settings.waitMaxSeconds, 20, 'Invalid MM:SS wait changed the stored upper bound.');
-    await maximumWait.fill('05:00'); await maximumWait.press('Enter'); await settled(page);
-    assert.equal((await persistedRoundState(page)).settings.waitMaxSeconds, 300);
+    await maximumWait.fill('03:00'); await maximumWait.press('Enter'); await settled(page);
+    assert.equal((await persistedRoundState(page)).settings.waitMaxSeconds, 180);
     await maximumWait.fill('00:20'); await maximumWait.press('Enter'); await settled(page);
     const rail = await dialog.locator('.wait-range-track').boundingBox();
     for (const name of ['Minimum wait', 'Maximum wait']) {
       const slider = dialog.getByRole('slider', { name, exact: true });
-      assert.equal(await slider.getAttribute('max'), '300');
+      assert.equal(await slider.getAttribute('max'), '180');
       const track = await slider.boundingBox();
       assert.ok(Math.abs(track.y + track.height / 2 - rail.y - rail.height / 2) < 1, `${name} thumb is not vertically centered on the rail.`);
       assert.ok(Math.abs(track.x + 10 - rail.x) < 1 && Math.abs(track.x + track.width - 10 - rail.x - rail.width) < 1, `${name} thumb centers do not align with rail endpoints.`);
@@ -458,7 +458,8 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     const statistics = page.getByRole('dialog', { name: 'Statistics', exact: true });
     await statistics.getByRole('button', { name: 'Export history', exact: true }).waitFor();
     assert.equal(await statistics.getByRole('button', { name: 'Import history', exact: true }).count(), 0);
-    await statistics.getByRole('heading', { name: 'Mean of 3 rounds', exact: true }).waitFor();
+    await statistics.locator('.statistics-summary dt', { hasText: /^Mo3R$/ }).waitFor();
+    assert.equal(await statistics.locator('aside').count(), 0);
     await capture(page, 'statistics', artifacts); await statistics.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Help', exact: true }).click();
     const help = page.getByRole('dialog');
