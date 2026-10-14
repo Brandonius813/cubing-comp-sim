@@ -2,7 +2,7 @@ name: Desktop web checks
 on:
   push:
     branches: [main]
-    paths: ['src/**', 'public/**', 'engine/**', 'scripts/**', 'tests/**', 'package*.json', 'index.html', 'tsconfig.json', 'vite.config.ts', 'wrangler.json', '.github/workflows/web-checks.yml']
+    paths: ['src/**', 'public/**', 'engine/**', 'scripts/**', 'tests/**', 'deploy/**', 'package*.json', 'index.html', 'tsconfig.json', 'vite.config.ts', 'wrangler.json', '.github/workflows/web-checks.yml', '.github/workflows/deploy-production.yml']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -30,6 +30,7 @@ jobs:
       - run: npm test
       - run: node --test engine/scripts/svg-conformance.test.mjs scripts/assert-engine.test.mjs
       - run: node --test deploy/auth-providers.test.mjs
+      - run: node --test deploy/domain.test.mjs
       - run: npm run engine:verify
       - run: npm run build
       - name: Validate static asset deployment without publishing

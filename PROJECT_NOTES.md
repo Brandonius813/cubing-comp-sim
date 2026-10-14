@@ -1,5 +1,13 @@
 # Cubing Comp Sim: project notes
 
+## Public accounts and cloud-save rollout (October 14, 2026)
+
+Brandon requested fully working public accounts and cloud saves and authorized production setup in the existing Cubing Comp Sim organization. The main domain currently serves a guest build without Auth/API browser configuration. Live staging checks confirm the restricted database role and Auth admin connection work; R2 uploads still fail with AccessDenied 403, so no cloud-save acceptance or production launch is asserted.
+
+The account dialog now fits its content, stays vertically centered, and scrolls within short viewports. Remove the optional-account sentence below the form. Chrome account regressions, all 216 application tests, typecheck, the verified-engine build and desktop/phone/short-screen geometry checks passed locally.
+
+Production frontend automation uses successful main web evidence and a separate `ccs-production-frontend` Worker. It stays inactive until the production public key is configured. The exact production manifest, API health/authentication check, configured UI/offline smoke check, tested artifact and hostname activation must succeed. The domain helper verifies its target before detaching the guest mapping and restores that mapping if attachment fails. Browser cloud acceptance permits only exact staging/production origins and two disposable test accounts. Production resources, SMTP delivery/recovery, provider consent, actual transfers/deletion and restore acceptance remain launch work.
+
 ## Settings copy cleanup (October 14, 2026)
 
 The owner requested a shorter Settings interface: remove the offline explanation beneath connection status, shortcut instructions, font fallback note, device-voice explanation, random-wait explanation, and Privacy explanations after its opening sentence. Keep the existing controls and font selectors. End Round keeps its discard warning without the completed-history sentence. Background sound setup is deferred to a separate task.

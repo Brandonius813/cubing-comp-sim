@@ -11,9 +11,11 @@ if (!['chromium', 'firefox', 'webkit'].includes(browserName)) throw new Error('B
 const browserType = { chromium, firefox, webkit }[browserName];
 if (process.env.CCS_BROWSER_CHANNEL && browserName !== 'chromium') throw new Error('CCS_BROWSER_CHANNEL is supported only with BROWSER=chromium.');
 const { settings, accounts } = JSON.parse(await readFile(credentialFile, 'utf8'));
-if (settings.appUrl !== 'https://staging.cubingcompsim.com' || accounts.length !== 2 || accounts.some(a => !/^ccs-check-[a-f0-9-]+@example\.test$/.test(a.email))) throw new Error('This check is restricted to disposable staging accounts.');
+const environment = settings.appUrl === 'https://staging.cubingcompsim.com' ? 'staging' : settings.appUrl === 'https://cubingcompsim.com' ? 'production' : null;
+const expectedApi = environment === 'production' ? 'https://api.cubingcompsim.com' : 'https://api-staging.cubingcompsim.com';
+if (!environment || settings.apiUrl !== expectedApi || accounts.length !== 2 || accounts.some(a => !/^ccs-check-[a-f0-9-]+@example\.test$/.test(a.email))) throw new Error('This check is restricted to disposable accounts on an exact configured environment.');
 if (!['cloud', 'signin-only'].includes(settings.mode)) throw new Error('Unknown verification mode.');
-const results = { environment: 'staging', url: settings.appUrl, browser: browserName, confirmed_test_accounts: true, email_confirmation_delivery: 'not tested by this check', checks: [] };
+const results = { environment, url: settings.appUrl, browser: browserName, confirmed_test_accounts: true, email_confirmation_delivery: 'not tested by this check', checks: [] };
 const pass = name => { results.checks.push(name); console.log(`Passed: ${name}`); };
 let stage = 'https_preflight';
 let browser;
@@ -72,7 +74,7 @@ async function transfer(dialog, direction) {
 try {
   if (settings.mode !== 'signin-only') assert.equal((await fetch(`${settings.apiUrl}/health`)).status, 200);
   const marker = await (await fetch(`${settings.appUrl}/deployment.json`, { cache: 'no-store' })).json();
-  assert.equal(marker.environment, 'staging'); assert.equal(marker.apiUrl, settings.apiUrl);
+  assert.equal(marker.environment, environment); assert.equal(marker.apiUrl, settings.apiUrl);
   assert.match(marker.sourceCommit, /^[a-f0-9]{40}$/);
   const authProviders = marker.authProviders ?? [];
   assert.ok(Array.isArray(authProviders) && authProviders.every(provider => ['google', 'wca'].includes(provider)));

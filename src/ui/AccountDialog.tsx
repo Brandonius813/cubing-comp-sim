@@ -237,7 +237,6 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
         <button type="submit" className="primary-button" disabled={!auth.configured || busy}>{t(busy ? 'working' : mode === 'reset' ? 'sendReset' : mode === 'password' ? 'updatePassword' : mode === 'signUp' ? 'createAccount' : 'signIn')}</button>
         {mode === 'signIn' && <button type="button" className="text-button" disabled={busy} onClick={() => setMode('reset')}>{t('forgotPassword')}</button>}
       </form>
-      <p className="muted">{t('accountOptional')}</p>
     </>}
   </Dialog>;
 }
