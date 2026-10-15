@@ -1,3 +1,7 @@
+## Privacy links and provider button appearance (October 15, 2026)
+
+The owner moved the app's About, Privacy Policy, and Terms of Service links into Settings > Privacy, removing them from the home and Help footers. Standalone public information pages retain their navigation. Provider buttons now use the app's blue accent, with each official logo centered beside its label. Added the official WCA symbol and retained the Google mark on a white backing; sign-in, linking, and confirmation use the same layout. The owner also reports publishing the Google application.
+
 ## Help copy and linked WCA ID (October 15, 2026)
 
 The owner requested one Help page with About and Brandon True sections, replacing the topic tabs and video placeholders. Use the supplied first-person copy and link the YouTube channel and public source. Omit the background-noise sentence because that feature was removed at the owner's request on October 14. Keep the privacy and terms links accessible.

@@ -24,6 +24,5 @@ export function HelpDialog({ onClose }: { onClose: () => void }) {
         </div>
       </section>
     </div>
-    <footer className="help-footer"><div className="help-resource-links"><a href="/privacy/" target="_blank" rel="noreferrer">Privacy Policy</a><a href="/terms/" target="_blank" rel="noreferrer">Terms of Service</a></div></footer>
   </Dialog>;
 }

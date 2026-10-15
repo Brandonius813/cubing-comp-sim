@@ -10,6 +10,7 @@
 .settings-dialog .setting-control{flex-shrink:0;max-width:65%}
 .settings-dialog .setting-control .app-select{min-width:200px}
 .settings-hint{font-size:13px;line-height:21px;color:var(--secondary);max-width:720px;margin:12px 0 20px}
+.settings-information-links{display:flex;flex-wrap:wrap;gap:12px 24px;margin-top:24px;font-size:14px;line-height:24px}.settings-information-links a{text-underline-offset:3px}
 .setting-segments{display:flex;gap:3px;max-width:100%;padding:3px;border:1px solid var(--border);border-radius:8px;background:var(--app)}
 .setting-segments button{font-size:13px;line-height:18px;min-height:36px;padding:8px 14px;background:transparent;border-radius:5px}
 .setting-segments button[aria-checked=true]{background:var(--raised);box-shadow:0 1px 3px #0002}
