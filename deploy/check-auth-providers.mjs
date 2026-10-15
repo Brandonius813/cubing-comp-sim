@@ -15,7 +15,7 @@ try {
     humanConsentVerified: false, frontendManifestChanged: false }));
 } catch (error) {
   // Do not print raw responses, locations, state, tokens, or credentials.
-  console.error(error instanceof Error && /^(google|wca|WCA|authProviders|Choose|Set)/.test(error.message)
+  console.error(error instanceof Error && /^(google|wca|WCA|apple|authProviders|Choose|Set)/.test(error.message)
     ? error.message : 'Provider readiness check failed; provider responses were withheld.');
   process.exitCode = 1;
 }

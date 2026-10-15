@@ -53,7 +53,7 @@ test('OAuth reauthentication needs signed AMR and owned live allowlisted identit
   }
   assert.equal(oauthAuthenticationTime(amr, 'user-a', [identity('email'), identity('google')]), timestamp * 1000);
   for (const identities of [undefined, [], [null], [identity('github')], [identity('wca')],
-    [identity('custom:other')], [identity('google'), identity('github')], [{ ...identity(), user_id: 'victim' }]]) {
+    [identity('custom:other')], [identity('apple')], [identity('google'), identity('apple')], [identity('google'), identity('github')], [{ ...identity(), user_id: 'victim' }]]) {
     assert.equal(oauthAuthenticationTime(amr, 'user-a', identities), undefined);
   }
   for (const method of ['token_refresh', 'recovery', 'magiclink', 'otp', 'totp', 'sso/saml']) {
@@ -64,6 +64,8 @@ test('OAuth reauthentication needs signed AMR and owned live allowlisted identit
   assert.equal(oauthAuthenticationTime(amr, 'user-a', [{ ...identity('email'), identity_data: identity() }]), undefined);
 });
 
+// Apple is deliberately excluded until provider grant revocation joins deletion.
+// A linked identity or editable metadata must not silently bypass that work.
 test('existing-account OAuth accepts server AMR even when live identity sign-in timestamps are stale', () => {
   const now = 1_700_000_000_000;
   const identity = (at: number) => [{ user_id: 'user-a', provider: 'google', last_sign_in_at: new Date(at).toISOString() }];

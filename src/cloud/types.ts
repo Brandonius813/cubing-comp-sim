@@ -3,7 +3,7 @@ export interface AccountSession {
   user: { id: string; email: string; emailVerified: boolean; providers?: string[]; wcaId?: string };
 }
 
-export type AccountProvider = 'google' | 'wca';
+export type AccountProvider = 'google' | 'wca' | 'apple';
 export interface AccountCallback { purpose: 'signin' | 'link' | 'delete'; status: 'success' | 'error'; provider?: AccountProvider; reason?: 'email_verification' }
 
 export interface SaveMetadata {

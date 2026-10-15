@@ -63,3 +63,5 @@ body{background:var(--app);color:var(--text)}button,input,select,textarea{font-f
 .site-update { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 20; width: max-content; max-width: calc(100vw - 32px); display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .25rem .75rem; padding: .25rem .75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: .85rem; text-align: center; }
 .site-update-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: var(--app); color: var(--text); }
 .provider-connected-row{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap}.wca-profile-link{display:inline-flex;align-items:center;text-decoration:none;font-size:14px}
+
+.apple-provider-button{background:#000;color:#fff;border:1px solid #fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif}.apple-provider-button:hover:not(:disabled){background:#222}

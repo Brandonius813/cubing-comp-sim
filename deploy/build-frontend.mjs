@@ -2,7 +2,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { verifyEngineArtifact } from '../scripts/assert-engine.mjs';
-import { verifyProviderRedirects } from './auth-providers.mjs';
+import { verifyProviderRedirects, assertProviderReleaseReadiness } from './auth-providers.mjs';
 
 const [configPath, verifiedPath] = process.argv.slice(2);
 if (!configPath || !verifiedPath) throw new Error('Supply an environment manifest and a verified web artifact directory.');
@@ -16,6 +16,7 @@ const publicKey = process.env[config.publicKeyVariable];
 if (!publicKey?.startsWith('sb_publishable_')) throw new Error('Set the environment publishable-key variable. Secret/admin keys are forbidden in frontend builds.');
 // Provider buttons are released per environment only after setup and acceptance.
 // Verify the initial live redirect again on every deployment that enables them.
+assertProviderReleaseReadiness(config.authProviders);
 const authProviders = await verifyProviderRedirects(config, publicKey);
 const engine = resolve(verifiedPath, 'dist/engine');
 const manifest = JSON.parse(await readFile(resolve(engine, 'manifest.json'), 'utf8'));
