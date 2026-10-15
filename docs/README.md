@@ -18,6 +18,7 @@ The root README introduces the app. This directory contains development, design,
 ## Components and experience
 
 - [Offline scramble engine](../engine/README.md): upstream source, browser adaptations, and correctness evidence.
+- [Mobile engine experiment](mobile-engine.md): isolated native bridge, host evidence, and outstanding device performance checks.
 - [Accounts and observability](auth-and-observability.md): identity, cloud saves, and optional diagnostics.
 - [Google and WCA sign-in setup](social-login-setup.md): application registration, callbacks, credentials and staged acceptance.
 - [Language coverage](languages.md): available catalogs and review needs.

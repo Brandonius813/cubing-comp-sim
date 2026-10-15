@@ -2,7 +2,7 @@
 
 The mobile client lives in `mobile/`. The existing desktop website remains a separate client. See [the mobile roadmap](mobile-roadmap.md) for scope and architecture.
 
-Status on October 15, 2026: this Mac has Node 24, npm 11, and Xcode Command Line Tools. Full Xcode, iOS Simulator, and Android build tools were not found. Apple Developer enrollment, an EAS project, signing, and installed mobile builds have not been verified. The commands below describe setup and testing, not completed device acceptance.
+Status on October 15, 2026: this Mac has Node 24, npm 11, and Xcode Command Line Tools. Full Xcode, iOS Simulator, and Android build tools were not found. Brandon confirmed he is not yet enrolled in the paid Apple Developer Program. An EAS project, signing, and installed mobile builds have not been verified. The commands below describe setup and testing, not completed device acceptance.
 
 ## Choose the right preview
 
@@ -47,6 +47,21 @@ Open the installed development client using the displayed QR code or simulator s
 
 EAS can compile in the cloud without local Xcode or Android Studio. It still needs an Expo account/project and the appropriate signing configuration. Running an iOS Simulator build locally still requires the Simulator installation.
 
+The project defines these EAS profiles. Run commands from `mobile/` after connecting an Expo project and preparing the verified engine:
+
+| Profile | Command | Output |
+| --- | --- | --- |
+| `development-simulator` | `npx eas-cli build --platform ios --profile development-simulator` | Development client for the Mac's iOS Simulator |
+| `development` | `npx eas-cli build --platform ios --profile development` | Signed iPhone/iPad development client; register devices first |
+| `development` | `npx eas-cli build --platform android --profile development` | Android development APK |
+| `preview` | `npx eas-cli build --platform ios --profile preview` | Standalone iPhone/iPad preview; register devices first |
+| `preview` | `npx eas-cli build --platform android --profile preview` | Standalone Android preview APK |
+| `production` | `npx eas-cli build --platform all --profile production` | Store builds for later TestFlight/Play submission |
+
+Before any EAS upload, put the complete verified artifact (`tnoodle.js`, `manifest.json`, `conformance.json`, `LICENSE.txt`) in the repository's `public/engine/`. A fresh root `npm run engine:verify` produces it. The optional external engine directory is useful for local development, but a path outside this repository will not be uploaded. The repository-root `.easignore` deliberately includes these generated artifacts and the mobile engine document while excluding credentials. The EAS preparation hook validates the archived proof and regenerates the mobile document; missing or mismatched files must fail the build.
+
+No EAS project has been linked and no cloud native build has been submitted by this kickoff.
+
 ## Standalone testing on your phone or iPad
 
 Use an EAS internal preview build with embedded application code and assets. It must launch with Metro stopped and the computer disconnected. Install the build first, then enable airplane mode before its first app launch to prove that practice does not rely on downloaded code, scrambles, drawings, or inspection voices.
@@ -68,7 +83,7 @@ These are release gates, not claims that the foundation already implements each 
 - [ ] **Local data:** SQLite retains completed rounds/settings across force-close, restart, app update, and schema migration. Interrupted writes cannot leave partial rounds. Uninstall/data clearing is a separate destructive case.
 - [ ] **Cloud replacement:** Explicitly upload a mobile save and download it on web, then reverse the direction. Verify replacement confirmations, revisions/conflicts, retry behavior, and account isolation. Signing in or changing accounts must not transfer or delete local history automatically.
 - [ ] **Accounts:** Verify email, Google, WCA, and Apple flows when implemented, including cancellation, cold/warm callbacks, expiry, sign-out, and recovery. Secrets stay out of the app bundle and logs; session credentials use protected storage.
-- [ ] **Apple account management:** Test Apple private-email users, identity linking, provider revocation, and account deletion. Deletion must remove associated cloud data and respect the app's local-data confirmation. Verify the public deletion route and privacy disclosures before store submission.
+- [ ] **Apple account management:** Test Apple private-email users, identity linking, provider revocation, and account deletion. Account deletion must remove associated cloud data while preserving local practice history. Verify the public deletion route and privacy disclosures before store submission.
 
 ## Official references
 

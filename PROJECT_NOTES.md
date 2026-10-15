@@ -6,6 +6,8 @@ The owner also approved adding Sign in with Apple to web and mobile. Provider en
 
 The durable implementation plan, issue ownership and agent handoff are in `docs/mobile-roadmap.md`; testing is in `docs/mobile-testing.md`. GitHub tracker #36 and workstreams #37–#41 coordinate parallel branches. This is the current approved checkpoint; older statements deferring mobile work no longer apply. Native distribution licensing remains an early release prerequisite.
 
+The first code checkpoint adds the three-page Expo shell, local timer/manual practice, SQLite confirmed-history persistence, and isolated offline engine bridge. TypeScript, 18 mobile tests, and iOS/Android JavaScript exports passed. No native app was compiled or tested on hardware. Cold 4×4 host generation took 176.046 seconds; high transitive tooling advisories also remain open. Native feature parity and interrupted-attempt recovery are subsequent work, as documented in `mobile/README.md`. Brandon confirmed he has not enrolled in the paid Apple Developer Program. Separate draft PR #42 prepares web Apple provider support while keeping production disabled pending credentials and grant revocation/deletion.
+
 ## Privacy links and provider button appearance (October 15, 2026)
 
 The owner moved the app's About, Privacy Policy, and Terms of Service links into Settings > Privacy, removing them from the home and Help footers. Standalone public information pages retain their navigation. Provider buttons now use the app's blue accent, with each official logo centered beside its label. Added the official WCA symbol and retained the Google mark on a white backing; sign-in, linking, and confirmation use the same layout. The owner also reports publishing the Google application.
