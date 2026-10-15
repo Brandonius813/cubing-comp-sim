@@ -15,6 +15,10 @@ interface AccountDialogProps {
   onReplace: (json: string, expectedRevision: number) => Promise<unknown>;
   localRevision: number;
 }
+function ProviderLogo({ provider }: { provider: AccountProvider }) {
+  return <span className="provider-icon" aria-hidden="true"><img src={provider === 'google' ? '/assets/google-g.png' : '/assets/wca-logo.svg'} width="18" height="18" alt="" /></span>;
+}
+
 export function AccountDialog({ session, recovery, callback, onRecoveryComplete, onClose, onExport, onReplace, localRevision }: AccountDialogProps) {
   const [mode, setMode] = useState<'signIn' | 'signUp' | 'reset' | 'password'>(recovery ? 'password' : 'signIn');
   const [email, setEmail] = useState('');
@@ -181,7 +185,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
           {passwordAvailable && <label>{t('deletePassword')}<input type="password" required autoComplete="current-password" value={deletePassword} disabled={busy} onChange={event => setDeletePassword(event.target.value)} /></label>}
           {deletionProviders.length > 0 && <div className="provider-buttons">
             <p className="muted">{t('providerDeleteDescription')}</p>
-            {deletionProviders.map(provider => <button key={provider} type="button" className="secondary-button provider-button" disabled={busy} onClick={() => providerAction(provider, 'delete')}>{provider === 'google' && <img src="/assets/google-g.png" width="18" height="18" alt="" aria-hidden="true" />}<span>{t(provider === 'google' ? 'confirmGoogleIdentity' : 'confirmWcaIdentity')}</span></button>)}
+            {deletionProviders.map(provider => <button key={provider} type="button" className="primary-button provider-button" disabled={busy} onClick={() => providerAction(provider, 'delete')}><ProviderLogo provider={provider} /><span>{t(provider === 'google' ? 'confirmGoogleIdentity' : 'confirmWcaIdentity')}</span></button>)}
           </div>}
         </>}
         <div className="button-row">
@@ -195,7 +199,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
           <div className="provider-buttons">
             {auth.providers.map(provider => providerIsLinked(provider)
               ? <div key={provider} className="provider-connected-row"><p className="provider-connected">{t(provider === 'google' ? 'linkedGoogle' : 'linkedWca')}</p>{provider === 'wca' && session.user.wcaId && <a className="secondary-button provider-button wca-profile-link" href={`https://www.worldcubeassociation.org/persons/${session.user.wcaId}`} target="_blank" rel="noreferrer">{t('wcaId')}: {session.user.wcaId}</a>}</div>
-              : <button key={provider} type="button" className="secondary-button provider-button" disabled={busy} onClick={() => providerAction(provider, 'link')}>{provider === 'google' && <img src="/assets/google-g.png" width="18" height="18" alt="" aria-hidden="true" />}<span>{t(provider === 'google' ? 'linkGoogle' : 'linkWca')}</span></button>)}
+              : <button key={provider} type="button" className="primary-button provider-button" disabled={busy} onClick={() => providerAction(provider, 'link')}><ProviderLogo provider={provider} /><span>{t(provider === 'google' ? 'linkGoogle' : 'linkWca')}</span></button>)}
           </div>
         </section>}
         <div className="cloud-save-summary">
@@ -227,7 +231,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
         <button type="button" disabled={busy} aria-pressed={mode === 'signUp'} onClick={() => setMode('signUp')}>{t('createAccount')}</button>
       </div>}
       {(mode === 'signIn' || mode === 'signUp') && auth.providers.length > 0 && <div className="provider-buttons account-signin-providers">
-        {auth.providers.map(provider => <button key={provider} type="button" className="secondary-button provider-button" disabled={!auth.configured || busy} onClick={() => providerAction(provider, 'signin')}>{provider === 'google' && <img src="/assets/google-g.png" width="18" height="18" alt="" aria-hidden="true" />}<span>{t(provider === 'google' ? 'continueGoogle' : 'continueWca')}</span></button>)}
+        {auth.providers.map(provider => <button key={provider} type="button" className="primary-button provider-button" disabled={!auth.configured || busy} onClick={() => providerAction(provider, 'signin')}><ProviderLogo provider={provider} /><span>{t(provider === 'google' ? 'continueGoogle' : 'continueWca')}</span></button>)}
         <p className="muted account-email-alternative">{t('emailAlternative')}</p>
       </div>}
       <form onSubmit={submit} className="account-form">

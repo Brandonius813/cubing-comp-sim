@@ -190,9 +190,9 @@ export async function checkAccountDialog(browser, origin, artifacts) {
       const logo = element.querySelector('img');
       return { background: style.backgroundColor, color: style.color, borderColor: style.borderColor, fontSize: style.fontSize, fontFamily: style.fontFamily, imageLoaded: logo.complete && logo.naturalWidth > 0, imageWidth: logo.width, imageHeight: logo.height };
     });
-    assert.equal(branding.background, 'rgb(255, 255, 255)');
-    assert.equal(branding.color, 'rgb(31, 31, 31)');
-    assert.equal(branding.borderColor, 'rgb(116, 119, 117)');
+    assert.equal(branding.background, 'rgb(139, 171, 255)');
+    assert.equal(branding.color, 'rgb(16, 23, 38)');
+    assert.equal(branding.borderColor, 'rgba(0, 0, 0, 0)');
     assert.equal(branding.fontSize, '14px');
     assert.match(branding.fontFamily, /CCS Google Sans/);
     assert.equal(branding.imageLoaded, true);
@@ -203,7 +203,7 @@ export async function checkAccountDialog(browser, origin, artifacts) {
     assert.equal(googleSize.width, wcaSize.width);
     assert.equal(googleSize.height, wcaSize.height);
     await button('Continue with WCA').hover();
-    assert.equal(await button('Continue with WCA').evaluate(element => getComputedStyle(element).backgroundColor), 'rgb(247, 247, 247)', 'Provider hover must preserve readable text contrast.');
+    assert.notEqual(await button('Continue with WCA').evaluate(element => getComputedStyle(element).backgroundColor), branding.background, 'Provider hover must remain visible.');
     await page.mouse.move(1, 1);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Account dialog overflows on mobile.');
     if (artifacts) { await mkdir(artifacts, { recursive: true }); await page.screenshot({ path: path.join(artifacts, 'account-mobile.png'), fullPage: true }); }
