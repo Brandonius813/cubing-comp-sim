@@ -10,6 +10,8 @@ The root README introduces the app. This directory contains development, design,
 | --- | --- |
 | Run, build, or test the app | [Development guide](development.md) |
 | Understand the product and architecture | [Architecture specification](architecture-spec.md) |
+| Build iPhone, iPad and Android apps | [Mobile architecture and agent workstreams](mobile-roadmap.md) |
+| Test mobile builds on a computer or device | [Mobile testing guide](mobile-testing.md) |
 | Find the code for a feature | [Repository map](development.md#repository-map) |
 | Understand ownership and proposed changes | [Contribution and review guidance](../CONTRIBUTING.md) |
 

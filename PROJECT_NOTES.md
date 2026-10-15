@@ -1,3 +1,11 @@
+## Mobile development authorization (October 15, 2026)
+
+Brandon approved React Native + Expo and authorized implementation for iPhone, iPad and Android. The three separate horizontal pages are Scorecard (left), Practice (center and initial page), and Settings (right, including account and cloud saves). Keep these separate on tablets too; the earlier tablet scorecard-side-panel proposal is superseded. Provide accessible tap navigation alongside paging and protect inspection/timing from navigation gestures. Native TNoodle runtime setup may change while preserving pinned algorithms, fresh offline generation and drawings. Reuse the existing backend and explicit one-save upload/download replacement.
+
+The owner also approved adding Sign in with Apple to web and mobile. Provider enablement needs real Apple setup, consent and deletion/revocation acceptance. No developer enrollment, signed app build or physical-device result is claimed by this authorization.
+
+The durable implementation plan, issue ownership and agent handoff are in `docs/mobile-roadmap.md`; testing is in `docs/mobile-testing.md`. GitHub tracker #36 and workstreams #37–#41 coordinate parallel branches. This is the current approved checkpoint; older statements deferring mobile work no longer apply. Native distribution licensing remains an early release prerequisite.
+
 ## Privacy links and provider button appearance (October 15, 2026)
 
 The owner moved the app's About, Privacy Policy, and Terms of Service links into Settings > Privacy, removing them from the home and Help footers. Standalone public information pages retain their navigation. Provider buttons now use the app's blue accent, with each official logo centered beside its label. Added the official WCA symbol and retained the Google mark on a white backing; sign-in, linking, and confirmation use the same layout. The owner also reports publishing the Google application.
