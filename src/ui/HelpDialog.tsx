@@ -56,7 +56,7 @@ export function HelpDialog({ onClose, videos = {} }: { onClose: () => void; vide
           <p>The app focuses on the complete round, including inspection, waiting between attempts, and reviewing your scorecard.</p>
           <p>The source code is public. You can follow the project, report a problem, or suggest an improvement on GitHub.</p>
         </div>}
-        <footer className="help-footer"><a href="https://github.com/Brandonius813/cubing-comp-sim" target="_blank" rel="noreferrer">{t('sourceLicenses')}</a></footer>
+        <footer className="help-footer"><div className="help-resource-links"><a href="/about/" target="_blank" rel="noreferrer">About</a><a href="/privacy/" target="_blank" rel="noreferrer">Privacy Policy</a><a href="/terms/" target="_blank" rel="noreferrer">Terms of Service</a><a href="https://github.com/Brandonius813/cubing-comp-sim" target="_blank" rel="noreferrer">{t('sourceLicenses')}</a></div></footer>
       </section>
     </div>
   </Dialog>;

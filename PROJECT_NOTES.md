@@ -310,3 +310,9 @@ The staging launch requires HTTPS termination in front of the API. Added optiona
 ## Isolated staging and release reuse (October 11, 2026)
 
 Prepared an isolated staging frontend Worker with public Supabase/API configuration, retaining the existing staging browser origin. A deployment workflow reuses the proven engine artifact, verifies unchanged engine source, tests the configured UI and publishes only the staging Worker. The existing guest Worker remains separate. API CI packages its tested Docker image for promotion; environment manifests render API/HTTPS configuration and validate private credential targeting without revealing secrets. Production is a configuration template and requires separate resources and acceptance; no production automation is claimed as validated. Actual sign-in and cloud-save browser acceptance remains dependent on R2 write access and API installation.
+
+## Public OAuth branding and policies (October 15, 2026)
+
+Published standalone /about/, /privacy/, and /terms/ pages with the existing brand assets, linked from the home screen and Help. The policies describe local-first practice, explicit single cloud saves, optional identity providers, current service providers, and account deletion. Public contact uses the existing GitHub issue tracker with instructions not to post personal data. Policy pages remain readable offline.
+
+Enabled production Google sign-in using the owner-provided web client with the production Supabase callback. Credentials remain outside the repository. Google and WCA are enabled in the production frontend manifest; provider consent and Google branding publication remain controlled by the owner.

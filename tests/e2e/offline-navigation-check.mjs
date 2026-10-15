@@ -54,7 +54,7 @@ self.addEventListener('fetch',event=>{
       response.writeHead(503, { 'Content-Type': 'text/html', 'Cache-Control': 'no-store' });
       response.end('Temporarily unavailable'); return;
     }
-    const file = path.resolve(dist, '.' + (url.pathname === '/' ? '/index.html' : url.pathname));
+    const file = path.resolve(dist, '.' + (url.pathname.endsWith('/') ? url.pathname + 'index.html' : url.pathname));
     if (!file.startsWith(dist + path.sep)) { response.writeHead(404); response.end(); return; }
     try {
       const body = url.pathname === '/' ? await html() : await readFile(file);
@@ -108,6 +108,13 @@ self.addEventListener('fetch',event=>{
     await page.reload(); await homepage(page);
     await page.goto(base + '/saved-round?fixture=offline'); await homepage(page);
     assert.equal(await page.locator('html').getAttribute('data-release'), 'installed');
+    for (const [route, heading] of [['about', 'Practice the whole round.'], ['privacy', 'Privacy Policy'], ['terms', 'Terms of Service']]) {
+      await page.goto(`${base}/${route}/`);
+      await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+      await page.reload();
+      await page.getByRole('heading', { name: heading, exact: true }).waitFor();
+    }
+    await page.goto(base); await homepage(page);
     await setOffline(context, false);
 
     console.log(`[${browserName}] Offline navigation: safe waiting-worker activation.`);
