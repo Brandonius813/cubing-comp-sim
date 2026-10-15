@@ -1,6 +1,6 @@
 export interface AccountSession {
   accessToken: string;
-  user: { id: string; email: string; emailVerified: boolean; providers?: string[] };
+  user: { id: string; email: string; emailVerified: boolean; providers?: string[]; wcaId?: string };
 }
 
 export type AccountProvider = 'google' | 'wca';

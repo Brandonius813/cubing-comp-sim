@@ -6,6 +6,7 @@ export const accountEn = {
   signInMethods: 'Sign-in methods',
   linkedGoogle: 'Google connected',
   linkedWca: 'WCA connected',
+  wcaId: 'WCA ID',
   linkGoogle: 'Connect Google',
   linkWca: 'Connect WCA',
   providerLinkDescription: 'Connect another sign-in method to this account. Your cloud save stays with this account.',

@@ -27,6 +27,28 @@ function sdk(id = 'user-a', providers = ['google']) {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('provider sign-in boundary', () => {
+  it('keeps the competitor ID from the WCA identity when other providers are linked', async () => {
+    const { client, methods } = sdk();
+    methods.getSession.mockResolvedValue({ data: { session: { access_token: 'app-token', user: {
+      id: 'user-a', email: 'solver@example.test', email_confirmed_at: '2026-01-01',
+      user_metadata: { preferred_username: '2012OTHR01' },
+      identities: [
+        { provider: 'google', identity_data: { preferred_username: '2012OTHR01' } },
+        { provider: 'custom:wca', identity_data: { sub: '12345', preferred_username: '2012TEST01' } },
+      ],
+    } } }, error: null });
+    expect((await new AccountAuth(config, client).getSession())?.user).toMatchObject({
+      providers: ['google', 'custom:wca'], wcaId: '2012TEST01',
+    });
+  });
+  it.each([undefined, null, '', 12345, '12345', 'https://example.test', '2012TEST01/other'])('omits a missing or invalid WCA competitor ID (%s)', async preferredUsername => {
+    const { client, methods } = sdk();
+    methods.getSession.mockResolvedValue({ data: { session: { access_token: 'app-token', user: {
+      id: 'user-a', user_metadata: { preferred_username: '2012OTHR01' },
+      identities: [{ provider: 'custom:wca', identity_data: { sub: '12345', preferred_username: preferredUsername } }],
+    } } }, error: null });
+    expect((await new AccountAuth(config, client).getSession())?.user.wcaId).toBeUndefined();
+  });
   it('keeps mistyped deployment config from breaking guest use', async () => {
     const account = new AccountAuth({ ...config, appUrl: 'not a URL' });
     expect(account.configured).toBe(false);

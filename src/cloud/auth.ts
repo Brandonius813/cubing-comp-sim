@@ -24,6 +24,11 @@ export function withoutProviderTokens(value: string): string {
 }
 
 function mapSession(session: Session | null): AccountSession | null {
+  // WCA's OIDC preferred_username is the competitor WCA ID, not its numeric
+  // account subject. Read only the WCA identity so linked providers cannot
+  // overwrite it. A WCA website account may not have a competitor ID yet.
+  const wcaUsername = session?.user.identities?.find(identity => identity.provider === PROVIDERS.wca)?.identity_data?.preferred_username;
+  const wcaId = typeof wcaUsername === 'string' && /^\d{4}[A-Z]{4}\d{2}$/.test(wcaUsername) ? wcaUsername : undefined;
   return session ? {
     accessToken: session.access_token,
     user: {
@@ -31,6 +36,7 @@ function mapSession(session: Session | null): AccountSession | null {
       email: session.user.email ?? '',
       emailVerified: Boolean(session.user.email_confirmed_at),
       providers: [...new Set(session.user.identities?.map(identity => identity.provider) ?? [])],
+      ...(wcaId ? { wcaId } : {}),
     },
   } : null;
 }
