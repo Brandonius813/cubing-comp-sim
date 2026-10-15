@@ -43,6 +43,8 @@ The first milestone is an installable build that produces real scrambles, record
 
 The October 15 code checkpoint passes TypeScript, 18 focused mobile tests, and iOS/Android Metro exports (Hermes JavaScript plus assets). It includes the three-page shell, gesture cancellation, inspection/timing/manual entry, penalty review, shared round scoring, and SQLite persistence of confirmed attempts/settings. It does not yet recover running or unsaved review attempts after process termination. Inspection recordings, wait simulation, full history/statistics/editing parity, native accounts, and cloud transfer remain open.
 
+The web test runner now explicitly scans the root `src/` directory. Its previous positional `src` filter also matched `mobile/src`, which incorrectly loaded the mobile Node tests into Vitest. After scoping the runner, all 226 existing web tests pass; the separate mobile test command remains unchanged.
+
 The production engine bridge generated all 16 events in host smoke testing. Full transformed-runtime JVM fixtures run in CI; this local test ran zero fixture cases. Cold 4×4 took 176.046 seconds and requires investigation. The new mobile dependency audit also reports high transitive build-tool advisories; keep that gate visible and resolve it before release. No native binary, simulator run, EAS upload, signing, or physical-device result is established by this checkpoint.
 
 Repository baseline for this kickoff: `2fdd881f16f11e25b4df735041ecaf3692a71edb`. Other web work may continue; fetch current main before starting a new branch. Do not reset or repurpose another agent's checkout.
