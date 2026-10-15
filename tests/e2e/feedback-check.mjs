@@ -217,6 +217,9 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
   try {
     await page.goto(baseUrl);
     await page.getByRole('button', { name: 'Start CompSim', exact: true }).waitFor();
+    // Initial IndexedDB loading disables Start. Tab correctly skips a disabled
+    // button, so wait for the app to be ready before testing keyboard focus.
+    await page.waitForFunction(() => document.querySelector('.main-stage .flow-button')?.matches(':enabled'));
     await page.locator('.main-stage').focus();
     await page.keyboard.press('Tab');
     const startFocus = await page.getByRole('button', { name: 'Start CompSim', exact: true }).evaluate(element => ({
