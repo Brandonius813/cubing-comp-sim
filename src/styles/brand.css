@@ -1,4 +1,5 @@
 /* Keep the approved wordmark in Geist across user font settings. */
+.home-information{position:absolute;bottom:20px;left:16px;right:16px;display:flex;justify-content:center;gap:20px;font-size:12px;line-height:20px}.home-information a{color:var(--secondary);text-decoration:none}.home-information a:hover{text-decoration:underline}
 .logo-space{display:flex;align-items:center;gap:12px;width:auto;max-width:calc(50vw - 156px);height:48px}
 .brand-symbol{display:block;flex:0 0 44px;width:44px;height:44px;object-fit:contain;filter:none}
 .brand-symbol-light{display:none}

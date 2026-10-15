@@ -21,13 +21,13 @@ function offlineCache(): Plugin {
       if (!paths.some(path => path.endsWith('/engine/tnoodle.js'))) return;
       const digest = createHash('sha256');
       // Change the cache identity when the navigation/cache contract changes.
-      digest.update('online-navigation-v3');
+      digest.update('online-navigation-v4');
       for (const path of paths.sort()) digest.update(readFileSync(path));
       const version = digest.digest('hex').slice(0, 16);
       const assets = paths.map(path => {
         const url = '/' + relative(outDir, path).replaceAll('\\', '/');
         // Cloudflare redirects /index.html to /. Cache the direct response.
-        return url === '/index.html' ? '/' : url;
+        return url.endsWith('/index.html') ? url.slice(0, -10) : url;
       });
       const worker = `
 const CACHE='comp-sim-${version}';
@@ -71,7 +71,10 @@ self.addEventListener('fetch',event=>{
        const response=await fetch(event.request,{cache:'no-store',signal:AbortSignal.timeout(5000)});
        if(response.ok)return response;
      }catch{ /* Offline, timeout or a failed deployment: use the coherent installed release. */ }
-     const shell=await (await caches.open(CACHE)).match('/');
+     const cache=await caches.open(CACHE);
+     const document=await cache.match(url.pathname)||await cache.match(url.pathname+'/');
+     if(document)return document;
+     const shell=await cache.match('/');
      if(shell)return shell;
      return Response.error();
    })());

@@ -6,6 +6,12 @@
   Cache-Control: no-store
 /deployment.json
   Cache-Control: no-store
+/about/*
+  Cache-Control: no-cache
+/privacy/*
+  Cache-Control: no-cache
+/terms/*
+  Cache-Control: no-cache
 /engine/*
   Cache-Control: no-cache
 /connection-check.json
