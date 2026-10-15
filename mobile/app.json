@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Cubing Comp Sim",
+    "slug": "cubing-comp-sim",
+    "version": "0.1.0",
+    "scheme": "cubingcompsim",
+    "orientation": "default",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.cubingcompsim.app", "infoPlist": { "ITSAppUsesNonExemptEncryption": false } },
+    "android": { "package": "com.cubingcompsim.app" },
+    "plugins": ["expo-sqlite", "expo-dev-client"],
+    "experiments": { "autolinkingModuleResolution": true }
+  }
+}
