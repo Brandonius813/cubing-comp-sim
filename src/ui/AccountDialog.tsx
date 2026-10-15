@@ -194,7 +194,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
           <p className="muted">{t('providerLinkDescription')}</p>
           <div className="provider-buttons">
             {auth.providers.map(provider => providerIsLinked(provider)
-              ? <p key={provider} className="provider-connected">{t(provider === 'google' ? 'linkedGoogle' : 'linkedWca')}</p>
+              ? <div key={provider} className="provider-connected-row"><p className="provider-connected">{t(provider === 'google' ? 'linkedGoogle' : 'linkedWca')}</p>{provider === 'wca' && session.user.wcaId && <a className="secondary-button provider-button wca-profile-link" href={`https://www.worldcubeassociation.org/persons/${session.user.wcaId}`} target="_blank" rel="noreferrer">{t('wcaId')}: {session.user.wcaId}</a>}</div>
               : <button key={provider} type="button" className="secondary-button provider-button" disabled={busy} onClick={() => providerAction(provider, 'link')}>{provider === 'google' && <img src="/assets/google-g.png" width="18" height="18" alt="" aria-hidden="true" />}<span>{t(provider === 'google' ? 'linkGoogle' : 'linkWca')}</span></button>)}
           </div>
         </section>}

@@ -12,8 +12,8 @@ export async function checkAccountDialog(browser, origin, artifacts) {
     if (new URL(request.url()).origin !== new URL(origin).origin) externalRequests.push(request.url());
   });
   const button = name => page.getByRole('button', { name, exact: true });
-  const render = async (providers, callback) => {
-    const revision = await page.evaluate(([providers, callback]) => window.accountFixture.render(providers, callback), [providers, callback]);
+  const render = async (providers, callback, wcaId) => {
+    const revision = await page.evaluate(([providers, callback, wcaId]) => window.accountFixture.render(providers, callback, wcaId), [providers, callback, wcaId]);
     await page.locator(`[data-account-fixture-revision="${revision}"]`).waitFor({ state: 'attached' });
     await page.getByRole('dialog', { name: 'Account & cloud save', exact: true }).waitFor();
   };
@@ -37,7 +37,10 @@ export async function checkAccountDialog(browser, origin, artifacts) {
     await render(['email']);
     await button('Connect WCA').click();
     assert.deepEqual(await calls(), [{ method: 'linkProvider', provider: 'wca' }]);
+    await render(['google', 'custom:wca'], null, '2012TEST01');
+    assert.equal(await page.getByRole('link', { name: 'WCA ID: 2012TEST01', exact: true }).getAttribute('href'), 'https://www.worldcubeassociation.org/persons/2012TEST01');
     await render(['custom:wca']);
+    assert.equal(await page.locator('.wca-profile-link').count(), 0, 'WCA accounts without competitor IDs must not show a profile link.');
     assert.equal(await button('Connect WCA').count(), 0);
     assert.equal(await page.getByText('WCA connected', { exact: true }).count(), 1);
     await button('Delete account').click();

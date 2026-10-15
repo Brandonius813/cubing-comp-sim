@@ -39,7 +39,7 @@ function Fixture() {
   Object.assign(window, { accountFixture: {
     calls,
     sdkConfigured: accountFixtureSdkConfigured,
-    render(providers: string[] | null, callback: AccountCallback | null = null) { calls.length = 0; failProvider = false; failProof = false; mismatch = false; switchDuringDownload = false; holdDeletion = false; deletionStarted = false; holdPasswordReauth = false; passwordReauthStarted = false; currentSession = providers ? session(providers) : null; const revision = state.revision + 1; setState({ revision, session: currentSession, callback, recovery: false }); return revision; },
+    render(providers: string[] | null, callback: AccountCallback | null = null, wcaId?: string) { calls.length = 0; failProvider = false; failProof = false; mismatch = false; switchDuringDownload = false; holdDeletion = false; deletionStarted = false; holdPasswordReauth = false; passwordReauthStarted = false; currentSession = providers ? session(providers) : null; if (currentSession && wcaId) currentSession.user.wcaId = wcaId; const revision = state.revision + 1; setState({ revision, session: currentSession, callback, recovery: false }); return revision; },
     renderRecovery() { calls.length = 0; currentSession = session(['email']); const revision = state.revision + 1; setState({ revision, session: currentSession, callback: null, recovery: true }); return revision; },
     failProvider() { failProvider = true; },
     failProof() { failProof = true; },

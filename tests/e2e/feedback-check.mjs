@@ -485,10 +485,10 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     await capture(page, 'statistics', artifacts); await statistics.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Help', exact: true }).click();
     const help = page.getByRole('dialog');
-    for (const name of ['About This App', 'How WCA Competitions Work', 'About Brandon True']) {
-      await help.getByRole('tab', { name, exact: true }).click();
-      await help.locator('.help-video-placeholder').waitFor();
-    }
+    for (const name of ['About', 'Brandon True']) await help.getByRole('heading', { name, exact: true }).waitFor();
+    assert.equal(await help.getByRole('tab').count(), 0);
+    assert.equal(await help.locator('.help-video-placeholder, iframe').count(), 0);
+    assert.equal(await help.getByRole('link', { name: 'YouTube Channel', exact: true }).getAttribute('href'), 'https://www.youtube.com/@BrandonTrueCubing');
     assert.match(await help.getByRole('link', { name: 'Source code & licenses', exact: true }).getAttribute('href'), /github\.com\/Brandonius813\/cubing-comp-sim/);
     await capture(page, 'help', artifacts);
     await help.getByRole('button', { name: 'Close', exact: true }).click();

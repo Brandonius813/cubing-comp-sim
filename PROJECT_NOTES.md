@@ -1,3 +1,9 @@
+## Help copy and linked WCA ID (October 15, 2026)
+
+The owner requested one Help page with About and Brandon True sections, replacing the topic tabs and video placeholders. Use the supplied first-person copy and link the YouTube channel and public source. Omit the background-noise sentence because that feature was removed at the owner's request on October 14. Keep the privacy and terms links accessible.
+
+Show the competitor WCA ID beside the connected WCA sign-in method as a public profile link. WCA supplies this as its OIDC `preferred_username`; read it only from the `custom:wca` identity, not the shared user metadata or numeric account subject. Accounts without a competitor ID keep their existing connected status without an invented ID. This is display data only and does not grant access or change cloud saves.
+
 ## Production WCA sign-in (October 14, 2026)
 
 The owner supplied a separate production WCA OAuth application and explicitly requested public signup/sign-in. Its client credentials passed a token-endpoint invalid-code check; an incorrect-secret control was rejected. Production Supabase now has the enabled `custom:wca` OIDC provider, with public/openid/profile/email scopes, provider PKCE and nonce validation enabled, and email confirmation retained. Manual identity linking is enabled for the existing Connect controls.
