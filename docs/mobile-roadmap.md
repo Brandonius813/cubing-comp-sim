@@ -79,7 +79,7 @@ See [Mobile testing](mobile-testing.md) for commands and setup.
 
 Development builds connect to Metro for live editing. Standalone preview builds carry their own JavaScript and are required for offline acceptance without a computer. Expo Go cannot establish custom native engine or authentication acceptance.
 
-On the kickoff host, Node is available; full Xcode/iOS Simulator and Android tooling were not installed. Brandon confirmed he is not yet enrolled in the paid Apple Developer Program. Expo/EAS project ownership and physical test devices have not been verified. Do not create guessed account IDs, signing keys, or successful build records.
+On the kickoff host, Node is available; full Xcode/iOS Simulator and Android tooling were not installed. Brandon subsequently enrolled for personal Apple publishing and signed up for Google Play. Expo is now linked under `brandonius813`. He has an iPhone 14 Pro and iPad Pro available, but no Android device. Apple activation, signing, device registration and actual hardware acceptance remain unverified. Do not create guessed account IDs, signing keys, or successful build records.
 
 ## Release constraints
 

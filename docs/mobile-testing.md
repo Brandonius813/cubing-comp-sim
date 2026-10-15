@@ -2,7 +2,7 @@
 
 The mobile client lives in `mobile/`. The existing desktop website remains a separate client. See [the mobile roadmap](mobile-roadmap.md) for scope and architecture.
 
-Status on October 15, 2026: this Mac has Node 24, npm 11, and Xcode Command Line Tools. Full Xcode, iOS Simulator, and Android build tools were not found. Brandon confirmed he is not yet enrolled in the paid Apple Developer Program. An EAS project, signing, and installed mobile builds have not been verified. The commands below describe setup and testing, not completed device acceptance.
+Status on October 15, 2026: this Mac has Node 24, npm 11, and Xcode Command Line Tools. Full Xcode, iOS Simulator, and Android build tools were not found. Brandon has enrolled personally in Apple Developer and signed up for Google Play. Apple activation and signing still need verification. Expo is linked to `@brandonius813/cubing-comp-sim`; no installed mobile build has been verified. The commands below describe setup and testing, not completed device acceptance.
 
 ## Choose the right preview
 
@@ -60,7 +60,7 @@ The project defines these EAS profiles. Run commands from `mobile/` after connec
 
 Before any EAS upload, put the complete verified artifact (`tnoodle.js`, `manifest.json`, `conformance.json`, `LICENSE.txt`) in the repository's `public/engine/`. A fresh root `npm run engine:verify` produces it. The optional external engine directory is useful for local development, but a path outside this repository will not be uploaded. The repository-root `.easignore` deliberately includes these generated artifacts and the mobile engine document while excluding credentials. The EAS preparation hook validates the archived proof and regenerates the mobile document; missing or mismatched files must fail the build.
 
-No EAS project has been linked and no cloud native build has been submitted by this kickoff.
+Expo project `52c0c6ad-0940-4756-9376-f29c88631aea` is linked under `brandonius813`. No cloud native build has been submitted by this setup.
 
 ## Standalone testing on your phone or iPad
 
@@ -92,3 +92,9 @@ These are release gates, not claims that the foundation already implements each 
 - [Apple Developer Mode](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device/) and [membership](https://developer.apple.com/programs/enroll/)
 - [Google Play registration](https://support.google.com/googleplay/android-developer/answer/6112435/), [testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465?hl=en), and [device verification](https://support.google.com/googleplay/android-developer/answer/14316361?hl=en)
 - [Apple review guidelines](https://developer.apple.com/app-store/review/guidelines/) and [Google account deletion](https://support.google.com/googleplay/android-developer/answer/13327111?hl=en-EN)
+
+## Owner setup update, October 15 evening
+
+Personal publishing name: Brandon True. Available test devices: iPhone 14 Pro and iPad Pro (generation/OS not yet confirmed), plus a MacBook Pro. No Android device is available; physical-device verification for Google Play remains open. The owner expects to recruit testers from his YouTube audience.
+
+Next, confirm Apple membership is active, run `npx eas-cli@latest device:create` from `mobile/` and register both Apple devices through the Website option. Then run `npx eas-cli@latest credentials:configure-build --platform ios --profile preview`, complete Apple login/2FA, and include both devices. This prepares signing without submitting a build. Do not revoke existing certificates or paste credentials into public issues.

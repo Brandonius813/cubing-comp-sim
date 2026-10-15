@@ -7,9 +7,28 @@
     "orientation": "default",
     "userInterfaceStyle": "dark",
     "icon": "./assets/icon.png",
-    "ios": { "supportsTablet": true, "bundleIdentifier": "com.cubingcompsim.app", "infoPlist": { "ITSAppUsesNonExemptEncryption": false } },
-    "android": { "package": "com.cubingcompsim.app" },
-    "plugins": ["expo-sqlite", "expo-dev-client"],
-    "experiments": { "autolinkingModuleResolution": true }
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cubingcompsim.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.cubingcompsim.app"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-dev-client"
+    ],
+    "experiments": {
+      "autolinkingModuleResolution": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "52c0c6ad-0940-4756-9376-f29c88631aea"
+      }
+    },
+    "owner": "brandonius813"
   }
 }

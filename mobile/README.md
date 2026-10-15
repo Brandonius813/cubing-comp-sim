@@ -34,7 +34,7 @@ npm run export:android
 
 The export commands compile JavaScript/assets only. They do not produce installable signed native apps or establish that the app works on hardware. Expo Go is not the release acceptance environment.
 
-EAS profiles in `eas.json`: `development`, `development-simulator`, `preview`, and `production`. No EAS project/account ID or signing credentials have been provisioned. `preview` is standalone and is the correct profile for offline testing without Metro; Android uses an APK. Apple device distribution requires its signing setup. The bundle/package identifier `com.cubingcompsim.app` is a proposed identifier, not a claim of store registration.
+EAS profiles in `eas.json`: `development`, `development-simulator`, `preview`, and `production`. The project is linked to `@brandonius813/cubing-comp-sim` (ID `52c0c6ad-0940-4756-9376-f29c88631aea`). Signing credentials are not yet verified. `preview` is standalone and is the correct profile for offline testing without Metro; Android uses an APK. Apple device distribution requires its signing setup. The bundle/package identifier `com.cubingcompsim.app` is a proposed identifier, not a claim of store registration.
 
 EAS archives from the repository root. The root `.easignore` includes the verified engine inputs and the generated bundle; the EAS pre-install hook reruns verification/bundling. Never place private keys, signing files, or account credentials in the repository.
 
