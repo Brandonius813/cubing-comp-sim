@@ -168,3 +168,38 @@ describe('provider sign-in boundary', () => {
     await expect(account.reauthenticatedDeletionSession()).rejects.toMatchObject({ code: 'reauth_required' });
   });
 });
+
+
+describe('Apple provider preparation', () => {
+  it('is unavailable without an explicit provider gate', async () => {
+    browser();
+    const { client, methods } = sdk();
+    await expect(new AccountAuth(config, client).signInWithProvider('apple')).rejects.toMatchObject({ code: 'not_configured' });
+    expect(methods.signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it('starts Apple sign-in with the fixed callback and no Google-only parameters', async () => {
+    const { storage } = browser();
+    const { client, methods } = sdk();
+    methods.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    await new AccountAuth({ ...config, providers: 'apple' }, client).signInWithProvider('apple');
+    expect(methods.signInWithOAuth).toHaveBeenCalledWith({ provider: 'apple', options: { redirectTo: 'https://app.example.test/?account=signin' } });
+    expect(JSON.parse(storage.get('ccs-oauth-intent')!)).toMatchObject({ provider: 'apple', purpose: 'signin' });
+  });
+
+  it('links Apple to the current account explicitly', async () => {
+    browser();
+    const { client, methods } = sdk();
+    await new AccountAuth({ ...config, providers: 'apple' }, client).linkProvider('apple', 'user-a');
+    expect(methods.linkIdentity).toHaveBeenCalledWith({ provider: 'apple', options: { redirectTo: 'https://app.example.test/?account=link' } });
+  });
+
+  it.each(['user-a', 'user-b'])('accepts only the expected Apple account after code exchange (%s)', async userId => {
+    const { storage, replaceState } = browser('https://app.example.test/?account=link&code=apple-test-code');
+    const { client } = sdk(userId, ['apple']);
+    storage.set('ccs-oauth-intent', JSON.stringify({ purpose: 'link', provider: 'apple', userId: 'user-a', startedAt: Date.now() }));
+    const result = await new AccountAuth({ ...config, providers: 'apple' }, client).completeRedirect();
+    expect(result).toMatchObject({ purpose: 'link', provider: 'apple', status: userId === 'user-a' ? 'success' : 'error' });
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/');
+  });
+});

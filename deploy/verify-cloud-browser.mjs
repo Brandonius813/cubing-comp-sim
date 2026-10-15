@@ -77,7 +77,7 @@ try {
   assert.equal(marker.environment, environment); assert.equal(marker.apiUrl, settings.apiUrl);
   assert.match(marker.sourceCommit, /^[a-f0-9]{40}$/);
   const authProviders = marker.authProviders ?? [];
-  assert.ok(Array.isArray(authProviders) && authProviders.every(provider => ['google', 'wca'].includes(provider)));
+  assert.ok(Array.isArray(authProviders) && authProviders.every(provider => ['google', 'wca', 'apple'].includes(provider)));
   results.deployment = { sourceCommit: marker.sourceCommit, authProviders };
   browser = await browserType.launch({ ...(process.env.CCS_BROWSER_CHANNEL ? { channel: process.env.CCS_BROWSER_CHANNEL } : {}) });
   const contexts = await Promise.all([browser.newContext(), browser.newContext()]);
