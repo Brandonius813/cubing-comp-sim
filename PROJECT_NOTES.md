@@ -337,3 +337,12 @@ Valid wait endpoint edits now save immediately instead of waiting for blur/Enter
 ## Default start hold (October 16, 2026)
 
 The owner changed the default Hold to start duration to zero seconds. Keep saved durations intact and retain the adjustable control, including 0.55 seconds. This supersedes the earlier 550ms default.
+
+## Complete localization and inspection corrections (October 16, 2026)
+
+Brandon requested publishing the localization audit fixes and correcting inspection DNFs from the time editor.
+
+- All 16 interface languages now cover the newer settings, round navigation, provider authentication, update messages, Help, Statistics, and accessible labels. Message state stores keys so a language change also updates existing notices.
+- About and policy pages receive the app language through their links and use bundled translations. They retain their original content, external URLs and English version. Translation drafts were generated with Google Translate and reviewed for interface/cubing terminology; fluent-speaker review is still welcome. No translation service is contacted by the shipped app.
+- The time editor exposes inspection penalties separately from additional solve penalties. Explicit corrections preserve the measured inspection duration. Merely editing a time does not silently waive an inspection penalty. Automatic inspection scoring is unchanged.
+- Regression checks cover all catalog keys/placeholders, untranslated JSX, rendered Help/Statistics, inspection correction persistence and averages. Browser checks cover editing a DNF, reload, all language switches and localized information pages.
