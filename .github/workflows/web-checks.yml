@@ -46,6 +46,7 @@ jobs:
           pactl load-module module-null-sink sink_name=inspection_tests
           pactl set-default-sink inspection_tests
           pactl info
+      - run: node scripts/check-back-navigation.mjs
       - run: node scripts/branding-check.mjs
       - run: |
           for browser in chromium firefox webkit; do

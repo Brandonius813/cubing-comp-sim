@@ -326,3 +326,10 @@ Prepared an isolated staging frontend Worker with public Supabase/API configurat
 Published standalone /about/, /privacy/, and /terms/ pages with the existing brand assets, linked from the home screen and Help. The policies describe local-first practice, explicit single cloud saves, optional identity providers, current service providers, and account deletion. Public contact uses the existing GitHub issue tracker with instructions not to post personal data. Policy pages remain readable offline.
 
 Enabled production Google sign-in using the owner-provided web client with the production Supabase callback. Credentials remain outside the repository. Google and WCA are enabled in the production frontend manifest; provider consent and Google branding publication remain controlled by the owner.
+
+
+## Back navigation and durable settings (October 16, 2026)
+
+Brandon requested Back throughout the solve process, persistent wait settings, and preservation of history when updating the site. Added per-round checkpoints that retain scrambles, reverse only attempts added since the prior step, and resume clocks from their checkpoint. Back cancels held-key activation and inspection audio. New rounds begin a new navigation history; page reload still recovers the existing scramble safely.
+
+Valid wait endpoint edits now save immediately instead of waiting for blur/Enter. IndexedDB remains the durable source for settings and times, separate from the service worker asset cache. The update action only replaces cached app assets and reloads at an idle point; regression coverage now compares a completed round and all settings before and after actual worker activation. Browser data clearing is not an update procedure.
