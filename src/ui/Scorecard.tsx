@@ -1,4 +1,4 @@
-import { attemptStatus, totalPenaltyMs, formatAttempt, formatTime, getEvent, possibleResults, scoreRound, type Penalty, type Round, type Score } from '../core';
+import { selectedPenalty, attemptStatus, totalPenaltyMs, formatAttempt, formatTime, getEvent, possibleResults, scoreRound, type Penalty, type Round, type Score } from '../core';
 import { Icon } from './primitives';
 import { t, localizedEventName } from './i18n';
 import './scorecard.css';
@@ -30,11 +30,11 @@ export function Scorecard({ round, eventId, roundNumber, onHide, onEdit, onPenal
           {attempt ? <><span>{formatAttempt(attempt)}</span>{attemptStatus(attempt) === 'ok' && totalPenaltyMs(attempt) > 0 && <small>({formatTime(attempt.rawMs)} + {totalPenaltyMs(attempt) / 1000})</small>}{attemptStatus(attempt) === 'DNF' && attempt.rawMs !== null && <small>({formatTime(attempt.rawMs)})</small>}</> : <span className="empty-result">—</span>}
         </button>{attempt && onPenalty && <div className="scorecard-penalties" role="group" aria-label={t('editSolveLabel', { number: index + 1, result: formatAttempt(attempt) })}>
           <div className="scorecard-penalty-controls">{(['+2', 'DNF'] as const).map(value => {
-            const nextPenalty = attempt.penalty === value ? 'none' : value;
+            const nextPenalty = selectedPenalty(attempt) === value ? 'none' : value;
             // A DNF/DNS with no recorded time cannot become a timed result here.
             // The edit dialog remains available to supply a time first.
-            const needsTime = attempt.rawMs === null && nextPenalty !== 'DNF' && attempt.inspectionPenalty !== 'DNF';
-            return <button key={value} type="button" className="scorecard-penalty-button" aria-pressed={attempt.penalty === value} disabled={disabled || needsTime} onClick={() => onPenalty(attempt.id, nextPenalty)}>{value}</button>;
+            const needsTime = attempt.rawMs === null && nextPenalty !== 'DNF';
+            return <button key={value} type="button" className="scorecard-penalty-button" aria-pressed={selectedPenalty(attempt) === value} disabled={disabled || needsTime} onClick={() => onPenalty(attempt.id, nextPenalty)}>{value}</button>;
           })}</div>
         </div>}</li>;
       })}</ol>

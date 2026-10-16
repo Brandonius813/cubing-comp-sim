@@ -101,3 +101,10 @@ export function formatAttempt(attempt: AttemptResult): string {
   const added = totalPenaltyMs(attempt);
   return `${formatTime(attemptTimeMs(attempt))}${added > 2_000 ? `+${added / 1_000}` : added ? '+' : ''}`;
 }
+
+/** One editable penalty selection, including automatically detected inspection penalties. */
+export function selectedPenalty(attempt: Pick<Attempt, 'penalty' | 'inspectionPenalty'>): Penalty {
+  if (attempt.penalty === 'DNF' || attempt.inspectionPenalty === 'DNF') return 'DNF';
+  if (attempt.penalty === 'DNS') return 'DNS';
+  return attempt.penalty === '+2' || attempt.inspectionPenalty === '+2' ? '+2' : 'none';
+}

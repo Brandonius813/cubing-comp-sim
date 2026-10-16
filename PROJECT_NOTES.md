@@ -346,3 +346,9 @@ Brandon requested publishing the localization audit fixes and correcting inspect
 - About and policy pages receive the app language through their links and use bundled translations. They retain their original content, external URLs and English version. Translation drafts were generated with Google Translate and reviewed for interface/cubing terminology; fluent-speaker review is still welcome. No translation service is contacted by the shipped app.
 - The time editor exposes inspection penalties separately from additional solve penalties. Explicit corrections preserve the measured inspection duration. Merely editing a time does not silently waive an inspection penalty. Automatic inspection scoring is unchanged.
 - Regression checks cover all catalog keys/placeholders, untranslated JSX, rendered Help/Statistics, inspection correction persistence and averages. Browser checks cover editing a DNF, reload, all language switches and localized information pages.
+
+## Typed solves and inspection (October 16, 2026)
+
+Typed solves do not automatically receive inspection penalties: the app cannot know when a physical desk timer was started. Inspection callouts remain available. Keyboard-timed solves retain automatic inspection scoring. A digit from the number row or numpad during Ready or Inspection immediately opens typed entry and retains that first digit, without changing the saved input-mode preference. Existing attempts and explicit penalty corrections remain unchanged.
+
+Penalty editing now presents a single +2/DNF toggle pair for both automatic inspection and user-applied penalties. Explicit edits replace the combined selection and clear the separate inspection contribution; existing records retain their original data until edited.
