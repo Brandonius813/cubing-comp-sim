@@ -1,0 +1,68 @@
+name: Mobile foundation checks
+on:
+  pull_request:
+    paths: ['mobile/**', 'src/core/**', 'src/storage/**', 'src/scramble/types.ts', 'package*.json', 'engine/**', 'scripts/assert-engine.mjs', 'scripts/build-engine.mjs', '.easignore', '.github/workflows/mobile-checks.yml']
+  push:
+    branches: [main]
+    paths: ['mobile/**', 'src/core/**', 'src/storage/**', 'src/scramble/types.ts', 'package*.json', 'engine/**', 'scripts/assert-engine.mjs', 'scripts/build-engine.mjs', '.easignore', '.github/workflows/mobile-checks.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: mobile-foundation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  bundle:
+    name: Verify engine and export iOS and Android JavaScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: engine/pom.xml
+      - run: npm ci --include=optional --no-fund
+      - run: npm run engine:verify
+      - name: Prepare the verified engine for the native app
+        run: node mobile/scripts/engine-bundle.mjs
+      - name: Install the separate mobile dependency lock
+        run: npm ci --no-fund
+        working-directory: mobile
+      - run: npm run typecheck
+        working-directory: mobile
+      - run: npm test
+        working-directory: mobile
+      - name: Verify the transformed engine against Java reference fixtures
+        run: node mobile/scripts/engine-verify.mjs
+      - name: Export iOS JavaScript
+        run: npx expo export --platform ios --output-dir dist/ios
+        working-directory: mobile
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+      - name: Export Android JavaScript
+        run: npx expo export --platform android --output-dir dist/android
+        working-directory: mobile
+        env:
+          CI: '1'
+          EXPO_NO_TELEMETRY: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-javascript-and-engine-evidence
+          path: |
+            mobile/dist/
+            mobile/test-results/
+            mobile/assets/engine.verification.generated.json
+            mobile/package-lock.json
+            public/engine/manifest.json
+            public/engine/conformance.json
+          retention-days: 7
+
+# This verifies code, protocol and bundling only. It does not compile an iOS/Android
+# binary, provision signing, run a simulator, or establish physical-device behavior.
