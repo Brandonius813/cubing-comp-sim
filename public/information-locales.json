@@ -100,7 +100,9 @@
     "For questions, bugs, or account assistance,": "For questions, bugs, or account assistance,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Issues are public. Do not include private account information; request a private contact method if needed.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.",
-    "Language": "Language"
+    "Language": "Language",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.",
+    "Effective October 16, 2026": "Effective October 16, 2026"
   },
   "fr": {
     ". Issues are public: start with a general request for private contact and do not post your email address, account credentials, tokens, or other personal information.": ". Les problèmes sont publics : commencez par une demande générale de contact privé et ne publiez pas votre adresse e-mail, vos identifiants de compte, vos jetons ou autres informations personnelles.",
@@ -203,7 +205,9 @@
     "For questions, bugs, or account assistance,": "Pour des questions, des bugs ou une assistance concernant votre compte,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Les problèmes sont publics. N'incluez pas d'informations de compte privé ; demandez une méthode de contact privée si nécessaire.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Conditions d'utilisation de Cubing Comp Sim, y compris les résultats des entraînements, les comptes, les données locales et les sauvegardes dans le cloud.",
-    "Language": "Langue"
+    "Language": "Langue",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Les visites, l’activité quotidienne des comptes, les résultats de l’API et les codes d’erreur de base sont collectés automatiquement. Un identifiant aléatoire du navigateur est stocké sur votre appareil. Les visites et l’activité sont conservées 180 jours, les événements opérationnels 30 jours. Les temps, mélanges, mots de passe et jetons sont exclus. Les options facultatives ne désactivent pas cette collecte.",
+    "Effective October 16, 2026": "En vigueur le 16 octobre 2026"
   },
   "de": {
     "Optional sign-in": "Optionale Anmeldung",
@@ -306,7 +310,9 @@
     "5. Optional analytics and diagnostics": "5. Optionale Analyse und Diagnose",
     "Product analytics and client diagnostics are separate, opt-in settings under Settings → Privacy. When enabled and configured, PostHog receives limited product events and Sentry receives limited diagnostic events. These reports are designed to exclude your email, passwords, account tokens, scramble text, and exact solve history. The app does not use session replay or automatic form recording. Turning either setting off stops that optional reporting; essential hosting and security processing continues.": "Produktanalysen und Kundendiagnosen sind separate Opt-in-Einstellungen unter Einstellungen → Datenschutz. Wenn PostHog aktiviert und konfiguriert ist, empfängt es begrenzte Produktereignisse und Sentry empfängt begrenzte Diagnoseereignisse. Diese Berichte sollen Ihre E-Mail-Adresse, Passwörter, Konto-Tokens, verschlüsselten Text und den genauen Lösungsverlauf ausschließen. Die App verwendet keine Sitzungswiedergabe oder automatische Formularaufzeichnung. Durch Deaktivieren einer der beiden Einstellungen wird die optionale Berichterstellung gestoppt. Die wesentliche Hosting- und Sicherheitsverarbeitung wird fortgesetzt.",
     "6. Storage, retention, and deletion": "6. Speicherung, Aufbewahrung und Löschung",
-    "Local history remains in your browser until you delete or replace it, or the browser removes site data. Keep exports of history you want to preserve.": "Der lokale Verlauf bleibt in Ihrem Browser, bis Sie ihn löschen oder ersetzen oder der Browser Websitedaten entfernt. Behalten Sie die Exporte des Verlaufs bei, den Sie bewahren möchten."
+    "Local history remains in your browser until you delete or replace it, or the browser removes site data. Keep exports of history you want to preserve.": "Der lokale Verlauf bleibt in Ihrem Browser, bis Sie ihn löschen oder ersetzen oder der Browser Websitedaten entfernt. Behalten Sie die Exporte des Verlaufs bei, den Sie bewahren möchten.",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Besuche, tägliche Kontoaktivität, API-Ergebnisse und grundlegende Fehlercodes werden automatisch erfasst. Eine zufällige Browserkennung wird auf deinem Gerät gespeichert. Besuche und Aktivität werden 180 Tage, Betriebsereignisse 30 Tage gespeichert. Zeiten, Scrambles, Passwörter und Kontotokens sind ausgeschlossen. Optionale Schalter deaktivieren diese Erfassung nicht.",
+    "Effective October 16, 2026": "Gültig ab 16. Oktober 2026"
   },
   "pl": {
     "Practice the whole round | Cubing Comp Sim": "Ćwicz całą rundę | Symulator tworzenia kostek",
@@ -409,7 +415,9 @@
     "For questions, bugs, or account assistance,": "W przypadku pytań, błędów lub pomocy dotyczącej konta,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Sprawy są publiczne. Nie podawaj informacji o koncie prywatnym; w razie potrzeby poproś o prywatną metodę kontaktu.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Warunki korzystania z Cubing Comp Sim, w tym wyniki ćwiczeń, konta, dane lokalne i zapisy w chmurze.",
-    "Language": "Język"
+    "Language": "Język",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Odwiedziny, dzienna aktywność kont, wyniki API i podstawowe kody błędów są zbierane automatycznie. Na urządzeniu zapisywany jest losowy identyfikator przeglądarki. Odwiedziny i aktywność przechowujemy 180 dni, zdarzenia operacyjne 30 dni. Dane nie zawierają czasów ułożeń, mieszań, haseł ani tokenów. Opcjonalne ustawienia nie wyłączają tego zbierania.",
+    "Effective October 16, 2026": "Obowiązuje od 16 października 2026 r"
   },
   "es": {
     "Practice the whole round | Cubing Comp Sim": "Practica toda la ronda | Simulación de cubos",
@@ -512,7 +520,9 @@
     "For questions, bugs, or account assistance,": "Para preguntas, errores o asistencia con la cuenta,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Los problemas son públicos. No incluya información de cuenta privada; Solicite un método de contacto privado si es necesario.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Términos para usar Cubing Comp Sim, incluidos resultados de práctica, cuentas, datos locales y guardados en la nube.",
-    "Language": "Idioma"
+    "Language": "Idioma",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Las visitas, la actividad diaria de cuentas, los resultados de la API y los códigos de error básicos se recopilan automáticamente. Se guarda un identificador aleatorio del navegador en tu dispositivo. Las visitas y la actividad se conservan 180 días; los eventos operativos, 30 días. No incluyen tiempos, mezclas, contraseñas ni tokens. Los controles opcionales no desactivan esta recopilación.",
+    "Effective October 16, 2026": "A partir del 16 de octubre de 2026"
   },
   "it": {
     "Practice the whole round | Cubing Comp Sim": "Esercitati per tutto il round | Simulazione di calcolo del cubo",
@@ -615,7 +625,9 @@
     "For questions, bugs, or account assistance,": "Per domande, bug o assistenza sull'account,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". I problemi sono pubblici. Non includere informazioni sull'account privato; richiedere un metodo di contatto privato se necessario.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Termini per l'utilizzo di Cubing Comp Sim, inclusi risultati degli esercizi, account, dati locali e salvataggi nel cloud.",
-    "Language": "Lingua"
+    "Language": "Lingua",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Visite, attività giornaliera degli account, risultati API e codici di errore di base vengono raccolti automaticamente. Un identificatore casuale del browser viene salvato sul dispositivo. Visite e attività sono conservate per 180 giorni, eventi operativi per 30 giorni. Sono esclusi tempi, scramble, password e token. I controlli facoltativi non disattivano questa raccolta.",
+    "Effective October 16, 2026": "In vigore dal 16 ottobre 2026"
   },
   "pt-BR": {
     "Practice the whole round | Cubing Comp Sim": "Pratique toda a rodada | Cubing Comp Sim",
@@ -718,7 +730,9 @@
     "For questions, bugs, or account assistance,": "Para dúvidas, bugs ou assistência à conta,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Os problemas são públicos. Não inclua informações de contas privadas; solicite um método de contato privado, se necessário.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Termos para usar o Cubing Comp Sim, incluindo resultados práticos, contas, dados locais e salvamentos na nuvem.",
-    "Language": "Linguagem"
+    "Language": "Linguagem",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Visitas, atividade diária das contas, resultados da API e códigos básicos de erro são coletados automaticamente. Um identificador aleatório do navegador é salvo no dispositivo. Visitas e atividade são mantidas por 180 dias; eventos operacionais, por 30 dias. Tempos, embaralhamentos, senhas e tokens não são incluídos. Os controles opcionais não desativam essa coleta.",
+    "Effective October 16, 2026": "Em vigor a partir de 16 de outubro de 2026"
   },
   "nl": {
     "Practice the whole round | Cubing Comp Sim": "Oefen de hele ronde | Cubing Comp Sim",
@@ -821,7 +835,9 @@
     "For questions, bugs, or account assistance,": "Voor vragen, bugs of hulp bij accounts,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Problemen zijn openbaar. Voeg geen privé-accountgegevens toe; vraag indien nodig een privé-contactmethode aan.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Voorwaarden voor het gebruik van Cubing Comp Sim, inclusief oefenresultaten, accounts, lokale gegevens en cloudopslag.",
-    "Language": "Taal"
+    "Language": "Taal",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Bezoeken, dagelijkse accountactiviteit, API-resultaten en basisfoutcodes worden automatisch verzameld. Een willekeurige browser-ID wordt op je apparaat opgeslagen. Bezoeken en activiteit worden 180 dagen bewaard, operationele gebeurtenissen 30 dagen. Tijden, scrambles, wachtwoorden en tokens worden niet opgenomen. Optionele instellingen schakelen deze verzameling niet uit.",
+    "Effective October 16, 2026": "Effectief op 16 oktober 2026"
   },
   "ru": {
     "Practice the whole round | Cubing Comp Sim": "Практикуйтесь весь раунд | Кубинг-комп сим",
@@ -924,7 +940,9 @@
     "For questions, bugs, or account assistance,": "По вопросам, ошибкам или помощи по учетной записи,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Проблемы публичны. Не включайте информацию о личной учетной записи; при необходимости запросите частный метод связи.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Условия использования Cubing Comp Sim, включая результаты тренировок, учетные записи, локальные данные и сохранения в облаке.",
-    "Language": "Язык"
+    "Language": "Язык",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Посещения, ежедневная активность аккаунтов, результаты API и основные коды ошибок собираются автоматически. На устройстве сохраняется случайный идентификатор браузера. Посещения и активность хранятся 180 дней, технические события 30 дней. Время сборок, скрамблы, пароли и токены не включаются. Необязательные настройки не отключают этот сбор.",
+    "Effective October 16, 2026": "Вступает в силу 16 октября 2026 г."
   },
   "uk": {
     "Practice the whole round | Cubing Comp Sim": "Тренуйтеся весь раунд | Cubing Comp Sim",
@@ -1027,7 +1045,9 @@
     "For questions, bugs, or account assistance,": "Якщо у вас виникли запитання, виникли помилки чи допомога в обліковому записі,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Проблеми публічні. Не включайте особисту інформацію облікового запису; запросіть приватний спосіб зв’язку, якщо це необхідно.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Умови використання Cubing Comp Sim, включаючи результати практики, облікові записи, локальні дані та збереження в хмарі.",
-    "Language": "Мова"
+    "Language": "Мова",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Відвідування, щоденна активність облікових записів, результати API та основні коди помилок збираються автоматично. На пристрої зберігається випадковий ідентифікатор браузера. Відвідування й активність зберігаються 180 днів, технічні події 30 днів. Часи складань, скрамбли, паролі й токени не включаються. Необов’язкові налаштування не вимикають цей збір.",
+    "Effective October 16, 2026": "Набуває чинності 16 жовтня 2026 року"
   },
   "tr": {
     "Practice the whole round | Cubing Comp Sim": "Tüm tur boyunca pratik yapın | Cubing Comp Simülasyonu",
@@ -1130,7 +1150,9 @@
     "For questions, bugs, or account assistance,": "Sorular, hatalar veya hesap yardımı için",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Sorunlar halka açıktır. Özel hesap bilgilerini eklemeyin; Gerekirse özel bir iletişim yöntemi isteyin.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Alıştırma sonuçları, hesaplar, yerel veriler ve bulut kayıtları da dahil olmak üzere Cubing Comp Sim'i kullanma koşulları.",
-    "Language": "Dil"
+    "Language": "Dil",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Ziyaretler, günlük hesap etkinliği, API sonuçları ve temel hata kodları otomatik toplanır. Cihazınıza rastgele bir tarayıcı kimliği kaydedilir. Ziyaret ve etkinlik kayıtları 180 gün, operasyonel olaylar 30 gün saklanır. Çözüm süreleri, karıştırmalar, şifreler ve hesap belirteçleri dahil edilmez. İsteğe bağlı ayarlar bu toplamayı kapatmaz.",
+    "Effective October 16, 2026": "16 Ekim 2026'dan itibaren geçerlidir"
   },
   "ja": {
     "Practice the whole round | Cubing Comp Sim": "ラウンド全体を練習する |キューブコンプシム",
@@ -1233,7 +1255,9 @@
     "For questions, bugs, or account assistance,": "質問、バグ、アカウントのサポートについては、",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": "。問題は公開されます。プライベートなアカウント情報は含めないでください。必要に応じてプライベートな連絡方法をリクエストします。",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "練習結果、アカウント、ローカルデータ、クラウドセーブなど、Cubing Comp Sim の利用規約。",
-    "Language": "言語"
+    "Language": "言語",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "訪問、日々のアカウント活動、クラウドAPIの結果、基本的なエラーコードを自動収集します。ランダムなブラウザ識別子を端末に保存します。訪問と活動は180日間、運用イベントは30日間保持します。ソルブタイム、スクランブル、パスワード、アカウントトークンは含みません。任意レポートの設定ではこの収集は停止しません。",
+    "Effective October 16, 2026": "2026 年 10 月 16 日より発効"
   },
   "zh-Hans": {
     "Practice the whole round | Cubing Comp Sim": "练习整轮|魔方比较模拟",
@@ -1336,7 +1360,9 @@
     "For questions, bugs, or account assistance,": "如有疑问、错误或帐户帮助，",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": "。问题是公开的。不包含私人账户信息；如果需要，请索取私人联系方式。",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Cubing Comp Sim 的使用条款，包括练习结果、帐户、本地数据和云保存。",
-    "Language": "语言"
+    "Language": "语言",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "访问、每日账户活动、云端API结果和基本错误代码会自动收集。设备上会存储随机浏览器标识符。访问和活动记录保留180天，运行事件保留30天。不包含还原时间、打乱、密码或账户令牌。可选报告设置不会关闭此收集。",
+    "Effective October 16, 2026": "2026 年 10 月 16 日生效"
   },
   "zh-Hant": {
     "Practice the whole round | Cubing Comp Sim": "練習整輪|魔術方塊比較模擬",
@@ -1439,7 +1465,9 @@
     "For questions, bugs, or account assistance,": "如有疑問、錯誤或帳戶協助，",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": "。問題是公開的。不包含私人帳戶資訊；如果需要，請索取私人聯絡資訊。",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Cubing Comp Sim 的使用條款，包括練習結果、帳戶、本機資料和雲端保存。",
-    "Language": "語言"
+    "Language": "語言",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "造訪、每日帳戶活動、雲端API結果和基本錯誤代碼會自動收集。裝置上會儲存隨機瀏覽器識別碼。造訪和活動紀錄保留180天，運作事件保留30天。不包含還原時間、打亂、密碼或帳戶權杖。選用報告設定不會關閉此收集。",
+    "Effective October 16, 2026": "2026 年 10 月 16 日生效"
   },
   "ko": {
     "Practice the whole round | Cubing Comp Sim": "전체 라운드 연습 | 큐빙 콤프 심",
@@ -1542,7 +1570,9 @@
     "For questions, bugs, or account assistance,": "질문, 버그 또는 계정 지원이 필요한 경우",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". 문제는 공개되어 있습니다. 개인 계정 정보를 포함하지 마십시오. 필요한 경우 비공개 연락 방법을 요청하세요.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "연습 결과, 계정, 로컬 데이터, 클라우드 저장을 포함한 Cubing Comp Sim 사용 조건입니다.",
-    "Language": "언어"
+    "Language": "언어",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "방문, 일별 계정 활동, 클라우드 API 결과 및 기본 오류 코드는 자동 수집됩니다. 기기에 무작위 브라우저 식별자가 저장됩니다. 방문 및 활동은 180일, 운영 이벤트는 30일 보관됩니다. 기록에는 풀이 시간, 스크램블, 비밀번호 및 계정 토큰이 포함되지 않습니다. 선택 보고 설정으로 이 수집을 끌 수 없습니다.",
+    "Effective October 16, 2026": "2026년 10월 16일부터 시행"
   },
   "id": {
     "Practice the whole round | Cubing Comp Sim": "Latih seluruh putaran | Sim Komputasi Kubus",
@@ -1645,6 +1675,8 @@
     "For questions, bugs, or account assistance,": "Untuk pertanyaan, bug, atau bantuan akun,",
     ". Issues are public. Do not include private account information; request a private contact method if needed.": ". Masalah bersifat publik. Jangan sertakan informasi akun pribadi; minta metode kontak pribadi jika diperlukan.",
     "Terms for using Cubing Comp Sim, including practice results, accounts, local data, and cloud saves.": "Ketentuan penggunaan Cubing Comp Sim, termasuk hasil latihan, akun, data lokal, dan penyimpanan cloud.",
-    "Language": "Bahasa"
+    "Language": "Bahasa",
+    "Visits, daily account activity, cloud API outcomes, and basic error codes are collected automatically. A random browser identifier is stored on your device. Visit and activity records are kept for 180 days, and operational events for 30 days. These records exclude solve times, scrambles, passwords, and account tokens. Optional reporting controls do not disable this collection.": "Kunjungan, aktivitas harian akun, hasil API cloud, dan kode kesalahan dasar dikumpulkan otomatis. Pengenal browser acak disimpan di perangkat. Kunjungan dan aktivitas disimpan 180 hari; peristiwa operasional 30 hari. Waktu penyelesaian, acakan, kata sandi, dan token tidak disertakan. Pengaturan opsional tidak menonaktifkan pengumpulan ini.",
+    "Effective October 16, 2026": "Efektif tanggal 16 Oktober 2026"
   }
 }

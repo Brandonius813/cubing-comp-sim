@@ -6,6 +6,7 @@ import { t, type MessageKey } from './i18n';
 import { InspectionAudio, takeInspectionCue } from '../audio/inspection';
 import { getAudioPreferences } from '../audio/preferences';
 import { telemetry } from '../telemetry';
+import { recordActivity, recordFailure } from '../operations/client';
 import { sampleWaitMs, simulatorKeyAction } from './simulatorInput';
 
 export type Phase = 'home' | 'loading' | 'scramble' | 'waiting' | 'ready' | 'inspection' | 'solving' | 'entry' | 'confirm' | 'complete' | 'engine-error';
@@ -62,7 +63,7 @@ export function useSimulator(blockKeyboard: boolean) {
       ownMutation.current = true;
       setSaving(true);
       try { const next = await operation(current.current); apply(next); setError(null); return next; }
-      catch (cause) { setError(cause instanceof StorageConflictError ? 'storageConflict' : 'saveError'); telemetry.reportError('local_save_failed', { code: cause instanceof StorageConflictError ? 'REVISION_CONFLICT' : 'TRANSACTION_FAILED' }); throw cause; }
+      catch (cause) { setError(cause instanceof StorageConflictError ? 'storageConflict' : 'saveError'); recordFailure('local_save_failed'); telemetry.reportError('local_save_failed', { code: cause instanceof StorageConflictError ? 'REVISION_CONFLICT' : 'TRANSACTION_FAILED' }); throw cause; }
       finally { ownMutation.current = false; setSaving(false); }
     });
     serial.current = task.then(() => undefined, () => undefined);
@@ -129,7 +130,7 @@ export function useSimulator(blockKeyboard: boolean) {
     } catch (cause) {
       if (request !== generation.current) return;
       setError(cause && typeof cause === 'object' && 'code' in cause && cause.code === 'ENGINE_UNAVAILABLE' ? 'engineError' : cause instanceof StorageConflictError ? 'storageConflict' : 'generationError');
-      telemetry.reportError('scramble_failed', { eventId: round.eventId, code: 'GENERATION_FAILED' });
+      recordFailure('scramble_failed'); telemetry.reportError('scramble_failed', { eventId: round.eventId, code: 'GENERATION_FAILED' });
       setPhase('engine-error');
     }
   };
@@ -195,6 +196,7 @@ export function useSimulator(blockKeyboard: boolean) {
       const updated = addAttempt(round, attempt);
       await mutate(s => request !== generation.current || endingRound.current ? Promise.resolve(s) : browserStore.saveRound(updated, s.revision));
       if (request !== generation.current || endingRound.current) return false;
+      void recordActivity();
       telemetry.track('attempt_recorded', { eventId: round.eventId, inputMode: inputMethod, attemptToken: attempt.id, roundToken: round.id });
       if (updated.completedAt !== undefined) telemetry.track('round_completed', { eventId: round.eventId, format: round.format, attemptCount: updated.attempts.length, roundToken: round.id });
       return true;

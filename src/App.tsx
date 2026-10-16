@@ -9,6 +9,7 @@ import { Scorecard, eventName, formatLabel, scoreText } from './ui/Scorecard';
 import { useSimulator } from './ui/useSimulator';
 import { normalizeTimeInput, setLocale, t, useLocale, type MessageKey } from './ui/i18n';
 import { telemetry } from './telemetry';
+import { recordVisit } from './operations/client';
 import { loadMetricsConsent } from './ui/metricsConsent';
 import { HelpDialog } from './ui/HelpDialog';
 import { StatisticsDialog } from './ui/StatisticsDialog';
@@ -65,7 +66,7 @@ function App() {
       if (callback) setModal('account');
       setSession(await auth.getSession());
       // No diagnostics/analytics begin while auth credentials remain in the URL.
-      if (mounted) telemetry.setConsent(loadMetricsConsent());
+      if (mounted) { telemetry.setConsent(loadMetricsConsent()); recordVisit(); }
     }).catch(() => undefined);
     return () => { mounted = false; unsubscribe(); };
   }, []);
