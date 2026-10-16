@@ -3,7 +3,7 @@ import { auth, cloud, cloudConfigured, CloudError, type AccountCallback, type Ac
 import { parseHistoryJson, type HistorySnapshot } from '../storage';
 import { telemetry } from '../telemetry';
 import { Dialog } from './primitives';
-import { errorMessage, localizedDate, t, type MessageKey } from './i18n';
+import { callbackErrorMessage, errorMessage, localizedDate, t, type MessageKey } from './i18n';
 
 interface AccountDialogProps {
   session: AccountSession | null;
@@ -24,7 +24,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<MessageKey | null>(callback?.status === 'success' ? callback.purpose === 'delete' ? 'providerIdentityConfirmed' : callback.purpose === 'link' ? 'accountLinked' : 'accountSignedIn' : null);
-  const [error, setError] = useState(callback?.status === 'error' ? t(callback.reason === 'email_verification' ? 'accountEmailProviderVerification' : 'accountCallbackFailed') : '');
+  const [error, setError] = useState(callback?.status === 'error' ? callbackErrorMessage(callback.reason) : '');
   const [busy, setBusy] = useState(false);
   const [metadata, setMetadata] = useState<SaveMetadata | null>(null);
   const [metadataLoaded, setMetadataLoaded] = useState(false);
@@ -66,7 +66,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
   useEffect(() => {
     if (!callback || appliedCallback.current === callback || (callback.purpose === 'delete' && callback.status === 'success' && !session)) return;
     appliedCallback.current = callback;
-    if (callback.status === 'error') { setError(t(callback.reason === 'email_verification' ? 'accountEmailProviderVerification' : 'accountCallbackFailed')); return; }
+    if (callback.status === 'error') { setError(callbackErrorMessage(callback.reason)); return; }
     setMessage(callback.purpose === 'delete' ? 'providerIdentityConfirmed' : callback.purpose === 'link' ? 'accountLinked' : 'accountSignedIn');
     if (callback.purpose === 'delete') { setDeleting(true); setProviderConfirmed(true); }
   }, [callback, session?.user.id]);

@@ -109,7 +109,18 @@ const errorKeys: Record<string, MessageKey> = {
   account_deleting: 'cloudAccountDeleting', deletion_not_configured: 'cloudDeletionUnavailable',
   provider_unavailable: 'accountProviderUnavailable', provider_mismatch: 'accountProviderMismatch',
   oauth_expired: 'accountCallbackExpired',
+  identity_conflict: 'accountIdentityConflict',
 };
+export function callbackErrorMessage(reason?: import('../cloud/types').AccountCallback['reason']): string {
+  const keys = {
+    email_verification: 'accountEmailProviderVerification',
+    identity_conflict: 'accountIdentityConflict',
+    account_changed: 'accountChangedDuringRedirect',
+    expired: 'accountCallbackExpired',
+  } as const;
+  return t(reason ? keys[reason] : 'accountCallbackFailed');
+}
+
 export function errorMessage(cause: unknown, fallback: MessageKey = 'requestError') {
   if (cause && typeof cause === 'object') {
     if ('name' in cause && cause.name === 'StorageConflictError') return t('storageConflict');

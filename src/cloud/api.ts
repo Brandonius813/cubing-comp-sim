@@ -12,6 +12,7 @@ const messages: Record<CloudErrorCode, string> = {
   too_large: 'This save exceeds the cloud size limit. Export a local backup instead.',
   rate_limited: 'Too many requests. Wait a moment and try again.',
   auth_error: 'The account request failed. Please try again.',
+  identity_conflict: 'This sign-in method conflicts with an existing account.',
   network_error: 'The cloud request could not finish. Your local times are unchanged.',
   server_error: 'The cloud service is unavailable. Your local times are unchanged.',
   reauth_required: 'Enter your password again before deleting this account.',
