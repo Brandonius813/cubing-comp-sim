@@ -36,6 +36,7 @@ export function useSimulator(blockKeyboard: boolean) {
   const serial = useRef(Promise.resolve());
   const ownMutation = useRef(false);
   const started = useRef(0);
+  const entrySeed = useRef<string | null>(null);
   const inspectionMs = useRef<number | undefined>(undefined);
   const waitDuration = useRef(0);
   const pressedKeys = useRef(new Set<string>());
@@ -157,13 +158,15 @@ export function useSimulator(blockKeyboard: boolean) {
     remember();
     prepareAudio(); cancelHold(); callouts.current.clear(); started.current = performance.now(); setElapsed(0); setPhase('inspection'); saveDraft('inspection');
   };
-  const beginSolve = () => {
+  const beginSolve = (firstDigit?: string) => {
     remember();
     const prior = phaseRef.current;
-    inspectionMs.current = prior === 'inspection' ? Math.floor(performance.now() - started.current) : undefined;
+    const manual = firstDigit !== undefined || current.current.settings.inputMethod === 'manual';
+    entrySeed.current = firstDigit ?? null;
+    inspectionMs.current = !manual && prior === 'inspection' ? Math.floor(performance.now() - started.current) : undefined;
     setAutomaticPenalty(inspectionMs.current === undefined ? 'none' : inspectionPenalty(inspectionMs.current));
     cancelHold(); started.current = performance.now(); setElapsed(0);
-    if (current.current.settings.inputMethod === 'manual') setPhase('entry');
+    if (manual) setPhase('entry');
     else { setPhase('solving'); saveDraft('solving'); }
   };
   const primary = () => {
@@ -191,7 +194,7 @@ export function useSimulator(blockKeyboard: boolean) {
     if (inputMethod === 'manual') remember();
     recordBusy.current = true;
     try {
-      const attempt = createAttempt(round, { rawMs, penalty, inputMethod, scramble: value, inspectionMs: inspectionMs.current });
+      const attempt = createAttempt(round, { rawMs, penalty, inputMethod, scramble: value, inspectionMs: inputMethod === 'manual' ? undefined : inspectionMs.current });
       lastAttemptRef.current = attempt; setLastAttempt(attempt);
       const updated = addAttempt(round, attempt);
       await mutate(s => request !== generation.current || endingRound.current ? Promise.resolve(s) : browserStore.saveRound(updated, s.revision));
@@ -272,6 +275,16 @@ export function useSimulator(blockKeyboard: boolean) {
       const control = target?.closest('button, a, [role="button"]');
       if (active !== 'solving' && control && !control.matches('.flow-button, [data-simulator-action]')
         && !(entryForm?.contains(control) && control.matches('button[type="submit"]'))) return;
+      // A digit signals an externally timed solve, including during inspection.
+      // Do this before shortcut handling, retaining the digit that opened entry.
+      if (['ready', 'inspection'].includes(active) && /^[0-9]$/.test(event.key)) {
+        event.preventDefault();
+        if (!event.repeat && !pressedKeys.current.has(event.code) && !endingRound.current && !navigatingBack.current && getRound() && scrambleRef.current) {
+          pressedKeys.current.add(event.code);
+          actions.current.beginSolve(event.key);
+        }
+        return;
+      }
       const round = getRound();
       const canStart = round !== null && scrambleRef.current !== null && current.current.settings.inputMethod === 'timer'
         && (active === 'inspection' || (active === 'ready' && (!current.current.settings.inspection || !getEvent(round.eventId).inspection)));
@@ -367,5 +380,5 @@ export function useSimulator(blockKeyboard: boolean) {
 
   const updateSettings = (patch: Partial<Settings>) => mutate(s => browserStore.saveSettings({ ...s.settings, ...patch }, s.revision));
   const home = () => { history.current = []; generation.current++; cancelHold(); setPhase('home'); setError(null); setNotice(null); };
-  return { back, canGoBack: history.current.length > 0, state, loaded, phase, scramble, error: error ? t(error) : null, notice: notice ? t(notice) : null, saving, elapsed, armed, holding, lastAttempt, automaticPenalty, mutate, updateSettings, primary, record, advance, endRound, home, setPhase, setError, apply, store: browserStore };
+  return { entrySeed, back, canGoBack: history.current.length > 0, state, loaded, phase, scramble, error: error ? t(error) : null, notice: notice ? t(notice) : null, saving, elapsed, armed, holding, lastAttempt, automaticPenalty, mutate, updateSettings, primary, record, advance, endRound, home, setPhase, setError, apply, store: browserStore };
 }
