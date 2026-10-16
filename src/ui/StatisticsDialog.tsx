@@ -1,13 +1,11 @@
 import { useMemo, useState } from 'react';
 import { EVENTS, attemptTimeMs, formatAttempt, formatTime, scoreRound, type EventId, type Round } from '../core';
-import { getEventRoundStatistics, getRoundStatisticsByEvent, type RoundMean } from '../core/statistics';
 import { Dialog, Select } from './primitives';
 import { eventName, formatLabel, scoreText } from './Scorecard';
 import { localizedDate, t, useLocale } from './i18n';
 import '../styles/statistics.css';
 
 const PAGE_SIZE = 50;
-const meanText = (mean: RoundMean | undefined) => !mean || mean.status === 'incomplete' ? '—' : mean.status === 'DNF' ? 'DNF' : formatTime(mean.valueMs);
 
 export function StatisticsDialog({ rounds, onEdit, onExport, onClose }: {
   rounds: readonly Round[];
@@ -33,10 +31,6 @@ export function StatisticsDialog({ rounds, onEdit, onExport, onClose }: {
     }
     return { solves, best, completed: filteredRounds.filter(round => round.completedAt !== undefined).length };
   }, [filteredRounds]);
-  const roundStatistics = useMemo(() => eventFilter === 'all'
-    ? getRoundStatisticsByEvent(rounds)
-    : [getEventRoundStatistics(rounds, eventFilter)], [rounds, eventFilter]);
-  const currentMean = roundStatistics.length === 1 ? roundStatistics[0].current : undefined;
   const pageCount = Math.max(1, Math.ceil(filteredRounds.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const visibleRounds = filteredRounds.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
@@ -51,7 +45,6 @@ export function StatisticsDialog({ rounds, onEdit, onExport, onClose }: {
         <div><dt>{t('solves')}</dt><dd>{summary.solves}</dd></div>
         <div><dt>{t('completedRounds')}</dt><dd>{summary.completed}</dd></div>
         <div><dt>{t('bestSingle')}</dt><dd>{formatTime(summary.best)}</dd></div>
-        <div><dt>Mo3R</dt><dd className={currentMean?.status === 'DNF' ? 'error-text' : undefined}>{meanText(currentMean)}</dd></div>
       </dl>
       {visibleRounds.length === 0 ? <p className="statistics-empty">{t('noHistory')}</p> : <div className="statistics-rounds">{visibleRounds.map(round => <StatisticsRound key={round.id} round={round} onEdit={onEdit} />)}</div>}
       {pageCount > 1 && <nav className="statistics-pagination" aria-label="Statistics pages">
