@@ -333,3 +333,7 @@ Enabled production Google sign-in using the owner-provided web client with the p
 Brandon requested Back throughout the solve process, persistent wait settings, and preservation of history when updating the site. Added per-round checkpoints that retain scrambles, reverse only attempts added since the prior step, and resume clocks from their checkpoint. Back cancels held-key activation and inspection audio. New rounds begin a new navigation history; page reload still recovers the existing scramble safely.
 
 Valid wait endpoint edits now save immediately instead of waiting for blur/Enter. IndexedDB remains the durable source for settings and times, separate from the service worker asset cache. The update action only replaces cached app assets and reloads at an idle point; regression coverage now compares a completed round and all settings before and after actual worker activation. Browser data clearing is not an update procedure.
+
+## Default start hold (October 16, 2026)
+
+The owner changed the default Hold to start duration to zero seconds. Keep saved durations intact and retain the adjustable control, including 0.55 seconds. This supersedes the earlier 550ms default.
