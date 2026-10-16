@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { DEFAULT_SETTINGS, FONT_OPTIONS, MAX_RANDOM_WAIT_SECONDS, MAX_WAIT_SECONDS, isShortcutCode, type Settings } from '../storage';
 import { Dialog, Select, Toggle } from './primitives';
-import { normalizeTimeInput, t } from './i18n';
+import { normalizeTimeInput, t, useLocale, type MessageKey } from './i18n';
 import { LOCALES } from '../locales';
 import { InspectionVoiceSettings } from './InspectionVoiceSettings';
 import { DEFAULT_AUDIO_PREFERENCES, saveAudioPreferences } from '../audio/preferences';
@@ -81,22 +81,24 @@ function WaitRange({ settings, update }: { settings: Settings; update: (patch: P
 
 const tabs = ['simulation', 'appearance', 'shortcuts', 'privacy'] as const;
 export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Settings; onUpdate: (patch: Partial<Settings>) => Promise<unknown>; onClose: () => void }) {
+  const locale = useLocale();
+  const fontOptions = FONT_OPTIONS.map(font => ({ ...font, label: font.value === 'system' ? t('systemSans') : font.value === 'system-mono' ? t('systemMono') : font.label }));
   const [tab, setTab] = useState<typeof tabs[number]>('simulation');
   const tabId = useId();
   const [connection, setConnection] = useState<'online' | 'offline' | 'connectionUnknown'>(navigator.onLine ? 'connectionUnknown' : 'offline');
   const [checking, setChecking] = useState(false);
   const connectionRequest = useRef(0);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<MessageKey | ''>('');
   const [consent, setConsent] = useState(loadMetricsConsent);
   const telemetryStatus = telemetry.getStatus();
-  const updateConsent = (next: typeof consent) => { try { saveMetricsConsent(next); setConsent(next); } catch { setError(t('saveError')); } };
-  const update = (patch: Partial<Settings>) => { setError(''); void onUpdate(patch).catch(() => setError(t('saveError'))); };
+  const updateConsent = (next: typeof consent) => { try { saveMetricsConsent(next); setConsent(next); } catch { setError('saveError'); } };
+  const update = (patch: Partial<Settings>) => { setError(''); void onUpdate(patch).catch(() => setError('saveError')); };
   const reset = async () => {
     setError('');
     const audioSaved = saveAudioPreferences(DEFAULT_AUDIO_PREFERENCES);
     try { await onUpdate({ ...DEFAULT_SETTINGS, eventId: settings.eventId, language: settings.language }); }
-    catch { setError(t('saveError')); }
-    if (!audioSaved) setError(t('saveError'));
+    catch { setError('saveError'); }
+    if (!audioSaved) setError('saveError');
   };
   const check = async () => {
     const request = ++connectionRequest.current;
@@ -110,7 +112,7 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
     finally { if (request === connectionRequest.current) setChecking(false); }
   };
   useEffect(() => { void check(); const online = () => void check(); const offline = () => { connectionRequest.current++; setConnection('offline'); setChecking(false); }; window.addEventListener('online', online); window.addEventListener('offline', offline); return () => { connectionRequest.current++; window.removeEventListener('online', online); window.removeEventListener('offline', offline); }; }, []);
-  const connectionHeader = <div className="settings-connection"><div><span className={`status-dot ${connection}`} /><span role="status">{t(connection)}</span><button type="button" className="text-button" disabled={checking} onClick={() => void check()}>{t(checking ? 'checkingConnection' : 'checkConnection')}</button></div>{error && <p role="alert" className="error-text">{error}</p>}</div>;
+  const connectionHeader = <div className="settings-connection"><div><span className={`status-dot ${connection}`} /><span role="status">{t(connection)}</span><button type="button" className="text-button" disabled={checking} onClick={() => void check()}>{t(checking ? 'checkingConnection' : 'checkConnection')}</button></div>{error && <p role="alert" className="error-text">{t(error)}</p>}</div>;
   return <Dialog title={t('settings')} onClose={onClose} className="settings-dialog" headerContent={connectionHeader}>
     <div className="settings-tabs" role="tablist" aria-label={t('settings')}>{tabs.map((key, index) => <button type="button" key={key} id={`${tabId}-${key}`} role="tab" aria-selected={tab === key} aria-controls={`${tabId}-panel`} tabIndex={tab === key ? 0 : -1} onClick={() => setTab(key)} onKeyDown={event => {
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -132,12 +134,12 @@ export function SettingsDialog({ settings, onUpdate, onClose }: { settings: Sett
     {tab === 'appearance' && <>
       <Row label={t('theme')}><SegmentedControl label={t('theme')} value={settings.theme} options={[{ value: 'dark', label: t('dark') }, { value: 'light', label: t('light') }, { value: 'system', label: t('systemTheme') }]} onChange={theme => update({ theme })} /></Row>
       <Row label={t('language')}><Select label={t('language')} value={settings.language} options={LOCALES.map(locale => ({ value: locale.id, label: locale.nativeName }))} onChange={language => update({ language: language as Settings['language'] })} /></Row>
-      <Row label={t('textFont')}><Select label={t('textFont')} value={settings.textFont} options={FONT_OPTIONS} onChange={textFont => update({ textFont: textFont as Settings['textFont'] })} /></Row>
-      <Row label={t('numberFont')}><Select label={t('numberFont')} value={settings.numberFont} options={FONT_OPTIONS} onChange={numberFont => update({ numberFont: numberFont as Settings['numberFont'] })} /></Row>
+      <Row label={t('textFont')}><Select label={t('textFont')} value={settings.textFont} options={fontOptions} onChange={textFont => update({ textFont: textFont as Settings['textFont'] })} /></Row>
+      <Row label={t('numberFont')}><Select label={t('numberFont')} value={settings.numberFont} options={fontOptions} onChange={numberFont => update({ numberFont: numberFont as Settings['numberFont'] })} /></Row>
       <div className="font-preview"><p>{t('fontPreview')}</p><div>0:12.34 · 56789</div></div>
     </>}
     {tab === 'shortcuts' && <div className="shortcut-settings"><Row label={`${t('advance')} · ${t('additionalShortcut')}`}><ShortcutControl action={t('advance')} value={settings.shortcuts.advance} onChange={advance => update({ shortcuts: { ...settings.shortcuts, advance } })} /></Row><Row label={t('startTimer')}><kbd>{t('spaceKey')}</kbd></Row><Row label={t('stopTimer')}><kbd>{t('anyKey')}</kbd></Row><Row label={`${t('submitSolve')} · ${t('additionalShortcut')}`}><ShortcutControl action={t('submitSolve')} value={settings.shortcuts.submit} onChange={submit => update({ shortcuts: { ...settings.shortcuts, submit } })} /></Row></div>}
-    {tab === 'privacy' && <><p className="settings-hint">{t('privacyHint')}</p><Row label={t('usageMetrics')}><Toggle label={t('usageMetrics')} checked={consent.product} disabled={!telemetryStatus.productConfigured} onChange={product => updateConsent({ ...consent, product })} /></Row><Row label={t('errorReports')}><Toggle label={t('errorReports')} checked={consent.diagnostics} disabled={!telemetryStatus.diagnosticsConfigured} onChange={diagnostics => updateConsent({ ...consent, diagnostics })} /></Row><nav className="settings-information-links" aria-label="About and policies"><a href="/about/" target="_blank" rel="noreferrer">About</a><a href="/privacy/" target="_blank" rel="noreferrer">Privacy Policy</a><a href="/terms/" target="_blank" rel="noreferrer">Terms of Service</a></nav></>}
+    {tab === 'privacy' && <><p className="settings-hint">{t('privacyHint')}</p><Row label={t('usageMetrics')}><Toggle label={t('usageMetrics')} checked={consent.product} disabled={!telemetryStatus.productConfigured} onChange={product => updateConsent({ ...consent, product })} /></Row><Row label={t('errorReports')}><Toggle label={t('errorReports')} checked={consent.diagnostics} disabled={!telemetryStatus.diagnosticsConfigured} onChange={diagnostics => updateConsent({ ...consent, diagnostics })} /></Row><nav className="settings-information-links" aria-label={t('information')}><a href={`/about/?lang=${locale}`} target="_blank" rel="noreferrer">{t('about')}</a><a href={`/privacy/?lang=${locale}`} target="_blank" rel="noreferrer">{t('privacyPolicy')}</a><a href={`/terms/?lang=${locale}`} target="_blank" rel="noreferrer">{t('termsOfService')}</a></nav></>}
     </div>
     <button type="button" className="secondary-button settings-reset" onClick={() => void reset()}>{t('resetSettings')}</button>
   </Dialog>;
