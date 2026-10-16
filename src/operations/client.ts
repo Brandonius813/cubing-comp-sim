@@ -3,6 +3,7 @@ import { auth } from '../cloud';
 const endpoint = import.meta.env.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/observability` : '';
 const enabled = () => location.origin === 'https://cubingcompsim.com' && !!endpoint && !/[?&#](?:code|access_token|refresh_token|token_hash)=/.test(location.search + location.hash);
 export const reportDay = (date = new Date()) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+function referrerOrigin() { try { return new URL(document.referrer).origin; } catch { return ''; } }
 function visitor() {
   try {
     let id = localStorage.getItem('ccs-observed-browser');
@@ -36,7 +37,7 @@ async function flush() {
       const event = queue[0];
       if (event.kind === 'activity' && event.userId !== session?.user.id) { queue.shift(); save(); continue; }
       const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, ...(session ? { Authorization: `Bearer ${session.accessToken}` } : {}) },
-        body: JSON.stringify({ ...event, userId: undefined, visitor: visitor(), referrer: event.kind === 'visit' ? document.referrer : undefined }), credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(8000) });
+        body: JSON.stringify({ ...event, userId: undefined, visitor: visitor(), referrer: event.kind === 'visit' ? referrerOrigin() : undefined }), credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(8000) });
       if (response.status >= 500 || response.status === 401) break;
       queue.shift(); save();
     }

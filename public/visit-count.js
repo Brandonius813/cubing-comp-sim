@@ -5,7 +5,9 @@
   try {
     let visitor = localStorage.getItem('ccs-observed-browser');
     if (!visitor || !/^[0-9a-f-]{36}$/i.test(visitor)) { visitor = crypto.randomUUID(); localStorage.setItem('ccs-observed-browser',visitor); }
+    let referrer = '';
+    try { referrer = new URL(document.referrer).origin; } catch { /* No referrer. */ }
     const day = new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-    void fetch('https://mrxbjdkhtnojgoskhrfx.supabase.co/functions/v1/observability', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'visit',visitor,day,referrer:document.referrer}),credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(8000)}).catch(()=>{});
+    void fetch('https://mrxbjdkhtnojgoskhrfx.supabase.co/functions/v1/observability', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'visit',visitor,day,referrer}),credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(8000)}).catch(()=>{});
   } catch { /* Site information remains usable without storage or tracking. */ }
 })();
