@@ -59,6 +59,11 @@ Deno.serve(async (req: Request) => {
       if (error || !data.user) return reply({ error: 'unauthorized' }, 401);
       userId = data.user.id;
     }
+    if (body.action === 'configure-alerts') {
+      if (!userId) return reply({ error: 'unauthorized' }, 401);
+      await rpc('ccs_metrics_configure_alerts', { p_user: userId, p_key: body.key, p_from: body.from });
+      return reply({ configured: true });
+    }
     if (body.action === 'dashboard') {
       if (!userId) return reply({ error: 'unauthorized' }, 401);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(body.start) || !/^\d{4}-\d{2}-\d{2}$/.test(body.end)) return reply({ error: 'invalid_dates' }, 400);

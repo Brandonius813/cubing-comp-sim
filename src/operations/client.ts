@@ -10,16 +10,18 @@ function visitor() {
     return id;
   } catch { return crypto.randomUUID(); }
 }
-export async function dashboardRequest(start: string, end: string): Promise<any> {
+async function adminRequest(payload: Record<string, string>): Promise<any> {
   const session = await auth.getSession();
   if (!session) throw new Error('Sign in to your administrator account to continue.');
   const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, Authorization: `Bearer ${session.accessToken}` },
-    body: JSON.stringify({ action: 'dashboard', start, end }), cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(20000) });
+    body: JSON.stringify(payload), cache: 'no-store', credentials: 'omit', referrerPolicy: 'no-referrer', signal: AbortSignal.timeout(20000) });
   if (response.status === 401) throw new Error('Your session expired. Sign in again.');
   if (response.status === 403) throw new Error('Access denied. Only the verified administrator account can view this dashboard.');
   if (!response.ok) throw new Error('Dashboard data is unavailable. Please retry.');
   return response.json();
 }
+export const dashboardRequest = (start: string, end: string) => adminRequest({ action: 'dashboard', start, end });
+export const configureAlerts = (key: string, from: string) => adminRequest({ action: 'configure-alerts', key, from });
 type Event = { kind: 'visit' | 'activity' | 'error' | 'api'; day: string; userId?: string; code?: string; status?: number; duration?: number };
 let busy = false;
 let queue: Event[] = [];

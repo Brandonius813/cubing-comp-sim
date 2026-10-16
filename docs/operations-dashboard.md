@@ -25,7 +25,7 @@ Frontend publication uses the existing successful main web-checks release pipeli
 
 ## Alert configuration and limitations
 
-The monitor supports a dedicated Resend sending key and verified sender in private configuration. Without those, it records health and failures but explicitly reports that email alerts are not sending. Two consecutive failures trigger an alert attempt, with a six-hour repeat limit per service. Provider acceptance is not proof of inbox delivery.
+The owner can enter a dedicated Resend Sending-access key and verified sender through Infrastructure → Configure email alerts. The server rechecks the owner identity before saving the key, never returns it to the browser, and sends only to the privately configured alert recipient. Apply `deploy/observability-alerts.sql` after the initial schema. Without those, it records health and failures but explicitly reports that email alerts are not sending. Two consecutive failures trigger an alert attempt, with a six-hour repeat limit per service. Provider acceptance is not proof of inbox delivery.
 
 Do not use a broad personal management credential to obtain or power this integration. During setup, automatic approval review rejected that expansion of credential access. Configure a narrowly scoped sending credential instead.
 
