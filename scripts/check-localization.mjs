@@ -2,12 +2,13 @@ import './check-information-locales.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
-import { createServer } from 'vite';
+import { createServer, preview } from 'vite';
 const catalogs = JSON.parse(await readFile('src/ui/locales/extended.json', 'utf8'));
 const information = JSON.parse(await readFile('public/information-locales.json', 'utf8'));
 const server = await createServer({ server: { host: '127.0.0.1', port: 0 } });
 await server.listen();
 let browser;
+let staticServer;
 try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -57,9 +58,12 @@ try {
     await page.locator('.dialog-header .icon-button').click();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   }
+  // Directory index routes are served by the production static server, not Vite's dev public-file middleware.
+  staticServer = await preview({ preview: { host: '127.0.0.1', port: 0, strictPort: false } });
+  const informationBase = `http://127.0.0.1:${staticServer.httpServer.address().port}`;
   for (const locale of ['es', 'de', 'ja', 'zh-Hans', 'ko']) {
     for (const path of ['about', 'privacy', 'terms']) {
-      await page.goto(`${base}/${path}/?lang=${locale}`);
+      await page.goto(`${informationBase}/${path}/?lang=${locale}`);
       await page.waitForFunction(locale => document.documentElement.lang === locale, locale);
       await page.locator('.information-language select').waitFor();
       assert.equal(await page.locator('.information-language select').inputValue(), locale);
@@ -69,4 +73,4 @@ try {
     }
   }
   console.log('PASS: inspection DNF correction updates scorecard/average and persists; all language switches; standalone information pages.');
-} finally { await browser?.close(); await server.close(); }
+} finally { await browser?.close(); await server.close(); await staticServer?.close(); }
