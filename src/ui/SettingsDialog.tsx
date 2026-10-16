@@ -42,7 +42,7 @@ function ShortcutControl({ action, value, onChange }: { action: string; value: s
 function waitTime(seconds: number) {
   return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
 }
-/** Keep partial edits local until blur/Enter, so typing 01:30 never saves 1 first. */
+/** Save valid values immediately; keep incomplete MM:SS edits local. */
 function WaitTimeInput({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (seconds: number) => void }) {
   const [draft, setDraft] = useState(() => waitTime(value));
   const [invalid, setInvalid] = useState(false);
@@ -57,7 +57,13 @@ function WaitTimeInput({ label, value, min, max, onChange }: { label: string; va
     setDraft(waitTime(seconds)); setInvalid(false);
     if (seconds !== value) onChange(seconds);
   };
-  return <label className="wait-time-field">{label}<input type="text" inputMode="text" autoComplete="off" spellCheck={false} aria-label={`${label} (MM:SS)`} aria-invalid={invalid} aria-describedby={invalid ? errorId : undefined} placeholder="MM:SS" value={draft} onFocus={() => { focused.current = true; }} onChange={event => { setDraft(event.target.value); setInvalid(false); }} onBlur={() => { focused.current = false; commit(); }} onKeyDown={event => {
+  return <label className="wait-time-field">{label}<input type="text" inputMode="text" autoComplete="off" spellCheck={false} aria-label={`${label} (MM:SS)`} aria-invalid={invalid} aria-describedby={invalid ? errorId : undefined} placeholder="MM:SS" value={draft} onFocus={() => { focused.current = true; }} onChange={event => {
+    const text = event.target.value; setDraft(text); setInvalid(false);
+    const normalized = normalizeTimeInput(text.trim());
+    const parts = /^(\d{1,2}):([0-5]\d)$/.exec(normalized);
+    const seconds = parts ? Number(parts[1]) * 60 + Number(parts[2]) : /^\d{1,3}$/.test(normalized) ? Number(normalized) : NaN;
+    if (Number.isInteger(seconds) && seconds >= min && seconds <= max && seconds !== value) onChange(seconds);
+  }} onBlur={() => { focused.current = false; commit(); }} onKeyDown={event => {
     if (event.key === 'Enter') { event.preventDefault(); event.stopPropagation(); commit(); }
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setDraft(waitTime(value)); setInvalid(false); }
   }} />{invalid && <span id={errorId} role="alert" className="error-text">{t('waitTimeInvalid', { min: waitTime(min), max: waitTime(max) })}</span>}</label>;

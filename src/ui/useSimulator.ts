@@ -44,6 +44,17 @@ export function useSimulator(blockKeyboard: boolean) {
   const generation = useRef(0);
   const recordBusy = useRef(false);
   const endingRound = useRef(false);
+  type Checkpoint = { phase: Phase; scramble: Scramble | null; roundId: string | null; attemptCount: number; lastAttempt: Attempt | null; elapsed: number; inspectionMs: number | undefined; waitDuration: number };
+  const history = useRef<Checkpoint[]>([]);
+  const navigatingBack = useRef(false);
+  const remember = () => {
+    const round = getRound();
+    const active = phaseRef.current;
+    history.current.push({ phase: active, scramble: scrambleRef.current, roundId: round?.id ?? null,
+      attemptCount: round?.attempts.length ?? 0, lastAttempt: lastAttemptRef.current,
+      elapsed: ['inspection', 'solving'].includes(active) ? performance.now() - started.current : elapsed,
+      inspectionMs: inspectionMs.current, waitDuration: waitDuration.current });
+  };
   const getRound = () => current.current.rounds.find(round => round.id === current.current.activeRoundId) ?? null;
   const apply = useCallback((next: LocalState) => { current.current = next; setState(next); }, []);
   const mutate = useCallback((operation: (state: LocalState) => Promise<LocalState>): Promise<LocalState> => {
@@ -63,7 +74,11 @@ export function useSimulator(blockKeyboard: boolean) {
     browserStore.load().then(next => {
       if (!mounted) return;
       apply(next); setLoaded(true);
-      if (next.draft) { setScramble(next.draft.scramble); setPhase('scramble'); }
+      if (next.draft) {
+        const round = next.rounds.find(value => value.id === next.activeRoundId);
+        history.current = [{ phase: 'home', scramble: null, roundId: next.activeRoundId, attemptCount: round?.attempts.length ?? 0, lastAttempt: null, elapsed: 0, inspectionMs: undefined, waitDuration: 0 }];
+        setScramble(next.draft.scramble); setPhase('scramble');
+      }
     }).catch(() => { if (mounted) setError(t('loadError')); });
     return () => { mounted = false; };
   }, [apply, setPhase]);
@@ -119,10 +134,13 @@ export function useSimulator(blockKeyboard: boolean) {
     }
   };
   const start = async () => {
-    if (!loaded || saving || endingRound.current || phaseRef.current === 'loading') return;
+    if (!loaded || saving || endingRound.current || navigatingBack.current || phaseRef.current === 'loading') return;
     const request = generation.current;
-    setPhase('loading');
     let round = getRound();
+    if (!round || round.completedAt !== undefined || round.eventId !== current.current.settings.eventId) {
+      history.current = [{ phase: 'home', scramble: null, roundId: null, attemptCount: 0, lastAttempt: null, elapsed: 0, inspectionMs: undefined, waitDuration: 0 }];
+    } else remember();
+    setPhase('loading');
     if (!round || round.completedAt !== undefined || round.eventId !== current.current.settings.eventId) {
       round = createRound(current.current.settings.eventId, { goalMs: current.current.settings.goalMs ?? undefined });
       try {
@@ -135,9 +153,11 @@ export function useSimulator(blockKeyboard: boolean) {
     await generate(round);
   };
   const beginInspection = () => {
+    remember();
     prepareAudio(); cancelHold(); callouts.current.clear(); started.current = performance.now(); setElapsed(0); setPhase('inspection'); saveDraft('inspection');
   };
   const beginSolve = () => {
+    remember();
     const prior = phaseRef.current;
     inspectionMs.current = prior === 'inspection' ? Math.floor(performance.now() - started.current) : undefined;
     setAutomaticPenalty(inspectionMs.current === undefined ? 'none' : inspectionPenalty(inspectionMs.current));
@@ -146,9 +166,10 @@ export function useSimulator(blockKeyboard: boolean) {
     else { setPhase('solving'); saveDraft('solving'); }
   };
   const primary = () => {
-    if (blockKeyboard || !loaded || endingRound.current) return;
+    if (blockKeyboard || !loaded || saving || endingRound.current || navigatingBack.current) return;
     if (phaseRef.current === 'home' || phaseRef.current === 'complete' || phaseRef.current === 'engine-error') { void start(); return; }
     if (phaseRef.current === 'scramble') {
+      remember();
       const wait = sampleWaitMs(current.current.settings);
       waitDuration.current = wait;
       setElapsed(wait); started.current = performance.now(); setPhase(wait > 0 ? 'waiting' : 'ready'); saveDraft(wait > 0 ? 'waiting' : 'ready'); return;
@@ -166,6 +187,7 @@ export function useSimulator(blockKeyboard: boolean) {
     const request = generation.current;
     const round = getRound(); const value = scrambleRef.current;
     if (!round || !value) return false;
+    if (inputMethod === 'manual') remember();
     recordBusy.current = true;
     try {
       const attempt = createAttempt(round, { rawMs, penalty, inputMethod, scramble: value, inspectionMs: inspectionMs.current });
@@ -182,6 +204,7 @@ export function useSimulator(blockKeyboard: boolean) {
   };
   const stop = (interrupted = false) => {
     if (phaseRef.current !== 'solving' || endingRound.current) return;
+    remember();
     const value = Math.max(0, Math.floor(performance.now() - started.current)); setElapsed(value); setPhase('confirm');
     if (interrupted) setNotice(t('interrupted'));
     void record(value, interrupted ? 'DNF' : 'none', 'timer');
@@ -196,6 +219,7 @@ export function useSimulator(blockKeyboard: boolean) {
     if (request !== generation.current || endingRound.current) return;
     const saved = getRound();
     if (!saved || saved.id !== round.id) return;
+    if (phaseRef.current === 'confirm') remember();
     if (saved.completedAt !== undefined) { setPhase('complete'); setNotice(null); return; }
     await generate(saved);
   };
@@ -204,10 +228,11 @@ export function useSimulator(blockKeyboard: boolean) {
     if (!['waiting', 'inspection', 'solving'].includes(phase)) return;
     let frame = 0;
     const tick = () => {
+      if (!['waiting', 'inspection', 'solving'].includes(phaseRef.current)) return;
       const ms = performance.now() - started.current;
       if (phaseRef.current === 'waiting') {
         const remaining = Math.max(0, waitDuration.current - ms); setElapsed(remaining);
-        if (remaining === 0) { setPhase('ready'); saveDraft('ready'); return; }
+        if (remaining === 0) { remember(); setPhase('ready'); saveDraft('ready'); return; }
       } else {
         setElapsed(ms);
         if (phaseRef.current === 'inspection') {
@@ -232,6 +257,7 @@ export function useSimulator(blockKeyboard: boolean) {
     const keyDown = (event: KeyboardEvent) => {
       if (event.isComposing || event.defaultPrevented || blockKeyboard || !loaded) return;
       const active = phaseRef.current;
+      if ((event.target as HTMLElement | null)?.closest('[data-step-back]')) return;
       if (active !== 'solving' && (event.ctrlKey || event.metaKey || event.altKey)) return;
       const target = event.target instanceof HTMLElement ? event.target : null;
       const entryForm = active === 'entry' ? document.querySelector<HTMLFormElement>('form[data-solve-entry]') : null;
@@ -292,6 +318,7 @@ export function useSimulator(blockKeyboard: boolean) {
     generation.current++; cancelHold(); audio.current?.cancel();
     try {
       await mutate(s => browserStore.discardActiveRound(s.revision, nextEventId));
+      history.current = [];
       scrambleRef.current = null; setScramble(null);
       lastAttemptRef.current = null; setLastAttempt(null);
       inspectionMs.current = undefined; waitDuration.current = 0;
@@ -305,7 +332,38 @@ export function useSimulator(blockKeyboard: boolean) {
     } finally { endingRound.current = false; }
   };
 
+  const back = async () => {
+    const checkpoint = history.current.at(-1);
+    if (!checkpoint || saving || recordBusy.current || endingRound.current || navigatingBack.current || blockKeyboard) return;
+    navigatingBack.current = true;
+    generation.current++; cancelHold(); audio.current?.cancel();
+    const previousPhase = phaseRef.current;
+    setPhase('loading');
+    try {
+      await mutate(s => {
+        const round = s.rounds.find(value => value.id === (checkpoint.roundId ?? s.activeRoundId));
+        if (!round) return Promise.resolve(s);
+        const attempts = round.attempts.slice(0, checkpoint.attemptCount);
+        const restored = { ...round, attempts, updatedAt: Date.now(), completedAt: attempts.length < getEvent(round.eventId).attemptCount ? undefined : round.completedAt };
+        const draft = checkpoint.scramble && !['home', 'confirm', 'complete'].includes(checkpoint.phase)
+          ? { roundId: round.id, scramble: checkpoint.scramble, stage: (checkpoint.phase === 'entry' ? 'solving' : checkpoint.phase) as 'scramble' | 'waiting' | 'ready' | 'inspection' | 'solving', savedAt: Date.now() }
+          : null;
+        return browserStore.saveRound(restored, s.revision, draft);
+      });
+      history.current.pop();
+      setScramble(checkpoint.scramble); scrambleRef.current = checkpoint.scramble;
+      lastAttemptRef.current = checkpoint.lastAttempt; setLastAttempt(checkpoint.lastAttempt);
+      inspectionMs.current = checkpoint.inspectionMs; waitDuration.current = checkpoint.waitDuration;
+      setAutomaticPenalty(checkpoint.inspectionMs === undefined ? 'none' : inspectionPenalty(checkpoint.inspectionMs));
+      setElapsed(checkpoint.elapsed);
+      started.current = performance.now() - (checkpoint.phase === 'waiting' ? checkpoint.waitDuration - checkpoint.elapsed : checkpoint.elapsed);
+      pressedKeys.current.clear(); setNotice(null); setPhase(checkpoint.phase);
+      if (checkpoint.phase === 'inspection') prepareAudio();
+    } catch { setPhase(previousPhase === 'loading' ? 'engine-error' : previousPhase); }
+    finally { navigatingBack.current = false; }
+  };
+
   const updateSettings = (patch: Partial<Settings>) => mutate(s => browserStore.saveSettings({ ...s.settings, ...patch }, s.revision));
-  const home = () => { generation.current++; cancelHold(); setPhase('home'); setError(null); setNotice(null); };
-  return { state, loaded, phase, scramble, error, notice, saving, elapsed, armed, holding, lastAttempt, automaticPenalty, mutate, updateSettings, primary, record, advance, endRound, home, setPhase, setError, apply, store: browserStore };
+  const home = () => { history.current = []; generation.current++; cancelHold(); setPhase('home'); setError(null); setNotice(null); };
+  return { back, canGoBack: history.current.length > 0, state, loaded, phase, scramble, error, notice, saving, elapsed, armed, holding, lastAttempt, automaticPenalty, mutate, updateSettings, primary, record, advance, endRound, home, setPhase, setError, apply, store: browserStore };
 }

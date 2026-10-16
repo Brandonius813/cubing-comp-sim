@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { EVENTS, attemptTimeMs, editAttempt, formatAttempt, formatTime, getEvent, parseTimeInput, scoreRound, type EventId, type Penalty } from './core';
 import { auth, type AccountSession, type AccountCallback } from './cloud';
 import { applyOfflineUpdate, registerOfflineSupport } from './platform/offline';
@@ -32,6 +32,10 @@ function App() {
   const [timeInput, setTimeInput] = useState('');
   const [penalty, setPenalty] = useState<Penalty>('none');
   const [fieldError, setFieldError] = useState('');
+  const entryDrafts = useRef(new Map<string, { time: string; penalty: Penalty }>());
+  const entryKey = sim.scramble ? `${sim.scramble.generatedAt}:${sim.scramble.notation}` : '';
+  const saveEntryDraft = (time: string, nextPenalty: Penalty) => { entryDrafts.current.set(entryKey, { time, penalty: nextPenalty }); };
+  useEffect(() => { entryDrafts.current.clear(); }, [sim.state.activeRoundId]);
   const [editTimeInput, setEditTimeInput] = useState('');
   const [editPenalty, setEditPenalty] = useState<Penalty>('none');
   const [editFieldError, setEditFieldError] = useState('');
@@ -78,7 +82,7 @@ function App() {
     } catch { setUpdateMessage(t('updateRetry')); }
     setApplyingUpdate(false);
   };
-  useEffect(() => { if (sim.phase === 'entry') { setTimeInput(''); setPenalty('none'); setFieldError(''); } }, [sim.phase]);
+  useEffect(() => { if (sim.phase === 'entry') { const draft = entryDrafts.current.get(entryKey); setTimeInput(draft?.time ?? ''); setPenalty(draft?.penalty ?? 'none'); setFieldError(''); } }, [sim.phase, entryKey]);
   const close = () => { setModal(null); setPendingEvent(null); setFieldError(''); setAccountCallback(null); };
   const roundFocus = () => document.querySelector<HTMLElement>('#manual-time') ?? document.querySelector<HTMLElement>('.main-stage');
   const edit = (attemptId: string) => {
@@ -134,11 +138,12 @@ function App() {
       <div className="logo-space" aria-label="Cubing Comp Sim"><img className="brand-symbol brand-symbol-light" src="/brand/logo.svg" width="44" height="44" alt="" /><img className="brand-symbol brand-symbol-dark" src="/brand/logo-dark.svg" width="44" height="44" alt="" /><h1 className="brand-name">Cubing Comp Sim</h1></div>
       <button type="button" className="event-selector" aria-haspopup="dialog" disabled={timerActive || sim.phase === 'loading' || sim.saving} onClick={() => setModal('events')}><Icon name={selectedEvent.id} event /><span>{eventName(selectedEvent.id)}</span><Icon name="chevron" /></button>
       {roundActive && <button type="button" className="end-round-button" aria-haspopup="dialog" disabled={sim.saving} onClick={() => setModal('end-round')}>{t('endRound')}</button>}
-      <nav className="utilities" aria-label={t('utilities')}><IconButton name="account" label={t('account')} disabled={timerActive} onClick={() => setModal('account')} /><IconButton name="help" label={t('help')} disabled={timerActive} onClick={() => setModal('help')} /><IconButton name="settings" label={t('settings')} disabled={timerActive} onClick={() => setModal('settings')} /></nav>
+      <nav className="utilities" aria-label={t('utilities')}><IconButton name="account" label={t('account')} disabled={timerActive} onClick={() => setModal('account')} /><IconButton name="help" label={t('help')} disabled={timerActive} onClick={() => setModal('help')} /><IconButton name="settings" label={t('settings')} disabled={timerActive || !sim.loaded} onClick={() => setModal('settings')} /></nav>
     </header>
     {updateReady && <div className="site-update" role="status"><span>{t(roundActive ? 'updateAfterRound' : 'siteUpdateAvailable')}</span><button type="button" className="text-button" disabled={roundActive || sim.saving || modal !== null || !sim.loaded || applyingUpdate} onClick={() => void updateSite()}>{t('updateSite')}</button>{updateMessage && <span>{updateMessage}</span>}</div>}
     <main className={`workspace ${cardVisible ? 'with-scorecard' : ''}`}>
       <div className="main-stage" tabIndex={-1}>
+        {sim.canGoBack && <button type="button" data-step-back className="step-back text-button" disabled={sim.saving || sim.phase === 'loading'} onClick={() => void sim.back()}>← {t('goBack')}</button>}
         {sim.phase === 'home' && <FlowButton onClick={sim.primary} disabled={!sim.loaded || sim.saving} shortcut={`Enter / ${t('spaceKey')}`}>{round && round.completedAt === undefined && round.attempts.length > 0 && round.eventId === selectedEvent.id ? t('resume') : t('start')}</FlowButton>}
         {sim.phase === 'loading' && <div className="center-message" role="status"><span className="loading-spinner" /><p>{t('generating')}</p></div>}
         {sim.phase === 'engine-error' && <div className="center-message"><p className="error-text">{sim.error}</p><FlowButton onClick={sim.primary}>{t('retry')}</FlowButton><button className="text-button" onClick={sim.home}>{t('home')}</button></div>}
@@ -147,7 +152,7 @@ function App() {
         {sim.phase === 'ready' && (sim.state.settings.inputMethod === 'manual' || sim.state.settings.inspection && selectedEvent.inspection ? <FlowButton onClick={sim.primary} disabled={sim.saving} shortcut={`Enter / ${t('spaceKey')}`}>{t('ready')}</FlowButton> : <div className="timer-block"><p>{sim.armed ? t('release') : t('hold')}</p><div className={`timer-number ${sim.armed ? 'positive-text' : sim.holding ? 'error-text' : ''}`}>0.00</div></div>)}
         {sim.phase === 'inspection' && <><div className="timer-block"><p>{sim.armed ? t('release') : t('inspection')}</p><div className={`timer-number ${sim.armed ? 'positive-text' : sim.holding || sim.elapsed >= 17000 ? 'error-text' : sim.elapsed >= 15000 ? 'warning-text' : ''}`}>{Math.floor(sim.elapsed / 1000)}</div>{sim.elapsed >= 15000 && <span className="inspection-penalty">{sim.elapsed >= 17000 ? 'DNF' : '+2'}</span>}</div><div className="bottom-action">{sim.state.settings.inputMethod === 'manual' ? <FlowButton secondary onClick={sim.primary} disabled={sim.saving}>{t('startSolve')}</FlowButton> : <p className="key-hint">{sim.armed ? t('release') : t('hold')}</p>}</div></>}
         {sim.phase === 'solving' && <div className="timer-block"><div className="timer-number">{formatTime(sim.elapsed)}</div><span className="sr-only">{t('stop')}</span></div>}
-        {sim.phase === 'entry' && <form data-solve-entry className="time-entry" onSubmit={submitManual}><label htmlFor="manual-time">{t('time')}</label><input id="manual-time" className="time-input" autoFocus autoComplete="off" inputMode="decimal" value={timeInput} onChange={event => setTimeInput(event.target.value)} aria-invalid={Boolean(fieldError)} aria-describedby={fieldError ? 'manual-error' : undefined} />{fieldError && <p id="manual-error" className="error-text" role="alert">{fieldError}</p>}<PenaltyButtons penalty={penalty} onChange={setPenalty} />{sim.automaticPenalty !== 'none' && <p className="muted">{t('inspectionAutomatic', { penalty: sim.automaticPenalty })}</p>}<button className="flow-button" type="submit" disabled={sim.saving}>{sim.saving ? t('saving') : t('submit')}</button></form>}
+        {sim.phase === 'entry' && <form data-solve-entry className="time-entry" onSubmit={submitManual}><label htmlFor="manual-time">{t('time')}</label><input id="manual-time" className="time-input" autoFocus autoComplete="off" inputMode="decimal" value={timeInput} onChange={event => { setTimeInput(event.target.value); saveEntryDraft(event.target.value, penalty); }} aria-invalid={Boolean(fieldError)} aria-describedby={fieldError ? 'manual-error' : undefined} />{fieldError && <p id="manual-error" className="error-text" role="alert">{fieldError}</p>}<PenaltyButtons penalty={penalty} onChange={value => { setPenalty(value); saveEntryDraft(timeInput, value); }} />{sim.automaticPenalty !== 'none' && <p className="muted">{t('inspectionAutomatic', { penalty: sim.automaticPenalty })}</p>}<button className="flow-button" type="submit" disabled={sim.saving}>{sim.saving ? t('saving') : t('submit')}</button></form>}
         {sim.phase === 'confirm' && <div className="confirm-stage"><div className="timer-number">{displayAttempt ? formatAttempt(displayAttempt) : formatTime(sim.elapsed)}</div><div className="confirm-actions">{displayAttempt && <button className="text-button" onClick={() => edit(displayAttempt.id)} disabled={sim.saving || !round?.attempts.some(value => value.id === displayAttempt.id)}>{t('editTime')}</button>}<FlowButton onClick={() => void sim.advance()} disabled={sim.saving} shortcut={`Enter / ${t('spaceKey')}`}>{sim.saving ? t('saving') : t('confirmSolve')}</FlowButton></div></div>}
         {sim.phase === 'complete' && round && <div className="complete-stage"><p>{formatLabel(round.format)}</p><div className="timer-number">{scoreText(scoreRound(round))}</div><p className="round-extremes">{t('fastest')}　{roundTimes.length ? formatTime(Math.min(...roundTimes)) : 'DNF'}　 {t('slowest')}　{roundTimes.length ? formatTime(Math.max(...roundTimes)) : 'DNF'}</p><FlowButton onClick={sim.primary} disabled={sim.saving} shortcut={`Enter / ${t('spaceKey')}`}>{t('start')}</FlowButton></div>}
       </div>
