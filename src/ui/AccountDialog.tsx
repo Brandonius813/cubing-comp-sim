@@ -3,7 +3,7 @@ import { auth, cloud, cloudConfigured, CloudError, type AccountCallback, type Ac
 import { parseHistoryJson, type HistorySnapshot } from '../storage';
 import { telemetry } from '../telemetry';
 import { Dialog } from './primitives';
-import { callbackErrorMessage, errorMessage, localizedDate, t, type MessageKey } from './i18n';
+import { callbackErrorKey, errorKey, localizedDate, t, type MessageKey } from './i18n';
 
 interface AccountDialogProps {
   session: AccountSession | null;
@@ -24,7 +24,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState<MessageKey | null>(callback?.status === 'success' ? callback.purpose === 'delete' ? 'providerIdentityConfirmed' : callback.purpose === 'link' ? 'accountLinked' : 'accountSignedIn' : null);
-  const [error, setError] = useState(callback?.status === 'error' ? callbackErrorMessage(callback.reason) : '');
+  const [error, setError] = useState<MessageKey | ''>(callback?.status === 'error' ? callbackErrorKey(callback.reason) : '');
   const [busy, setBusy] = useState(false);
   const [metadata, setMetadata] = useState<SaveMetadata | null>(null);
   const [metadataLoaded, setMetadataLoaded] = useState(false);
@@ -50,7 +50,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
     requestBusy.current = true;
     setBusy(true); setError(''); setMessage(null);
     try { await work(); }
-    catch (cause) { setError(errorMessage(cause)); }
+    catch (cause) { setError(errorKey(cause)); }
     finally { requestBusy.current = false; setBusy(false); }
   };
   useEffect(() => { if (recovery) setMode('password'); }, [recovery]);
@@ -66,7 +66,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
   useEffect(() => {
     if (!callback || appliedCallback.current === callback || (callback.purpose === 'delete' && callback.status === 'success' && !session)) return;
     appliedCallback.current = callback;
-    if (callback.status === 'error') { setError(callbackErrorMessage(callback.reason)); return; }
+    if (callback.status === 'error') { setError(callbackErrorKey(callback.reason)); return; }
     setMessage(callback.purpose === 'delete' ? 'providerIdentityConfirmed' : callback.purpose === 'link' ? 'accountLinked' : 'accountSignedIn');
     if (callback.purpose === 'delete') { setDeleting(true); setProviderConfirmed(true); }
   }, [callback, session?.user.id]);
@@ -76,7 +76,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
     let mounted = true;
     cloud.getSaveMetadata(session).then(result => {
       if (mounted) { setMetadata(result); setMetadataLoaded(true); }
-    }).catch(cause => { if (mounted) setError(errorMessage(cause, 'cloudCheckError')); });
+    }).catch(cause => { if (mounted) setError(errorKey(cause, 'cloudCheckError')); });
     return () => { mounted = false; };
   }, [session?.user.id]);
 
@@ -141,7 +141,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
   const deleteAccount = (event: FormEvent) => {
     event.preventDefault();
     if (!session || deleteEmail.trim() !== session.user.email) {
-      setError(t('deleteEmailMismatch')); return;
+      setError('deleteEmailMismatch'); return;
     }
     void action(async () => {
       let freshSession: AccountSession;
@@ -167,7 +167,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
 
   return <Dialog title={t('accountTitle')} onClose={() => { if (!busy) onClose(); }} className="account-dialog">
     {!cloudConfigured && <p className="notice">{t(auth.configured ? 'cloudNotConfigured' : 'cloudUnavailable')}</p>}
-    {error && <p role="alert" className="error-text">{error}</p>}
+    {error && <p role="alert" className="error-text">{t(error)}</p>}
     {message && <p role="status" className="positive-text">{t(message)}</p>}
     {deletedResult ? <div className="account-form">
       <p role="status">{t(deletedResult === 'deleted' ? 'deleteSuccess' : 'deletePending')}</p>

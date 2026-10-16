@@ -43,13 +43,14 @@ export function addAttempt(round: Round, attempt: Attempt): Round {
   return { ...round, attempts, updatedAt: now, ...(attempts.length === attemptCount(round.format) ? { completedAt: now } : {}) };
 }
 
-export function editAttempt(round: Round, attemptId: string, patch: Partial<Pick<Attempt, 'rawMs' | 'penalty'>>): Round {
+export function editAttempt(round: Round, attemptId: string, patch: Partial<Pick<Attempt, 'rawMs' | 'penalty' | 'inspectionPenalty'>>): Round {
   if (!round.attempts.some(attempt => attempt.id === attemptId)) throw new Error('Attempt not found.');
   return {
     ...round,
     attempts: round.attempts.map(attempt => {
       if (attempt.id !== attemptId) return attempt;
       const updated = { ...attempt, ...patch };
+      if (!getEvent(round.eventId).inspection && updated.inspectionPenalty !== 'none') throw new Error('This event does not use inspection penalties.');
       assertAttemptResult(updated.rawMs, updated.penalty, updated.inspectionPenalty);
       return updated;
     }),

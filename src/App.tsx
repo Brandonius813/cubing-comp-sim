@@ -1,13 +1,13 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
-import { EVENTS, attemptTimeMs, editAttempt, formatAttempt, formatTime, getEvent, parseTimeInput, scoreRound, type EventId, type Penalty } from './core';
+import { EVENTS, attemptTimeMs, editAttempt, formatAttempt, formatTime, getEvent, parseTimeInput, scoreRound, type EventId, type InspectionPenalty, type Penalty } from './core';
 import { auth, type AccountSession, type AccountCallback } from './cloud';
 import { applyOfflineUpdate, registerOfflineSupport } from './platform/offline';
 import { AccountDialog } from './ui/AccountDialog';
 import { SettingsDialog } from './ui/SettingsDialog';
-import { Dialog, FlowButton, Icon, IconButton } from './ui/primitives';
+import { Dialog, FlowButton, Icon, IconButton, Select } from './ui/primitives';
 import { Scorecard, eventName, formatLabel, scoreText } from './ui/Scorecard';
 import { useSimulator } from './ui/useSimulator';
-import { normalizeTimeInput, setLocale, t, useLocale } from './ui/i18n';
+import { normalizeTimeInput, setLocale, t, useLocale, type MessageKey } from './ui/i18n';
 import { telemetry } from './telemetry';
 import { loadMetricsConsent } from './ui/metricsConsent';
 import { HelpDialog } from './ui/HelpDialog';
@@ -21,7 +21,7 @@ function App() {
   const [modal, setModal] = useState<Modal>(null);
   const [updateReady, setUpdateReady] = useState(false);
   const [applyingUpdate, setApplyingUpdate] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState('');
+  const [updateMessage, setUpdateMessage] = useState<MessageKey | ''>('');
   const sim = useSimulator(modal !== null || applyingUpdate);
   useLocale();
   useAppearance(sim.state.settings);
@@ -31,14 +31,15 @@ function App() {
   const [accountCallback, setAccountCallback] = useState<AccountCallback | null>(null);
   const [timeInput, setTimeInput] = useState('');
   const [penalty, setPenalty] = useState<Penalty>('none');
-  const [fieldError, setFieldError] = useState('');
+  const [fieldError, setFieldError] = useState<MessageKey | ''>('');
   const entryDrafts = useRef(new Map<string, { time: string; penalty: Penalty }>());
   const entryKey = sim.scramble ? `${sim.scramble.generatedAt}:${sim.scramble.notation}` : '';
   const saveEntryDraft = (time: string, nextPenalty: Penalty) => { entryDrafts.current.set(entryKey, { time, penalty: nextPenalty }); };
   useEffect(() => { entryDrafts.current.clear(); }, [sim.state.activeRoundId]);
   const [editTimeInput, setEditTimeInput] = useState('');
   const [editPenalty, setEditPenalty] = useState<Penalty>('none');
-  const [editFieldError, setEditFieldError] = useState('');
+  const [editFieldError, setEditFieldError] = useState<MessageKey | ''>('');
+  const [editInspectionPenalty, setEditInspectionPenalty] = useState<InspectionPenalty>('none');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingEvent, setPendingEvent] = useState<EventId | null>(null);
   const round = useMemo(() => sim.state.rounds.find(value => value.id === sim.state.activeRoundId) ?? null, [sim.state.rounds, sim.state.activeRoundId]);
@@ -78,8 +79,8 @@ function App() {
     try {
       const result = await applyOfflineUpdate();
       if (result === 'applied') { window.location.reload(); return; }
-      setUpdateMessage(t(result === 'other-tabs' ? 'updateOtherTabs' : 'updateRetry'));
-    } catch { setUpdateMessage(t('updateRetry')); }
+      setUpdateMessage(result === 'other-tabs' ? 'updateOtherTabs' : 'updateRetry');
+    } catch { setUpdateMessage('updateRetry'); }
     setApplyingUpdate(false);
   };
   useLayoutEffect(() => { if (sim.phase === 'entry') { const draft = entryDrafts.current.get(entryKey); setTimeInput(draft?.time ?? ''); setPenalty(draft?.penalty ?? 'none'); setFieldError(''); } }, [sim.phase, entryKey]);
@@ -88,7 +89,7 @@ function App() {
   const edit = (attemptId: string) => {
     const attempt = sim.state.rounds.flatMap(value => value.attempts).find(value => value.id === attemptId);
     if (!attempt) return;
-    setEditingId(attemptId); setEditTimeInput(attempt.rawMs === null ? '' : formatTime(attempt.rawMs, { precision: 'milliseconds' })); setEditPenalty(attempt.penalty); setEditFieldError(''); setModal('edit');
+    setEditingId(attemptId); setEditTimeInput(attempt.rawMs === null ? '' : formatTime(attempt.rawMs, { precision: 'milliseconds' })); setEditPenalty(attempt.penalty); setEditInspectionPenalty(attempt.inspectionPenalty); setEditFieldError(''); setModal('edit');
   };
   const applySettings = async (patch: Parameters<typeof sim.updateSettings>[0]) => { await sim.updateSettings(patch); };
   const chooseEvent = async (eventId: EventId) => {
@@ -114,19 +115,19 @@ function App() {
   const submitManual = (event: FormEvent) => {
     event.preventDefault(); if (sim.saving) return;
     const parsed = parseTimeInput(normalizeTimeInput(timeInput) || (penalty === 'DNF' || penalty === 'DNS' ? penalty : ''));
-    if (!parsed) { setFieldError(t('invalid')); return; }
+    if (!parsed) { setFieldError('invalid'); return; }
     setFieldError('');
     void sim.record(parsed.rawMs, penalty === 'none' ? parsed.penalty : penalty, 'manual').then(async saved => { if (saved) await sim.advance(); });
   };
   const saveEdit = (event: FormEvent) => {
     event.preventDefault(); if (!editingRound || !editingAttempt) return;
-    const parsed = parseTimeInput(normalizeTimeInput(editTimeInput) || (editPenalty === 'DNF' || editPenalty === 'DNS' ? editPenalty : ''));
-    if (!parsed) { setEditFieldError(t('invalid')); return; }
-    const updated = editAttempt(editingRound, editingAttempt.id, { rawMs: parsed.rawMs, penalty: editPenalty === 'none' ? parsed.penalty : editPenalty });
+    const parsed = parseTimeInput(normalizeTimeInput(editTimeInput) || (editPenalty === 'DNF' || editPenalty === 'DNS' ? editPenalty : editInspectionPenalty === 'DNF' ? 'DNF' : ''));
+    if (!parsed) { setEditFieldError('invalid'); return; }
+    const updated = editAttempt(editingRound, editingAttempt.id, { rawMs: parsed.rawMs, penalty: editInspectionPenalty === 'DNF' && !editTimeInput.trim() ? editPenalty : editPenalty === 'none' ? parsed.penalty : editPenalty, inspectionPenalty: editInspectionPenalty });
     void sim.mutate(s => sim.store.updateRound(updated, s.revision)).then(close).catch(() => undefined);
   };
   const downloadExport = async () => {
-    try { const json = await sim.store.exportJson(); const url = URL.createObjectURL(new Blob([json], { type: 'application/json' })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `cubing-comp-sim-${new Date().toISOString().slice(0, 10)}.json`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch { sim.setError(t('loadError')); }
+    try { const json = await sim.store.exportJson(); const url = URL.createObjectURL(new Blob([json], { type: 'application/json' })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `cubing-comp-sim-${new Date().toISOString().slice(0, 10)}.json`; anchor.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); } catch { sim.setError('loadError'); }
   };
   const replaceHistory = async (json: string, revision: number) => {
     await sim.mutate(() => sim.store.replaceFromJson(json, revision)); sim.home();
@@ -140,7 +141,7 @@ function App() {
       {roundActive && <button type="button" className="end-round-button" aria-haspopup="dialog" disabled={sim.saving} onClick={() => setModal('end-round')}>{t('endRound')}</button>}
       <nav className="utilities" aria-label={t('utilities')}><IconButton name="account" label={t('account')} disabled={timerActive} onClick={() => setModal('account')} /><IconButton name="help" label={t('help')} disabled={timerActive} onClick={() => setModal('help')} /><IconButton name="settings" label={t('settings')} disabled={timerActive || !sim.loaded} onClick={() => setModal('settings')} /></nav>
     </header>
-    {updateReady && <div className="site-update" role="status"><span>{t(roundActive ? 'updateAfterRound' : 'siteUpdateAvailable')}</span><button type="button" className="text-button" disabled={roundActive || sim.saving || modal !== null || !sim.loaded || applyingUpdate} onClick={() => void updateSite()}>{t('updateSite')}</button>{updateMessage && <span>{updateMessage}</span>}</div>}
+    {updateReady && <div className="site-update" role="status"><span>{t(roundActive ? 'updateAfterRound' : 'siteUpdateAvailable')}</span><button type="button" className="text-button" disabled={roundActive || sim.saving || modal !== null || !sim.loaded || applyingUpdate} onClick={() => void updateSite()}>{t('updateSite')}</button>{updateMessage && <span>{t(updateMessage)}</span>}</div>}
     <main className={`workspace ${cardVisible ? 'with-scorecard' : ''}`}>
       <div className="main-stage" tabIndex={-1}>
         {sim.canGoBack && <button type="button" data-step-back className="step-back text-button" disabled={sim.saving || sim.phase === 'loading'} onClick={() => void sim.back()}>← {t('goBack')}</button>}
@@ -152,7 +153,7 @@ function App() {
         {sim.phase === 'ready' && (sim.state.settings.inputMethod === 'manual' || sim.state.settings.inspection && selectedEvent.inspection ? <FlowButton onClick={sim.primary} disabled={sim.saving} shortcut={`Enter / ${t('spaceKey')}`}>{t('ready')}</FlowButton> : <div className="timer-block"><p>{sim.armed ? t('release') : t('hold')}</p><div className={`timer-number ${sim.armed ? 'positive-text' : sim.holding ? 'error-text' : ''}`}>0.00</div></div>)}
         {sim.phase === 'inspection' && <><div className="timer-block"><p>{sim.armed ? t('release') : t('inspection')}</p><div className={`timer-number ${sim.armed ? 'positive-text' : sim.holding || sim.elapsed >= 17000 ? 'error-text' : sim.elapsed >= 15000 ? 'warning-text' : ''}`}>{Math.floor(sim.elapsed / 1000)}</div>{sim.elapsed >= 15000 && <span className="inspection-penalty">{sim.elapsed >= 17000 ? 'DNF' : '+2'}</span>}</div><div className="bottom-action">{sim.state.settings.inputMethod === 'manual' ? <FlowButton secondary onClick={sim.primary} disabled={sim.saving}>{t('startSolve')}</FlowButton> : <p className="key-hint">{sim.armed ? t('release') : t('hold')}</p>}</div></>}
         {sim.phase === 'solving' && <div className="timer-block"><div className="timer-number">{formatTime(sim.elapsed)}</div><span className="sr-only">{t('stop')}</span></div>}
-        {sim.phase === 'entry' && <form data-solve-entry className="time-entry" onSubmit={submitManual}><label htmlFor="manual-time">{t('time')}</label><input id="manual-time" className="time-input" autoFocus autoComplete="off" inputMode="decimal" value={timeInput} onChange={event => { setTimeInput(event.target.value); saveEntryDraft(event.target.value, penalty); }} aria-invalid={Boolean(fieldError)} aria-describedby={fieldError ? 'manual-error' : undefined} />{fieldError && <p id="manual-error" className="error-text" role="alert">{fieldError}</p>}<PenaltyButtons penalty={penalty} onChange={value => { setPenalty(value); saveEntryDraft(timeInput, value); }} />{sim.automaticPenalty !== 'none' && <p className="muted">{t('inspectionAutomatic', { penalty: sim.automaticPenalty })}</p>}<button className="flow-button" type="submit" disabled={sim.saving}>{sim.saving ? t('saving') : t('submit')}</button></form>}
+        {sim.phase === 'entry' && <form data-solve-entry className="time-entry" onSubmit={submitManual}><label htmlFor="manual-time">{t('time')}</label><input id="manual-time" className="time-input" autoFocus autoComplete="off" inputMode="decimal" value={timeInput} onChange={event => { setTimeInput(event.target.value); saveEntryDraft(event.target.value, penalty); }} aria-invalid={Boolean(fieldError)} aria-describedby={fieldError ? 'manual-error' : undefined} />{fieldError && <p id="manual-error" className="error-text" role="alert">{t(fieldError)}</p>}<PenaltyButtons penalty={penalty} onChange={value => { setPenalty(value); saveEntryDraft(timeInput, value); }} />{sim.automaticPenalty !== 'none' && <p className="muted">{t('inspectionAutomatic', { penalty: sim.automaticPenalty })}</p>}<button className="flow-button" type="submit" disabled={sim.saving}>{sim.saving ? t('saving') : t('submit')}</button></form>}
         {sim.phase === 'confirm' && <div className="confirm-stage"><div className="timer-number">{displayAttempt ? formatAttempt(displayAttempt) : formatTime(sim.elapsed)}</div><div className="confirm-actions">{displayAttempt && <button className="text-button" onClick={() => edit(displayAttempt.id)} disabled={sim.saving || !round?.attempts.some(value => value.id === displayAttempt.id)}>{t('editTime')}</button>}<FlowButton onClick={() => void sim.advance()} disabled={sim.saving} shortcut={`Enter / ${t('spaceKey')}`}>{sim.saving ? t('saving') : t('confirmSolve')}</FlowButton></div></div>}
         {sim.phase === 'complete' && round && <div className="complete-stage"><p>{formatLabel(round.format)}</p><div className="timer-number">{scoreText(scoreRound(round))}</div><p className="round-extremes">{t('fastest')}　{roundTimes.length ? formatTime(Math.min(...roundTimes)) : 'DNF'}　 {t('slowest')}　{roundTimes.length ? formatTime(Math.max(...roundTimes)) : 'DNF'}</p><FlowButton onClick={sim.primary} disabled={sim.saving} shortcut={`Enter / ${t('spaceKey')}`}>{t('start')}</FlowButton></div>}
       </div>
@@ -168,7 +169,7 @@ function App() {
     {modal === 'help' && <HelpDialog onClose={close} />}
     {modal === 'event-confirm' && pendingEvent && <Dialog title={t('changeEventTitle')} onClose={close} className="confirm-dialog" returnFocus={roundFocus}><p>{t('changeEventDescription')}</p>{sim.error && <p className="error-text" role="alert">{sim.error}</p>}<div className="button-row"><button className="secondary-button" onClick={close} disabled={sim.saving}>{t('goBack')}</button><button className="primary-button" disabled={sim.saving} onClick={() => void chooseEvent(pendingEvent)}>{t('confirm')}</button></div></Dialog>}
     {modal === 'end-round' && <Dialog title={t('endRoundTitle')} onClose={close} className="confirm-dialog" returnFocus={roundFocus}><p>{t('endRoundDescription')}</p>{sim.error && <p className="error-text" role="alert">{sim.error}</p>}<div className="button-row"><button className="secondary-button" onClick={close} disabled={sim.saving}>{t('goBack')}</button><button className="danger-button" disabled={sim.saving} onClick={() => void endRound()}>{t('endRound')}</button></div></Dialog>}
-    {modal === 'edit' && editingAttempt && <Dialog title={`${t('editTime')} · ${editingAttempt.index + 1}`} onClose={close} className="edit-dialog"><form onSubmit={saveEdit} className="edit-form"><label>{t('time')}<input autoFocus className="time-input" autoComplete="off" value={editTimeInput} onChange={event => setEditTimeInput(event.target.value)} /></label><PenaltyButtons penalty={editPenalty} onChange={setEditPenalty} />{editingAttempt.inspectionPenalty !== 'none' && <p className="muted">{t('inspectionEdit', { penalty: editingAttempt.inspectionPenalty })}</p>}{editFieldError && <p className="error-text" role="alert">{editFieldError}</p>}<button className="primary-button" disabled={sim.saving} type="submit">{t('save')}</button><p className="muted scramble-detail">{editingAttempt.scramble.notation}</p></form></Dialog>}
+    {modal === 'edit' && editingAttempt && <Dialog title={`${t('editTime')} · ${editingAttempt.index + 1}`} onClose={close} className="edit-dialog"><form onSubmit={saveEdit} className="edit-form"><label>{t('time')}<input autoFocus className="time-input" autoComplete="off" value={editTimeInput} onChange={event => setEditTimeInput(event.target.value)} /></label><PenaltyButtons penalty={editPenalty} onChange={setEditPenalty} />{editingRound && getEvent(editingRound.eventId).inspection && <div className="inspection-penalty-editor"><span>{t('inspectionPenaltyLabel')}</span><Select label={t('inspectionPenaltyLabel')} value={editInspectionPenalty} options={[{ value: 'none', label: t('noPenalty') }, { value: '+2', label: '+2' }, { value: 'DNF', label: 'DNF' }]} onChange={value => setEditInspectionPenalty(value as InspectionPenalty)} /></div>}{editFieldError && <p className="error-text" role="alert">{t(editFieldError)}</p>}<button className="primary-button" disabled={sim.saving} type="submit">{t('save')}</button><p className="muted scramble-detail">{editingAttempt.scramble.notation}</p></form></Dialog>}
     {modal === 'stats' && <StatisticsDialog rounds={sim.state.rounds} onEdit={edit} onExport={() => void downloadExport()} onClose={close} />}
   </div>{applyingUpdate && <div className="site-update-overlay" role="status">{t('updatingSite')}</div>}</>;
 }

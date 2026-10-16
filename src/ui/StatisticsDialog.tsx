@@ -35,7 +35,7 @@ export function StatisticsDialog({ rounds, onEdit, onExport, onClose }: {
   const currentPage = Math.min(page, pageCount - 1);
   const visibleRounds = filteredRounds.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
 
-  return <Dialog title="Statistics" onClose={onClose} className="statistics-dialog">
+  return <Dialog title={t('statisticsTitle')} onClose={onClose} className="statistics-dialog">
     <div className="statistics-toolbar">
       <Select label={t('event')} value={eventFilter} options={[{ value: 'all', label: t('allEvents') }, ...EVENTS.map(event => ({ value: event.id, label: eventName(event.id) }))]} onChange={value => { setEventFilter(value as EventId | 'all'); setPage(0); }} />
       <button type="button" className="secondary-button" onClick={() => void onExport()}>{t('export')}</button>
@@ -47,7 +47,7 @@ export function StatisticsDialog({ rounds, onEdit, onExport, onClose }: {
         <div><dt>{t('bestSingle')}</dt><dd>{formatTime(summary.best)}</dd></div>
       </dl>
       {visibleRounds.length === 0 ? <p className="statistics-empty">{t('noHistory')}</p> : <div className="statistics-rounds">{visibleRounds.map(round => <StatisticsRound key={round.id} round={round} onEdit={onEdit} />)}</div>}
-      {pageCount > 1 && <nav className="statistics-pagination" aria-label="Statistics pages">
+      {pageCount > 1 && <nav className="statistics-pagination" aria-label={t('statisticsPages')}>
         <button type="button" className="secondary-button" disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>{t('previous')}</button>
         <span className="statistics-page-number">{currentPage + 1} / {pageCount}</span>
         <button type="button" className="secondary-button" disabled={currentPage + 1 >= pageCount} onClick={() => setPage(currentPage + 1)}>{t('nextPage')}</button>
