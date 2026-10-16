@@ -1,8 +1,10 @@
+import './check-information-locales.mjs';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
 const catalogs = JSON.parse(await readFile('src/ui/locales/extended.json', 'utf8'));
+const information = JSON.parse(await readFile('public/information-locales.json', 'utf8'));
 const server = await createServer({ server: { host: '127.0.0.1', port: 0 } });
 await server.listen();
 let browser;
@@ -25,7 +27,7 @@ try {
     await store.replaceFromJson(JSON.stringify({ app: 'cubing-comp-sim', schemaVersion: 1, exportedAt: Date.now(), rounds: [round], activeRoundId: round.id }), state.revision);
   });
   await page.reload();
-  await page.locator('.scorecard-time').first().waitFor();
+  await page.locator('.scorecard-time:not([disabled])').first().waitFor();
   assert.match(await page.locator('.scorecard-time').first().textContent(), /DNF/);
   await page.locator('.scorecard-time').first().click();
   const dialog = page.getByRole('dialog');
@@ -37,10 +39,9 @@ try {
   assert.equal((await page.locator('.scorecard-time').first().textContent()).trim(), '12.00');
   assert.equal((await page.locator('.scorecard-average strong').textContent()).trim(), '12.00');
   await page.reload();
-  await page.locator('.scorecard-time').first().waitFor();
+  await page.locator('.scorecard-time:not([disabled])').first().waitFor();
   assert.equal((await page.locator('.scorecard-time').first().textContent()).trim(), '12.00');
   // Every locale must immediately update the currently open settings dialog.
-  let current = 'en';
   for (const locale of Object.keys(catalogs)) {
     await page.locator('button[aria-label]').filter({ has: page.locator('img[src="/assets/settings.svg"]') }).click();
     await page.getByRole('tab').nth(1).click();
@@ -53,8 +54,7 @@ try {
     await page.getByRole('tab').nth(3).click();
     assert.equal(await page.locator('.settings-information-links a').nth(0).textContent(), catalogs[locale].about);
     assert.match(await page.locator('.settings-information-links a').nth(1).getAttribute('href'), new RegExp(`lang=${locale}`));
-    await page.locator('.dialog-header button').click();
-    current = locale;
+    await page.locator('.dialog-header .icon-button').click();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   }
   for (const locale of ['es', 'de', 'ja', 'zh-Hans', 'ko']) {
@@ -63,7 +63,8 @@ try {
       await page.waitForFunction(locale => document.documentElement.lang === locale, locale);
       await page.locator('.information-language select').waitFor();
       assert.equal(await page.locator('.information-language select').inputValue(), locale);
-      assert.ok(!(await page.locator('h1').textContent()).includes('Privacy Policy'));
+      const originalHeading = { about: 'Practice the whole round.', privacy: 'Privacy Policy', terms: 'Terms of Service' }[path];
+      assert.equal(await page.locator('h1').textContent(), information[locale][originalHeading]);
       assert.equal(await page.locator('a[href^="javascript:"]').count(), 0);
     }
   }
