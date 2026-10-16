@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { EVENTS, attemptTimeMs, editAttempt, formatAttempt, formatTime, getEvent, parseTimeInput, scoreRound, type EventId, type Penalty } from './core';
 import { auth, type AccountSession, type AccountCallback } from './cloud';
 import { applyOfflineUpdate, registerOfflineSupport } from './platform/offline';
@@ -82,7 +82,7 @@ function App() {
     } catch { setUpdateMessage(t('updateRetry')); }
     setApplyingUpdate(false);
   };
-  useEffect(() => { if (sim.phase === 'entry') { const draft = entryDrafts.current.get(entryKey); setTimeInput(draft?.time ?? ''); setPenalty(draft?.penalty ?? 'none'); setFieldError(''); } }, [sim.phase, entryKey]);
+  useLayoutEffect(() => { if (sim.phase === 'entry') { const draft = entryDrafts.current.get(entryKey); setTimeInput(draft?.time ?? ''); setPenalty(draft?.penalty ?? 'none'); setFieldError(''); } }, [sim.phase, entryKey]);
   const close = () => { setModal(null); setPendingEvent(null); setFieldError(''); setAccountCallback(null); };
   const roundFocus = () => document.querySelector<HTMLElement>('#manual-time') ?? document.querySelector<HTMLElement>('.main-stage');
   const edit = (attemptId: string) => {
