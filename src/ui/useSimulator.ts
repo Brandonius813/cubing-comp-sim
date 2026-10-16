@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { addAttempt, createAttempt, createRound, getEvent, inspectionPenalty, type Attempt, type EventId, type Penalty, type Round, type Scramble } from '../core';
 import { BrowserStore, DEFAULT_SETTINGS, StorageConflictError, type LocalState, type Settings } from '../storage';
 import { createScrambleService } from '../scramble';
-import { t } from './i18n';
+import { t, type MessageKey } from './i18n';
 import { InspectionAudio, takeInspectionCue } from '../audio/inspection';
 import { getAudioPreferences } from '../audio/preferences';
 import { telemetry } from '../telemetry';
@@ -22,8 +22,8 @@ export function useSimulator(blockKeyboard: boolean) {
   const setPhase = useCallback((next: Phase) => { if (next !== 'inspection') audio.current?.cancel(); phaseRef.current = next; setPhaseState(next); }, []);
   const [scramble, setScramble] = useState<Scramble | null>(null);
   const scrambleRef = useRef(scramble); scrambleRef.current = scramble;
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<MessageKey | null>(null);
+  const [notice, setNotice] = useState<MessageKey | null>(null);
   const [saving, setSaving] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [armed, setArmed] = useState(false);
@@ -62,7 +62,7 @@ export function useSimulator(blockKeyboard: boolean) {
       ownMutation.current = true;
       setSaving(true);
       try { const next = await operation(current.current); apply(next); setError(null); return next; }
-      catch (cause) { setError(cause instanceof StorageConflictError ? t('storageConflict') : t('saveError')); telemetry.reportError('local_save_failed', { code: cause instanceof StorageConflictError ? 'REVISION_CONFLICT' : 'TRANSACTION_FAILED' }); throw cause; }
+      catch (cause) { setError(cause instanceof StorageConflictError ? 'storageConflict' : 'saveError'); telemetry.reportError('local_save_failed', { code: cause instanceof StorageConflictError ? 'REVISION_CONFLICT' : 'TRANSACTION_FAILED' }); throw cause; }
       finally { ownMutation.current = false; setSaving(false); }
     });
     serial.current = task.then(() => undefined, () => undefined);
@@ -79,14 +79,14 @@ export function useSimulator(blockKeyboard: boolean) {
         history.current = [{ phase: 'home', scramble: null, roundId: next.activeRoundId, attemptCount: round?.attempts.length ?? 0, lastAttempt: null, elapsed: 0, inspectionMs: undefined, waitDuration: 0 }];
         setScramble(next.draft.scramble); setPhase('scramble');
       }
-    }).catch(() => { if (mounted) setError(t('loadError')); });
+    }).catch(() => { if (mounted) setError('loadError'); });
     return () => { mounted = false; };
   }, [apply, setPhase]);
   // A tab never silently replaces edits another tab may still be making.
   useEffect(() => browserStore.subscribe(() => {
     if (ownMutation.current) return;
     void browserStore.load().then(next => {
-      if (next.revision > current.current.revision && !saving) setNotice(t('otherTab'));
+      if (next.revision > current.current.revision && !saving) setNotice('otherTab');
     }).catch(() => undefined);
   }), [saving]);
 
@@ -128,7 +128,7 @@ export function useSimulator(blockKeyboard: boolean) {
       setScramble(value); scrambleRef.current = value; setPhase('scramble');
     } catch (cause) {
       if (request !== generation.current) return;
-      setError(cause && typeof cause === 'object' && 'code' in cause && cause.code === 'ENGINE_UNAVAILABLE' ? t('engineError') : cause instanceof StorageConflictError ? t('storageConflict') : t('generationError'));
+      setError(cause && typeof cause === 'object' && 'code' in cause && cause.code === 'ENGINE_UNAVAILABLE' ? 'engineError' : cause instanceof StorageConflictError ? 'storageConflict' : 'generationError');
       telemetry.reportError('scramble_failed', { eventId: round.eventId, code: 'GENERATION_FAILED' });
       setPhase('engine-error');
     }
@@ -199,14 +199,14 @@ export function useSimulator(blockKeyboard: boolean) {
       if (updated.completedAt !== undefined) telemetry.track('round_completed', { eventId: round.eventId, format: round.format, attemptCount: updated.attempts.length, roundToken: round.id });
       return true;
     }
-    catch (cause) { if (request === generation.current) setError(cause instanceof StorageConflictError ? t('storageConflict') : t('saveError')); return false; }
+    catch (cause) { if (request === generation.current) setError(cause instanceof StorageConflictError ? 'storageConflict' : 'saveError'); return false; }
     finally { recordBusy.current = false; }
   };
   const stop = (interrupted = false) => {
     if (phaseRef.current !== 'solving' || endingRound.current) return;
     remember();
     const value = Math.max(0, Math.floor(performance.now() - started.current)); setElapsed(value); setPhase('confirm');
-    if (interrupted) setNotice(t('interrupted'));
+    if (interrupted) setNotice('interrupted');
     void record(value, interrupted ? 'DNF' : 'none', 'timer');
   };
   const advance = async () => {
@@ -365,5 +365,5 @@ export function useSimulator(blockKeyboard: boolean) {
 
   const updateSettings = (patch: Partial<Settings>) => mutate(s => browserStore.saveSettings({ ...s.settings, ...patch }, s.revision));
   const home = () => { history.current = []; generation.current++; cancelHold(); setPhase('home'); setError(null); setNotice(null); };
-  return { back, canGoBack: history.current.length > 0, state, loaded, phase, scramble, error, notice, saving, elapsed, armed, holding, lastAttempt, automaticPenalty, mutate, updateSettings, primary, record, advance, endRound, home, setPhase, setError, apply, store: browserStore };
+  return { back, canGoBack: history.current.length > 0, state, loaded, phase, scramble, error: error ? t(error) : null, notice: notice ? t(notice) : null, saving, elapsed, armed, holding, lastAttempt, automaticPenalty, mutate, updateSettings, primary, record, advance, endRound, home, setPhase, setError, apply, store: browserStore };
 }
