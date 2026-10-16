@@ -32,8 +32,9 @@ try {
   assert.match(await page.locator('.scorecard-time').first().textContent(), /DNF/);
   await page.locator('.scorecard-time').first().click();
   const dialog = page.getByRole('dialog');
-  await dialog.getByRole('combobox', { name: 'Inspection penalty', exact: true }).click();
-  await page.getByRole('option', { name: 'None', exact: true }).click();
+  const dnf = dialog.getByRole('button', { name: 'DNF', exact: true });
+  assert.equal(await dnf.getAttribute('aria-pressed'), 'true');
+  await dnf.click();
   await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
   await dialog.waitFor({ state: 'hidden' });
   await settled();
