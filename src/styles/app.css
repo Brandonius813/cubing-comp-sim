@@ -65,3 +65,5 @@ body{background:var(--app);color:var(--text)}button,input,select,textarea{font-f
 .provider-connected-row{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap}.wca-profile-link{display:inline-flex;align-items:center;text-decoration:none;font-size:14px}
 
 .step-back { position: absolute; bottom: 12px; left: 12px; z-index: 2; min-height: 44px; padding: 8px 12px; }
+
+.inspection-penalty-editor { display: grid; gap: .5rem; }
