@@ -483,7 +483,7 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     const statistics = page.getByRole('dialog', { name: 'Statistics', exact: true });
     await statistics.getByRole('button', { name: 'Export history', exact: true }).waitFor();
     assert.equal(await statistics.getByRole('button', { name: 'Import history', exact: true }).count(), 0);
-    await statistics.locator('.statistics-summary dt', { hasText: /^Mo3R$/ }).waitFor();
+    assert.equal(await statistics.locator('.statistics-summary dt', { hasText: /^Mo3R$/ }).count(), 0);
     assert.equal(await statistics.locator('aside').count(), 0);
     await capture(page, 'statistics', artifacts); await statistics.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Help', exact: true }).click();
