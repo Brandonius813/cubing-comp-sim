@@ -81,3 +81,48 @@ Local evidence on October 15, 2026: the three bundler/runtime tests and five ser
 If the isolated WebView fails these gates, compare an explicitly hosted background JavaScript runtime/native bridge. The experiment does not authorize weakening the TNoodle correctness or offline requirements.
 
 Implementation references: [React Native WebView guide](https://github.com/react-native-webview/react-native-webview/blob/master/docs/Guide.md), [WebView API reference](https://github.com/react-native-webview/react-native-webview/blob/master/docs/Reference.md), [WebCrypto getRandomValues](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues), and the repository's [engine documentation](../engine/README.md).
+
+## October 20 review implementation
+
+The service accepts an optional `AbortSignal` as the second argument to
+`generate`. A cancelled queued request is removed before dispatch. Cancelling
+an active request rejects that caller immediately, but the isolated synchronous
+TNoodle computation keeps its slot until it finishes or the existing timeout
+expires. Its result is discarded. The next request then uses the same engine,
+retaining expensive initialized tables. This is logical cancellation, not a
+claim that injected JavaScript can preempt synchronous native WebView work.
+Unmount/reset still rejects the entire queue and retires the host channel.
+
+`EngineStatus.phase` remains `ready` while generating, with optional
+`generation: { eventId, elapsedMs, queued }` progress. The elapsed value uses the
+native monotonic clock and updates once per second. It is not an estimated
+percentage or completion time. The app can render progress without running any
+engine algorithm in the React Native runtime. A request-specific error with an
+unknown/retired request ID no longer kills unrelated active work.
+
+Source inspection of the pinned `cs.threephase.Search.init()` shows the first
+4x4 path initializes Center1 symmetry/move/pruning tables, Center2 and Center3,
+and Edge3 move, symmetry and pruning tables. Edge3's pruning generation scans
+its state space over successive depths. Those tables are retained only within
+the current engine runtime. This explains a plausible initialization cost, but
+is not a measured per-function profile and does not establish that all observed
+latency is initialization. No table cache, algorithm substitution or timeout
+increase has been introduced. Persisting compiler-private tables without
+versioned validation and matching reference evidence would be unsafe.
+
+The verification script now removes any prior generated success report before
+starting and checks the exact reference fixture hash before expensive work.
+Both normal and explicit smoke modes generate fresh results for all 16 events
+in a first pass and repeat pass. The report separates `timings` and
+`warmTimings`. Both passes share one host, so related events in the first pass
+can already benefit from initialized tables. These are Node VM timings, not
+cold native process measurements. Smoke mode still records zero JVM fixtures
+and cannot satisfy reference conformance.
+
+Environment inspection for this review found only Apple Command Line Tools;
+`xcrun simctl list devices available` failed because `simctl` is unavailable.
+`node engine/scripts/reference.mjs 2` verified all 72 pinned vendor files, then
+failed at `javac`: no compiler-capable JDK is installed. The available Java
+runtime reported 1.8.0_371; Maven was not found. No fresh JVM fixture or native
+WebView acceptance result is claimed. The existing artifact's SHA-256 remains
+`37008dff9676c9c782da7b31bcb0cedf562a07e288bafb0ea16fa68267c17f57`.

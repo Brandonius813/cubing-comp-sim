@@ -2,7 +2,11 @@ import { isScrambleEvent, SCRAMBLE_EVENTS, type GeneratedScramble } from '../../
 
 export const BRIDGE_VERSION = 1;
 export const MAX_MESSAGE_LENGTH = 2_000_000;
-export type EngineStatus = { phase: 'loading' | 'ready' | 'error'; message?: string };
+export type EngineStatus = {
+  phase: 'loading' | 'ready' | 'error'; message?: string;
+  /** Elapsed time is observational, never an invented percentage or ETA. */
+  generation?: { eventId: string; elapsedMs: number; queued: number };
+};
 export type EngineRequest = { version: 1; channel: string; type: 'generate'; id: number; eventId: string };
 export type EngineResponse =
   | { version: 1; channel: string; type: 'ready'; engineVersion: string; events: string[] }

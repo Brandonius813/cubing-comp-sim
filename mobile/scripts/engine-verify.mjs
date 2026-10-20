@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash, webcrypto } from 'node:crypto';
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
@@ -20,11 +20,18 @@ for (let index = 0; index < args.length; index++) {
   else if (args[index] === '--fixtures' && args[index + 1]) fixturePath = path.resolve(args[++index]);
   else throw new Error('Usage: engine-verify.mjs [--engine-dir path] [--fixtures path] [--smoke]');
 }
+// Never leave a prior successful report looking like evidence for a failed run.
+const reportPath = path.join(mobile, 'assets/engine.verification.generated.json');
+await rm(reportPath, { force: true });
 const bytes = await readFile(path.join(engineDirectory, 'tnoodle.js'));
 const manifest = JSON.parse(await readFile(path.join(engineDirectory, 'manifest.json'), 'utf8'));
 const proof = JSON.parse(await readFile(path.join(engineDirectory, 'conformance.json'), 'utf8'));
 const lock = JSON.parse(await readFile(path.join(root, 'engine/upstream-lock.json'), 'utf8'));
 verifyEngineArtifact({ bytes, manifest, proof, lock });
+// Fail before expensive initialization if the exact JVM evidence is unavailable.
+const fixtureBytes = smoke ? null : await readFile(fixturePath);
+const referenceSha256 = fixtureBytes ? createHash('sha256').update(fixtureBytes).digest('hex') : null;
+if (!smoke) assert.equal(referenceSha256, proof.referenceSha256, 'Reference fixtures do not match the engine conformance proof.');
 const runtime = await readFile(path.join(mobile, 'src/engine/webview-runtime.js'), 'utf8');
 const license = await readFile(path.join(engineDirectory, 'LICENSE.txt'), 'utf8');
 const html = makeEngineDocument({ source: bytes.toString('utf8'), runtime, manifest, license });
@@ -41,23 +48,22 @@ const events = messages[0].events;
 assert.deepEqual([...events].sort(), [...proof.liveEvents].sort());
 
 const timings = [];
+const warmTimings = [];
+for (const pass of [0, 1]) {
 for (const [index, eventId] of events.entries()) {
-  vm.runInContext(`__ccsEngineReceive(${JSON.stringify({ version: 1, channel: 'verification', type: 'generate', id: index + 1, eventId })})`, context, { timeout: 180_000 });
+  vm.runInContext(`__ccsEngineReceive(${JSON.stringify({ version: 1, channel: 'verification', type: 'generate', id: pass * events.length + index + 1, eventId })})`, context, { timeout: 180_000 });
   const response = messages.at(-1);
   assert.equal(response.type, 'result', `${eventId}: production bridge failed`);
   assert.equal(response.scramble.eventId, eventId);
   assert.equal(response.scramble.engineVersion, manifest.engineVersion);
   assert.ok(response.scramble.notation.trim()); assert.match(response.scramble.svg, /^<svg[\s>]/);
-  timings.push({ eventId, durationMs: Math.round(response.durationMs) });
-  console.log(`PASS production bridge ${eventId} (${Math.round(response.durationMs)} ms)`);
+  (pass === 0 ? timings : warmTimings).push({ eventId, durationMs: Math.round(response.durationMs) });
+  console.log(`PASS production bridge ${pass === 0 ? 'first' : 'repeat'} ${eventId} (${Math.round(response.durationMs)} ms)`);
+}
 }
 
 let fixtureCount = 0;
-let referenceSha256 = null;
 if (!smoke) {
-  const fixtureBytes = await readFile(fixturePath);
-  referenceSha256 = createHash('sha256').update(fixtureBytes).digest('hex');
-  assert.equal(referenceSha256, proof.referenceSha256, 'Reference fixtures do not match the engine conformance proof.');
   const fixtures = fixtureBytes.toString('utf8').trim().split('\n').map(line => JSON.parse(line));
   assert.deepEqual([...new Set(fixtures.map(value => value.eventId))].sort(), [...events].sort());
   for (const event of events) assert.ok(new Set(fixtures.filter(value => value.eventId === event).map(value => value.seed)).size >= 2);
@@ -89,10 +95,11 @@ if (!smoke) {
     assert.equal(engine.meetsMinimumDistance(eventId, notation), true);
   }
 }
-await writeFile(path.join(mobile, 'assets/engine.verification.generated.json'), JSON.stringify({
+await writeFile(reportPath, JSON.stringify({
   outcome: 'passed', scope: smoke ? 'Node VM: exact production bridge fresh generation only; no native-device evidence.'
     : 'Node VM: exact production bridge fresh generation and instrumented transformed engine against JVM fixtures; no native-device evidence.',
   engineSha256: manifest.sha256, documentSha256: createHash('sha256').update(html).digest('hex'),
-  referenceSha256, fixtureCount, timings,
+  referenceSha256, fixtureCount, timings, warmTimings,
+  measurementNote: 'First pass shares one engine host across events; related events may share already-initialized tables. Repeat pass uses that same host. Neither is a native-device measurement.',
 }, null, 2) + '\n');
-console.log(`Mobile bridge verification passed: ${events.length} fresh generators, ${fixtureCount} reference fixtures. Native-device acceptance remains required.`);
+console.log(`Mobile bridge verification passed: ${events.length} fresh generators in each of two passes, ${fixtureCount} reference fixtures. Native-device acceptance remains required.`);

@@ -31,7 +31,8 @@ test('waits for exact engine readiness, serializes jobs and matches results to r
     assert.equal((await first).eventId, '333'); assert.equal(f.sent.length, 2);
     f.binding.receive(f.result(2, '222'));
     assert.equal((await second).eventId, '222');
-    assert.deepEqual(f.statuses, ['loading', 'ready']);
+    assert.equal(f.statuses[0], 'loading');
+    assert.ok(f.statuses.slice(1).every(status => status === 'ready'));
   } finally { f.service.dispose(); }
 });
 
@@ -71,4 +72,77 @@ test('protocol rejects truncated results, mismatched engine identity and executa
   assert.throws(() => parseEngineResponse(JSON.stringify({ version: 1, channel: 'host', type: 'ready', engineVersion: 'other', events: SCRAMBLE_EVENTS }), 'host', version));
   assert.throws(() => requestScript({ version: 1, channel: 'host', type: 'generate', id: 1, eventId: "333');alert(1)" }));
   assert.throws(() => requestScript({ version: 1, channel: 'host);alert(1)', type: 'generate', id: 1, eventId: '333' }));
+});
+
+
+test('cancelled queued work never enters the engine and active cancellation discards only its result', async () => {
+  const f = fixture(); f.ready();
+  try {
+    const active = new AbortController(); const queued = new AbortController();
+    const first = f.service.generate('444', { signal: active.signal });
+    const second = f.service.generate('222', { signal: queued.signal });
+    const firstRejected = assert.rejects(first, /cancelled/);
+    const secondRejected = assert.rejects(second, /cancelled/);
+    queued.abort(); active.abort();
+    await Promise.all([firstRejected, secondRejected]);
+    const third = f.service.generate('333');
+    assert.equal(f.sent.length, 1);
+    f.binding.receive(f.result(1, '444'));
+    assert.equal(f.sent.length, 2);
+    f.binding.receive(f.result(3));
+    assert.equal((await third).eventId, '333');
+    await assert.rejects(f.service.generate('333', { signal: active.signal }), /cancelled/);
+    assert.equal(f.sent.length, 2);
+  } finally { f.service.dispose(); }
+});
+
+test('stale request failures cannot kill a newer request', async () => {
+  const f = fixture(); f.ready();
+  try {
+    const pending = f.service.generate('333');
+    f.binding.receive(JSON.stringify({ version: 1, channel: f.binding.channel, type: 'error', id: 999, code: 'GENERATION_FAILED' }));
+    assert.equal(f.statuses.at(-1), 'ready');
+    f.binding.receive(f.result(1)); await pending;
+  } finally { f.service.dispose(); }
+});
+
+test('progress uses a monotonic elapsed duration and clears after completion', async () => {
+  const service = new MobileScrambleService();
+  const updates: import('./protocol').EngineStatus[] = [];
+  const binding = service.bind(version, () => {}, value => updates.push(value));
+  try {
+    binding.receive(JSON.stringify({ version: 1, channel: binding.channel, type: 'ready', engineVersion: version, events: SCRAMBLE_EVENTS }));
+    const pending = service.generate('444');
+    assert.equal(updates.at(-1)?.generation?.eventId, '444');
+    assert.ok(updates.at(-1)!.generation!.elapsedMs >= 0);
+    binding.receive(JSON.stringify({ version: 1, channel: binding.channel, type: 'result', id: 1, durationMs: 5,
+      scramble: { eventId: '444', notation: 'R', svg: '<svg></svg>', engineVersion: version, generatedAt: 1 } }));
+    await pending;
+    assert.equal(updates.at(-1)?.generation, undefined);
+  } finally { service.dispose(); }
+});
+
+test('queue is bounded and cancelling a queued request frees its slot', async () => {
+  const f = fixture(); f.ready();
+  const controller = new AbortController();
+  const requests = [f.service.generate('333')];
+  requests.push(f.service.generate('333', { signal: controller.signal }));
+  for (let i = 0; i < 7; i++) requests.push(f.service.generate('333'));
+  const settled = Promise.allSettled(requests);
+  await assert.rejects(f.service.generate('333'), /Too many/);
+  controller.abort();
+  const replacement = f.service.generate('222');
+  const replacementRejected = assert.rejects(replacement, /closed/);
+  f.service.dispose();
+  assert.ok((await settled).every(result => result.status === 'rejected'));
+  await replacementRejected;
+});
+
+test('boot timeout rejects queued requests and late readiness cannot revive a failed host', async () => {
+  const f = fixture({ bootTimeoutMs: 5 });
+  await assert.rejects(f.service.generate('333'), /stopped/);
+  f.ready();
+  assert.equal(f.statuses.at(-1), 'error');
+  await assert.rejects(f.service.generate('333'), /not ready/);
+  f.service.dispose();
 });

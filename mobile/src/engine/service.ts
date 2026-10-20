@@ -6,6 +6,8 @@ interface Pending {
   eventId: string;
   resolve: (scramble: GeneratedScramble) => void;
   reject: (error: ScrambleError) => void;
+  cleanup?: () => void;
+  cancelled?: boolean;
 }
 export interface EngineBinding {
   channel: string;
@@ -24,6 +26,9 @@ export class MobileScrambleService implements ScrambleService {
   private send: ((script: string) => void) | undefined;
   private ready = false;
   private disposed = false;
+  private report: ((status: EngineStatus) => void) | undefined;
+  private progressTimer: ReturnType<typeof setInterval> | undefined;
+  private startedAt = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly options: { generationTimeoutMs?: number; bootTimeoutMs?: number } = {}) {}
@@ -45,13 +50,15 @@ export class MobileScrambleService implements ScrambleService {
             this.clearTimer(); this.ready = true; status({ phase: 'ready' }); this.pump();
           } else if (response.type === 'error') {
             // A runtime failure invalidates the host. Re-mount to retry cleanly.
-            binding.fail();
+            if (response.id === undefined || response.id === this.active?.id) binding.fail();
           } else {
             const active = this.active;
             if (!active || response.id !== active.id) return;
             if (response.scramble.eventId !== active.eventId) throw new Error('Wrong event in engine response.');
             this.clearTimer(); this.active = undefined;
-            active.resolve(response.scramble); this.pump();
+            active.cleanup?.();
+            if (!active.cancelled) active.resolve(response.scramble);
+            this.progress(); this.pump();
           }
         } catch { binding.fail(); }
       },
@@ -68,19 +75,33 @@ export class MobileScrambleService implements ScrambleService {
         this.rejectAll(new ScrambleError('DISPOSED', 'The scramble engine was closed.'));
       },
     };
-    this.binding = binding; this.send = send; this.ready = false;
+    this.binding = binding; this.send = send; this.ready = false; this.report = status;
     status({ phase: 'loading' });
     this.timer = setTimeout(binding.fail, this.options.bootTimeoutMs ?? 15_000);
     return binding;
   }
 
-  generate(eventId: string): Promise<GeneratedScramble> {
+  generate(eventId: string, options: { signal?: AbortSignal } = {}): Promise<GeneratedScramble> {
+    if (options.signal?.aborted) return Promise.reject(new ScrambleError('DISPOSED', 'Scramble request cancelled.'));
     if (this.disposed) return Promise.reject(new ScrambleError('DISPOSED', 'The scramble service has closed.'));
     if (!isScrambleEvent(eventId)) return Promise.reject(new ScrambleError('UNSUPPORTED_EVENT', 'This event is not supported.'));
     if (!this.binding || !this.send) return Promise.reject(new ScrambleError('ENGINE_UNAVAILABLE', 'The local engine is not ready.'));
     if (this.queue.length >= 8) return Promise.reject(new ScrambleError('GENERATION_FAILED', 'Too many queued scramble requests.'));
     return new Promise((resolve, reject) => {
-      this.queue.push({ id: ++this.nextId, eventId, resolve, reject }); this.pump();
+      const pending: Pending = { id: ++this.nextId, eventId, resolve, reject };
+      const cancel = () => {
+        pending.cancelled = true;
+        this.queue = this.queue.filter(request => request !== pending);
+        pending.cleanup?.();
+        reject(new ScrambleError('DISPOSED', 'Scramble request cancelled.'));
+        // Synchronous TNoodle cannot be interrupted by an injected message. Keep
+        // the active slot until completion/timeout, discarding its stale result.
+        // This also retains expensive initialized tables for the next request.
+        this.progress();
+      };
+      pending.cleanup = () => options.signal?.removeEventListener('abort', cancel);
+      options.signal?.addEventListener('abort', cancel, { once: true });
+      this.queue.push(pending); this.pump(); this.progress();
     });
   }
 
@@ -89,17 +110,31 @@ export class MobileScrambleService implements ScrambleService {
     const pending = this.queue.shift();
     if (!pending) return;
     this.active = pending;
+    this.startedAt = performance.now();
+    this.progressTimer = setInterval(() => this.progress(), 1_000);
+    this.progress();
     this.timer = setTimeout(() => this.binding?.fail(), this.options.generationTimeoutMs ?? 180_000);
     try { this.send(requestScript({ version: BRIDGE_VERSION, channel: this.binding.channel, type: 'generate', id: pending.id, eventId: pending.eventId })); }
     catch { this.binding.fail(); }
   }
 
-  private clearTimer(): void { if (this.timer) clearTimeout(this.timer); this.timer = undefined; }
+  private progress(): void {
+    if (!this.ready) return;
+    this.report?.({ phase: 'ready', generation: this.active ? {
+      eventId: this.active.eventId,
+      elapsedMs: Math.max(0, performance.now() - this.startedAt),
+      queued: this.queue.length,
+    } : undefined });
+  }
+  private clearTimer(): void {
+    if (this.timer) clearTimeout(this.timer); this.timer = undefined;
+    if (this.progressTimer) clearInterval(this.progressTimer); this.progressTimer = undefined;
+  }
   private rejectAll(error: ScrambleError): void {
     this.clearTimer();
     const pending = this.active ? [this.active, ...this.queue] : this.queue;
     this.active = undefined; this.queue = [];
-    for (const request of pending) request.reject(error);
+    for (const request of pending) { request.cleanup?.(); if (!request.cancelled) request.reject(error); }
   }
   dispose(): void { this.binding?.dispose(); this.disposed = true; }
 }
