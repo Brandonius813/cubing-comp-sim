@@ -15,7 +15,8 @@ describe('settings migration and persistence', () => {
     expect(read({ ...legacy, waitSeconds: 25 })).toMatchObject({ waitEnabled: true, waitSeconds: 25 });
   });
   it('keeps the new default hold separate from existing saved choices', () => {
-    expect(DEFAULT_SETTINGS.holdMs).toBe(550);
+    expect(DEFAULT_SETTINGS.holdMs).toBe(0);
+    expect(read({ ...legacy, holdMs: 550 }).holdMs).toBe(550);
     expect(read(legacy).holdMs).toBe(300);
   });
   it('defaults to the system theme while retaining saved theme choices', () => {

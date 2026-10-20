@@ -1,11 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="72 44 772 824" role="img" aria-labelledby="title">
   <title id="title">Cubing Comp Sim</title>
-  <g fill="#eef1f4"><path d="M458 60 822 223 458 428 94 223Z"/><path d="M89 236 451 435 451 857 89 659Z"/><path d="M465 435 827 236 827 659 465 857Z"/></g>
-  <g fill="#111315">
-    <path d="M458 65 811 223 458 419 105 223Z"/>
-    <path d="M94 246 446 438 446 848 94 655Z"/>
-    <path d="M470 438 822 246 822 655 470 848Z"/>
-  </g>
+  <!-- Shared cube edges are drawn once so the small header mark stays crisp. -->
+  <path fill="#111315" stroke="#eef1f4" stroke-width="20" stroke-linejoin="round"
+    d="M458 65 822 228 822 655 458 848 94 655 94 228Z"/>
+  <path fill="none" stroke="#eef1f4" stroke-width="20" stroke-linejoin="round"
+    d="M94 228 458 428 822 228M458 428V848"/>
   <g fill="#8babff">
     <path d="M604 277 567 256Q584 239 568 230L483 185Q461 170 440 182L353 223Q332 234 353 246L438 291Q455 301 473 291L489 283 540 309 509 325Q460 351 409 325L282 258Q246 236 280 213L410 147Q459 124 507 147L635 211Q668 233 638 257Z"/>
     <path d="M385 568 331 539 331 512Q331 488 306 475L235 440Q209 427 209 454L209 561Q209 584 232 598L305 643Q331 658 331 632L331 617 385 646 385 682Q385 742 330 715L211 650Q155 620 155 559L155 416Q155 344 213 377L329 438Q385 469 385 530Z"/>

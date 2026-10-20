@@ -51,7 +51,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = {
-  eventId: '333', inputMethod: 'timer', inspection: true, waitSeconds: 0, holdMs: 550,
+  eventId: '333', inputMethod: 'timer', inspection: true, waitSeconds: 0, holdMs: 0,
   waitEnabled: false, waitMode: 'fixed', waitMinSeconds: 15, waitMaxSeconds: 45,
   goalMs: null, audioCallouts: true, ambience: false, showScorecard: true, language: 'en',
   theme: 'system', textFont: 'geist', numberFont: 'geist-mono', shortcuts: { advance: 'Enter', submit: 'Enter' },

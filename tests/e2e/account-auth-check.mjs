@@ -5,6 +5,8 @@ export async function checkRealAccountCallbacks(browser, origin) {
     { purpose: 'signin', provider: 'google', identity: 'google', status: 'success' },
     { purpose: 'signin', provider: 'wca', identity: 'custom:wca', status: 'success' },
     { purpose: 'link', provider: 'wca', identity: 'custom:wca', userId: 'test-user', status: 'success' },
+    { purpose: 'link', provider: 'google', identity: 'google', userId: 'test-user', status: 'success' },
+    { purpose: 'link', provider: 'wca', identity: 'custom:wca', userId: 'test-user', status: 'error', signedOut: true, reason: 'account_changed' },
     { purpose: 'delete', provider: 'google', identity: 'google', userId: 'test-user', status: 'success', deletionAllowed: true },
     { purpose: 'delete', provider: 'google', identity: 'google', userId: 'different-user', status: 'error' },
     { purpose: 'delete', provider: 'wca', identity: 'google', userId: 'test-user', status: 'error' },
@@ -28,7 +30,7 @@ export async function checkRealAccountCallbacks(browser, origin) {
           localStorage.setItem(`ccs-auth-session-flow-${scenario.flowId}-code-verifier`, JSON.stringify('test-only-code-verifier'));
           localStorage.setItem('ccs-auth-session-flows-code-verifier', JSON.stringify([scenario.flowId]));
         } else if (!scenario.missingVerifier) localStorage.setItem('ccs-auth-session-code-verifier', JSON.stringify('test-only-code-verifier'));
-        else {
+        if (scenario.missingVerifier || (scenario.userId && !scenario.signedOut)) {
           const now = Math.floor(Date.now() / 1000);
           const access_token = `${btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))}.${btoa(JSON.stringify({ sub: 'test-user', exp: now + 3600, iat: now, aud: 'authenticated', role: 'authenticated' }))}.test-only-signature`;
           localStorage.setItem('ccs-auth-session', JSON.stringify({ access_token, refresh_token: 'test-only-refresh-token', expires_at: now + 3600, expires_in: 3600, token_type: 'bearer', user: { id: 'test-user', email: 'solver@example.test', email_confirmed_at: new Date().toISOString(), identities: [{ provider: scenario.identity }], app_metadata: { provider: scenario.identity, providers: [scenario.identity] }, user_metadata: {}, aud: 'authenticated' } }));
@@ -60,7 +62,7 @@ export async function checkRealAccountCallbacks(browser, origin) {
       assert.equal(result.deletionAllowed, Boolean(scenario.deletionAllowed), 'Deletion proof must require a successful same-account callback.');
       assert.equal(result.intent, null, 'Callback intent must be consumed.');
       assert.equal(new URL(page.url()).search, '', 'Credentials and callback indicators must be removed from URL.');
-      assert.equal(exchanges, scenario.denied || scenario.missingVerifier || scenario.expired || scenario.missingIntent || (scenario.flowId && !scenario.perFlow) ? 0 : 1);
+      assert.equal(exchanges, scenario.denied || scenario.signedOut || scenario.userId === 'different-user' || scenario.missingVerifier || scenario.expired || scenario.missingIntent || (scenario.flowId && !scenario.perFlow) ? 0 : 1);
       assert.equal(await page.evaluate(() => localStorage.getItem('account-auth-local-history-sentinel')), 'kept');
       if (result.storedSession) {
         assert.ok(!result.storedSession.includes('test-only-provider-token'));
@@ -71,5 +73,5 @@ export async function checkRealAccountCallbacks(browser, origin) {
       assert.deepEqual(errors, [], `Real SDK callback page errors: ${JSON.stringify(scenario)}`);
     } finally { await context.close(); }
   }
-  return 'Real Supabase SDK legacy/per-flow PKCE exchange, Google/custom WCA callbacks, identity linking, same-account deletion proof, mismatch/denial/expiry/missing-verifier/intent handling, email verification, token redaction and local-history preservation passed (13 cases).';
+  return 'Real Supabase SDK legacy/per-flow PKCE exchange, Google/custom WCA callbacks, identity linking, same-account deletion proof, mismatch/denial/expiry/missing-verifier/intent handling, email verification, token redaction and local-history preservation passed (15 cases).';
 }

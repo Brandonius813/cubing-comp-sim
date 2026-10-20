@@ -229,7 +229,11 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     }));
     assert.deepEqual(startFocus, { focused: true, visible: true, outline: 'solid' }, 'Tab navigation must retain the button focus indicator.');
     let dialog = await settings(page);
-    assert.equal(await dialog.getByLabel('Hold to start', { exact: true }).inputValue(), '0.55');
+    assert.equal(await dialog.getByLabel('Hold to start', { exact: true }).inputValue(), '0');
+    // Exercise configurable hold behavior explicitly, independent of the zero default.
+    await dialog.getByLabel('Hold to start', { exact: true }).fill('0.55');
+    await dialog.getByLabel('Hold to start', { exact: true }).blur();
+    await settled(page);
     const header = dialog.locator('.dialog-header');
     await header.getByRole('button', { name: 'Check connection', exact: true }).waitFor();
     assert.equal(await dialog.locator('.dialog-body').getByRole('button', { name: 'Check connection', exact: true }).count(), 0);
@@ -483,7 +487,7 @@ export async function checkFeedbackApp(browser, baseUrl, { browserName = 'chromi
     const statistics = page.getByRole('dialog', { name: 'Statistics', exact: true });
     await statistics.getByRole('button', { name: 'Export history', exact: true }).waitFor();
     assert.equal(await statistics.getByRole('button', { name: 'Import history', exact: true }).count(), 0);
-    await statistics.locator('.statistics-summary dt', { hasText: /^Mo3R$/ }).waitFor();
+    assert.equal(await statistics.locator('.statistics-summary dt', { hasText: /^Mo3R$/ }).count(), 0);
     assert.equal(await statistics.locator('aside').count(), 0);
     await capture(page, 'statistics', artifacts); await statistics.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Help', exact: true }).click();

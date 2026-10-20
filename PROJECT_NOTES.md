@@ -336,3 +336,29 @@ Prepared an isolated staging frontend Worker with public Supabase/API configurat
 Published standalone /about/, /privacy/, and /terms/ pages with the existing brand assets, linked from the home screen and Help. The policies describe local-first practice, explicit single cloud saves, optional identity providers, current service providers, and account deletion. Public contact uses the existing GitHub issue tracker with instructions not to post personal data. Policy pages remain readable offline.
 
 Enabled production Google sign-in using the owner-provided web client with the production Supabase callback. Credentials remain outside the repository. Google and WCA are enabled in the production frontend manifest; provider consent and Google branding publication remain controlled by the owner.
+
+
+## Back navigation and durable settings (October 16, 2026)
+
+Brandon requested Back throughout the solve process, persistent wait settings, and preservation of history when updating the site. Added per-round checkpoints that retain scrambles, reverse only attempts added since the prior step, and resume clocks from their checkpoint. Back cancels held-key activation and inspection audio. New rounds begin a new navigation history; page reload still recovers the existing scramble safely.
+
+Valid wait endpoint edits now save immediately instead of waiting for blur/Enter. IndexedDB remains the durable source for settings and times, separate from the service worker asset cache. The update action only replaces cached app assets and reloads at an idle point; regression coverage now compares a completed round and all settings before and after actual worker activation. Browser data clearing is not an update procedure.
+
+## Default start hold (October 16, 2026)
+
+The owner changed the default Hold to start duration to zero seconds. Keep saved durations intact and retain the adjustable control, including 0.55 seconds. This supersedes the earlier 550ms default.
+
+## Complete localization and inspection corrections (October 16, 2026)
+
+Brandon requested publishing the localization audit fixes and correcting inspection DNFs from the time editor.
+
+- All 16 interface languages now cover the newer settings, round navigation, provider authentication, update messages, Help, Statistics, and accessible labels. Message state stores keys so a language change also updates existing notices.
+- About and policy pages receive the app language through their links and use bundled translations. They retain their original content, external URLs and English version. Translation drafts were generated with Google Translate and reviewed for interface/cubing terminology; fluent-speaker review is still welcome. No translation service is contacted by the shipped app.
+- The time editor exposes inspection penalties separately from additional solve penalties. Explicit corrections preserve the measured inspection duration. Merely editing a time does not silently waive an inspection penalty. Automatic inspection scoring is unchanged.
+- Regression checks cover all catalog keys/placeholders, untranslated JSX, rendered Help/Statistics, inspection correction persistence and averages. Browser checks cover editing a DNF, reload, all language switches and localized information pages.
+
+## Typed solves and inspection (October 16, 2026)
+
+Typed solves do not automatically receive inspection penalties: the app cannot know when a physical desk timer was started. Inspection callouts remain available. Keyboard-timed solves retain automatic inspection scoring. A digit from the number row or numpad during Ready or Inspection immediately opens typed entry and retains that first digit, without changing the saved input-mode preference. Existing attempts and explicit penalty corrections remain unchanged.
+
+Penalty editing now presents a single +2/DNF toggle pair for both automatic inspection and user-applied penalties. Explicit edits replace the combined selection and clear the separate inspection contribution; existing records retain their original data until edited.

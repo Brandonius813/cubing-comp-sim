@@ -117,6 +117,7 @@ export class AccountAuth {
     const hash = new URLSearchParams(url?.hash.slice(1));
     const isCallback = Boolean(url && (credentialKeys.some(key => url.searchParams.has(key) || hash.has(key)) || ['signin', 'link', 'delete', 'recovery'].includes(url.searchParams.get('account') ?? '')));
     let intent: RedirectIntent | undefined;
+    let reason: AccountCallback['reason'];
     if (isCallback && typeof sessionStorage !== 'undefined') {
       try {
         const value = JSON.parse(sessionStorage.getItem(INTENT_KEY) ?? 'null');
@@ -142,8 +143,14 @@ export class AccountAuth {
       }
       const initialized = await this.client?.auth.initialize();
       if (initialized?.error || ['error', 'error_code', 'error_description'].some(key => url?.searchParams.has(key) || hash.has(key))) throw new Error('Callback failed');
-      if (!isCallback || !intent) return isCallback && (url?.searchParams.has('code') || ['signin', 'link', 'delete'].includes(url?.searchParams.get('account') ?? '')) ? { purpose: 'signin', status: 'error' } : null;
+      if (!isCallback || !intent) return isCallback && (url?.searchParams.has('code') || ['signin', 'link', 'delete'].includes(url?.searchParams.get('account') ?? '')) ? { purpose: 'signin', status: 'error', reason: 'expired' } : null;
       if (!url?.searchParams.get('code') || url.searchParams.get('account') !== intent.purpose) throw new Error('Missing OAuth exchange');
+      // Do not let an old linking/confirmation tab replace a newer account.
+      // The SDK installs the exchanged session before returning its result.
+      if (intent.userId && (await this.getSession())?.user.id !== intent.userId) {
+        reason = 'account_changed';
+        throw new Error('Account changed before exchange');
+      }
       const flowId = url.searchParams.get('sb_flow_id');
       // The supported SDK exchange checks legacy/per-flow verifier storage and
       // rejects invalid flow IDs. Do not infer success from a cached session.
@@ -157,7 +164,12 @@ export class AccountAuth {
       return { purpose: intent.purpose, provider: intent.provider, status: 'success' };
     } catch {
       const needsEmail = url?.searchParams.get('error_code') === 'provider_email_needs_verification' || hash.get('error_code') === 'provider_email_needs_verification';
-      return isCallback ? { purpose: intent?.purpose ?? 'signin', provider: intent?.provider, status: 'error', ...(needsEmail ? { reason: 'email_verification' as const } : {}) } : null;
+      const errorCode = url?.searchParams.get('error_code') ?? hash.get('error_code');
+      const description = url?.searchParams.get('error_description') ?? hash.get('error_description') ?? '';
+      // Map known errors to fixed copy. Never display provider error text.
+      if (needsEmail) reason = 'email_verification';
+      else if (errorCode === 'identity_already_exists' || description.includes('Multiple accounts with the same email address')) reason = 'identity_conflict';
+      return isCallback ? { purpose: intent?.purpose ?? 'signin', provider: intent?.provider, status: 'error', ...(reason ? { reason } : {}) } : null;
     } finally {
       // This one-shot client only consumes an email link. Release its SDK
       // listeners and in-memory session after restoring the primary client.
@@ -189,8 +201,11 @@ export class AccountAuth {
       const result = purpose === 'link' ? await client.auth.linkIdentity({ provider: PROVIDERS[provider], options })
         : await client.auth.signInWithOAuth({ provider: PROVIDERS[provider], options });
       if (result.error) throw result.error;
-    } catch {
-      sessionStorage.removeItem(INTENT_KEY);
+    } catch (cause) {
+      try { sessionStorage.removeItem(INTENT_KEY); } catch { /* Storage may be blocked. */ }
+      if (cause && typeof cause === 'object' && 'code' in cause && cause.code === 'identity_already_exists') {
+        throw new CloudError('identity_conflict', 'This identity is already connected to another account.');
+      }
       throw new CloudError('auth_error', 'Could not start provider sign-in. Please try again.');
     }
   }
