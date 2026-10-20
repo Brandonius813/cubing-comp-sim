@@ -1,4 +1,5 @@
-import { emptySave, validateMobileSave, type MobileSave } from './practice';
+import { validateHistorySnapshot, type HistorySnapshot } from '../../src/storage/validation';
+import { emptySave, validateMobileDraft, validateMobileSave, type MobileDraft, type MobileSave } from './practice';
 
 /** SQL is injected so failure/ordering behavior can be exercised without a device. */
 export interface SaveDriver {
@@ -26,6 +27,25 @@ export function createSaveRepository(driver: SaveDriver) {
     }),
     store: (save: MobileSave) => write(save, false),
     replace: (save: MobileSave) => write(save, true),
+    storeDraft: (draft: MobileDraft, expectedHistory: HistorySnapshot): Promise<boolean> => {
+      // Capture immutable validated input before entering the queue. The current
+      // settings/history must be read INSIDE it, after earlier explicit commits.
+      const incoming = validateMobileDraft(draft, draft.scramble.eventId);
+      const expected = JSON.stringify(validateHistorySnapshot(expectedHistory));
+      return serialized(async () => {
+        const body = await driver.read();
+        // The caller initializes an empty save once at load, fixing exportedAt.
+        if (body === null) return false;
+        const current = validateMobileSave(JSON.parse(body));
+        if (JSON.stringify(current.history) !== expected
+          || current.preferences.eventId !== incoming.scramble.eventId
+          || (current.draft !== undefined && current.draft.id !== incoming.id)
+          || current.history.rounds.some(round => round.attempts.some(attempt => attempt.id === incoming.id))) return false;
+        const next = validateMobileSave({ ...current, draft: incoming });
+        await driver.write(JSON.stringify(next), false);
+        return true;
+      });
+    },
     loadRecovery: () => serialized(async () => {
       const body = await driver.readRecovery();
       return body === null ? null : validateMobileSave(JSON.parse(body));

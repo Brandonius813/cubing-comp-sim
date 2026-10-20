@@ -40,6 +40,8 @@ const repository = createSaveRepository({
 
 export const loadSave = repository.load;
 export const storeSave = repository.store;
+/** Compare history and update only the draft inside the serialized write queue. */
+export const storeDraft = repository.storeDraft;
 /** Only call after explicit confirmation; retains the previous complete local save. */
 export const replaceSave = repository.replace;
 export const loadRecoverySave = repository.loadRecovery;

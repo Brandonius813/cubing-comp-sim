@@ -102,3 +102,61 @@ test('durable drafts recover interrupted timing without inventing a result and i
   await repository.replace(replacement);
   assert.deepEqual(await repository.loadRecovery(), save);
 });
+
+
+test('draft writes preserve newer preferences committed before their queued read', async () => {
+  const { repository } = memoryDriver();
+  const initial = emptySave();
+  await repository.store(initial);
+  const newer = { ...initial, preferences: { ...initial.preferences, holdMs: 550, inspection: false } };
+  const settingsWrite = repository.store(newer);
+  const draftWrite = repository.storeDraft({ id: 'new-draft', phase: 'ready', scramble }, initial.history);
+  await settingsWrite;
+  assert.equal(await draftWrite, true);
+  const loaded = await repository.load();
+  assert.equal(loaded.preferences.holdMs, 550);
+  assert.equal(loaded.preferences.inspection, false);
+  assert.equal(loaded.draft?.id, 'new-draft');
+});
+
+test('stale draft writes cannot overwrite history edits, replacements, or confirmed IDs', async () => {
+  const { repository } = memoryDriver();
+  const initial = emptySave();
+  await repository.store(initial);
+  const confirmed = recordResult(initial, scramble, { ...result, attemptId: 'confirmed' });
+  await repository.store(confirmed);
+  assert.equal(await repository.storeDraft({ id: 'stale', phase: 'ready', scramble }, initial.history), false);
+  assert.equal(await repository.storeDraft({ id: 'confirmed', phase: 'ready', scramble }, confirmed.history), false);
+  const round = confirmed.history.rounds[0];
+  const edited = updateHistoryAttempt(confirmed, round.id, round.attempts[0].id, { rawMs: 15000 });
+  await repository.store(edited);
+  assert.equal(await repository.storeDraft({ id: 'before-edit', phase: 'ready', scramble }, confirmed.history), false);
+  assert.deepEqual(await repository.load(), edited);
+  const replacement = prepareHistoryReplacement(edited, exportHistory(initial));
+  await repository.replace(replacement);
+  assert.equal(await repository.storeDraft({ id: 'before-replace', phase: 'ready', scramble }, edited.history), false);
+  assert.deepEqual(await repository.load(), replacement);
+});
+
+test('draft writes require initialized storage and the currently selected event', async () => {
+  const { repository } = memoryDriver();
+  const initial = emptySave();
+  const draft = { id: 'event-333', phase: 'ready' as const, scramble };
+  assert.equal(await repository.storeDraft(draft, initial.history), false);
+  const other = { ...initial, preferences: { ...initial.preferences, eventId: '222' as const } };
+  await repository.store(other);
+  assert.equal(await repository.storeDraft(draft, initial.history), false);
+  assert.deepEqual(await repository.load(), other);
+});
+
+
+test('same-history stale callbacks cannot replace a newer unsaved draft', async () => {
+  const { repository } = memoryDriver();
+  const initial = emptySave();
+  await repository.store(initial);
+  assert.equal(await repository.storeDraft({ id: 'current', phase: 'ready', scramble }, initial.history), true);
+  assert.equal(await repository.storeDraft({ id: 'retired', phase: 'ready', scramble }, initial.history), false);
+  assert.equal((await repository.load()).draft?.id, 'current');
+  assert.equal(await repository.storeDraft({ id: 'current', phase: 'inspection', scramble }, initial.history), true);
+  assert.equal((await repository.load()).draft?.phase, 'inspection');
+});
