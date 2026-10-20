@@ -1,5 +1,6 @@
-import { memo, useMemo, useState } from 'react';
-import { FlatList, Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FORMAT_LABELS, getEvent } from '../../src/core/events';
 import { scoreRound } from '../../src/core/scoring';
 import { formatAttempt, formatTime, parseTimeInput } from '../../src/core/timing';
@@ -30,15 +31,20 @@ export interface ScorecardProps {
   onSave: (next: MobileSave) => Promise<boolean>;
   disabled?: boolean;
   onExport?: () => void;
+  /** Lock parent paging, but do not feed this editor's own lock into disabled. */
+  onEditingChange?: (open: boolean) => void;
 }
 
 /** Virtualized history: keeps the number of mounted round cards bounded. */
-export function Scorecard({ save, onSave, disabled = false, onExport }: ScorecardProps) {
+export function Scorecard({ save, onSave, disabled = false, onExport, onEditingChange }: ScorecardProps) {
   const [edit, setEdit] = useState<{ round: Round; attempt: Attempt } | null>(null);
   const [input, setInput] = useState('');
   const [penalty, setPenalty] = useState<Penalty>('none');
   const [inspection, setInspection] = useState<InspectionPenalty>('none');
   const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  useEffect(() => { onEditingChange?.(edit !== null); }, [edit !== null, onEditingChange]);
+  useEffect(() => () => { onEditingChange?.(false); }, [onEditingChange]);
   const [error, setError] = useState('');
   const eventId = save.preferences.eventId;
   const rounds = useMemo(() => save.history.rounds.filter(round => round.eventId === eventId).slice().reverse(), [save.history.rounds, eventId]);
@@ -48,16 +54,16 @@ export function Scorecard({ save, onSave, disabled = false, onExport }: Scorecar
     setPenalty(attempt.penalty); setInspection(attempt.inspectionPenalty); setError('');
   };
   const apply = async () => {
-    if (!edit || busy || disabled) return;
+    if (!edit || busyRef.current || disabled) return;
     const parsed = input.trim() ? parseTimeInput(input) : null;
     if (input.trim() && (!parsed || parsed.rawMs === null || parsed.penalty !== 'none')) { setError('Enter a time without a penalty suffix. Use the penalty buttons below.'); return; }
     try {
       const next = updateHistoryAttempt(save, edit.round.id, edit.attempt.id, { rawMs: parsed?.rawMs ?? null, penalty, inspectionPenalty: inspection });
-      setBusy(true);
+      busyRef.current = true; setBusy(true);
       if (await onSave(next)) setEdit(null);
       else setError('The edit was not saved. Your previous result is unchanged.');
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Invalid result.'); }
-    finally { setBusy(false); }
+    finally { busyRef.current = false; setBusy(false); }
   };
   return <View style={styles.container}>
     <FlatList data={rounds} keyExtractor={round => round.id} initialNumToRender={6} maxToRenderPerBatch={6} windowSize={5} contentContainerStyle={styles.content}
@@ -65,7 +71,7 @@ export function Scorecard({ save, onSave, disabled = false, onExport }: Scorecar
       ListEmptyComponent={<Text style={styles.empty}>No solves for this event yet. Start a round on Practice.</Text>}
       renderItem={({ item }) => <HistoryRound round={item} disabled={disabled} onEdit={openEdit} />} />
     <Modal visible={edit !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => { if (!busy) setEdit(null); }}>
-      <SafeAreaView style={styles.container}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <SafeAreaView style={styles.container}><KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Edit solve {(edit?.attempt.index ?? 0) + 1}</Text>
         <Text style={styles.muted}>Original time in seconds. Penalties are applied separately.</Text>
         <TextInput accessibilityLabel="Original solve time in seconds" value={input} onChangeText={setInput} keyboardType="decimal-pad" style={styles.input} editable={!busy} />
@@ -75,7 +81,7 @@ export function Scorecard({ save, onSave, disabled = false, onExport }: Scorecar
         <Action title={busy ? 'Saving…' : 'Save correction'} onPress={() => void apply()} disabled={busy || disabled} />
         <Action title="Cancel" onPress={() => setEdit(null)} disabled={busy} />
         <Text style={styles.heading}>Scramble</Text><Text selectable style={styles.text}>{edit?.attempt.scramble.notation}</Text><Text selectable style={styles.muted}>Engine: {edit?.attempt.scramble.engineVersion}</Text>
-      </ScrollView></SafeAreaView>
+      </ScrollView></KeyboardAvoidingView></SafeAreaView>
     </Modal>
   </View>;
 }
