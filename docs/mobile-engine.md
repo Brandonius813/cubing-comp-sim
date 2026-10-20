@@ -126,3 +126,20 @@ failed at `javac`: no compiler-capable JDK is installed. The available Java
 runtime reported 1.8.0_371; Maven was not found. No fresh JVM fixture or native
 WebView acceptance result is claimed. The existing artifact's SHA-256 remains
 `37008dff9676c9c782da7b31bcb0cedf562a07e288bafb0ea16fa68267c17f57`.
+
+### Actual checks in this review
+
+- `node --import ./mobile/node_modules/tsx/dist/loader.mjs --test mobile/src/engine/service.test.ts`: **10 passed**, covering queue bounds, aborts, disposal, startup/generation timeouts, stale responses/errors, correlation and progress.
+- `node --test mobile/scripts/engine-bundle.test.mjs`: **3 passed**, including network-independent document construction and secure-randomness failure.
+- `./node_modules/.bin/tsc --noEmit -p mobile/tsconfig.json`: **passed**.
+- `node mobile/scripts/engine-bundle.mjs --engine-dir ../mobile-foundation/public/engine`: **passed**, preserving the verified engine hash above. The sibling path is only the local review artifact source, not a build requirement.
+- The production-bridge smoke run (before the verifier gained its second pass) generated 2x2 in **59 ms**, 3x3 in **1,633 ms**, then **failed** at the unchanged **180,000 ms** timeout during the first 4x4. It did not complete the all-event pass. Warm measurements are therefore unavailable. The timeout was not increased and no slower retry was represented as acceptance.
+- `node --check mobile/scripts/engine-verify.mjs`: **passed** for the revised verifier. Its full reference mode failed immediately on the missing exact `reference-fixtures.jsonl`, as intended, without leaving a generated success report. The revised two-pass path has not completed in this environment.
+
+**Release status:** the engine remains a verified-artifact integration with
+passing host/protocol unit tests, not an accepted all-event native runtime.
+Cold 4x4 exceeded the production failure bound even on this Node host. Device
+performance must be measured before release, and a reproducible verified table
+cache or different isolated runtime may be required. Resolving that requires
+compiler/reference tooling and native testing; the timeout and correctness
+gates remain intact.
