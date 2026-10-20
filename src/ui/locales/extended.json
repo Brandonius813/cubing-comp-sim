@@ -76,7 +76,11 @@
     "helpReason": "I built this app because it is the warm-up timer I wanted for competitions, but nobody had made one quite like it. This app will always be free :)",
     "youtubeChannel": "YouTube Channel",
     "inspectionPenaltyLabel": "Inspection penalty",
-    "noPenalty": "None"
+    "noPenalty": "None",
+    "continueApple": "Continue with Apple",
+    "linkedApple": "Apple connected",
+    "linkApple": "Connect Apple",
+    "confirmAppleIdentity": "Confirm with Apple"
   },
   "es": {
     "fixedDuration": "Duración fija",
@@ -155,7 +159,11 @@
     "helpMobile": "¡Estoy creando versiones para iOS y Android de esta aplicación y espero publicarlas pronto!",
     "helpBio": "Resuelvo cubos desde los 10 años. Empecé mi canal de YouTube para compartir mi trayectoria y ahora también entrevisto a otros cuberos destacados.",
     "helpReason": "Creé esta aplicación porque es el cronómetro de calentamiento que quería para las competiciones, pero nadie había creado uno parecido. Esta aplicación siempre será gratuita :)",
-    "youtubeChannel": "Canal de YouTube"
+    "youtubeChannel": "Canal de YouTube",
+    "continueApple": "Continuar con Apple",
+    "linkedApple": "Apple conectado",
+    "linkApple": "Conecta Apple",
+    "confirmAppleIdentity": "Confirmar con Apple"
   },
   "fr": {
     "fixedDuration": "Durée fixe",
@@ -234,7 +242,11 @@
     "helpMobile": "Je crée des versions iOS et Android de cette application et j'espère les publier bientôt !",
     "helpBio": "Je pratique le cube depuis l’âge de 10 ans. J’ai créé ma chaîne YouTube pour partager mon parcours et j’interviewe maintenant aussi d’autres cubeurs de haut niveau.",
     "helpReason": "J'ai créé cette application parce que c'est le minuteur d'échauffement que je voulais pour les compétitions, mais personne n'en avait créé un comme celui-ci. Cette application sera toujours gratuite :)",
-    "youtubeChannel": "Chaîne YouTube"
+    "youtubeChannel": "Chaîne YouTube",
+    "continueApple": "Continuer avec Apple",
+    "linkedApple": "Apple connecté",
+    "linkApple": "Connectez Apple",
+    "confirmAppleIdentity": "Confirmez avec Apple"
   },
   "de": {
     "fixedDuration": "Feste Dauer",
@@ -313,7 +325,11 @@
     "helpMobile": "Ich erstelle iOS- und Android-Versionen dieser App und hoffe, sie bald veröffentlichen zu können!",
     "helpBio": "Ich bin seit meinem 10. Lebensjahr Cuber. Ich habe meinen YouTube-Kanal gestartet, um meine Reise zum Cuben zu teilen und jetzt auch andere Top-Cuber zu interviewen.",
     "helpReason": "Ich habe diese App entwickelt, weil es sich um den Aufwärmtimer handelt, den ich für Wettkämpfe wollte, aber niemand hat einen vergleichbaren Timer entwickelt. Diese App wird immer kostenlos sein :)",
-    "youtubeChannel": "YouTube-Kanal"
+    "youtubeChannel": "YouTube-Kanal",
+    "continueApple": "Weiter mit Apple",
+    "linkedApple": "Apple verbunden",
+    "linkApple": "Verbinden Sie Apple",
+    "confirmAppleIdentity": "Bestätigen Sie mit Apple"
   },
   "pl": {
     "fixedDuration": "Stały czas trwania",
@@ -392,7 +408,11 @@
     "helpReason": "Stworzyłem tę aplikację, ponieważ chciałem mieć licznik czasu na rozgrzewkę przed zawodami, ale nikt nie stworzył podobnego. Ta aplikacja zawsze będzie darmowa :)",
     "youtubeChannel": "Kanał YouTube",
     "inspectionPenaltyLabel": "Kara za inspekcję",
-    "noPenalty": "Brak"
+    "noPenalty": "Brak",
+    "continueApple": "Kontynuuj z Apple",
+    "linkedApple": "Połączono z Apple",
+    "linkApple": "Połącz Apple",
+    "confirmAppleIdentity": "Potwierdź w Apple"
   },
   "it": {
     "fixedDuration": "Durata fissa",
@@ -471,7 +491,11 @@
     "accountFreshConfirmationRequired": "Conferma nuovamente la tua identità prima di eliminare il tuo account.",
     "accountCallbackExpired": "La richiesta di accesso è scaduta. Per favore riprova.",
     "accountEmailProviderVerification": "Controlla la tua email per verificare il tuo account, quindi prova ad accedere nuovamente con questo provider.",
-    "accountIdentityConflict": "Questo metodo di accesso è in conflitto con un account esistente. Accedi invece con l'e-mail. Se anche la connessione al provider non riesce, contattare l'assistenza. Non creare un altro account."
+    "accountIdentityConflict": "Questo metodo di accesso è in conflitto con un account esistente. Accedi invece con l'e-mail. Se anche la connessione al provider non riesce, contattare l'assistenza. Non creare un altro account.",
+    "continueApple": "Continua con Apple",
+    "linkedApple": "Apple connesso",
+    "linkApple": "Connetti Apple",
+    "confirmAppleIdentity": "Conferma con Apple"
   },
   "pt-BR": {
     "privacyHint": "As contagens básicas de visitas, atividade das contas e confiabilidade são automáticas. Estes controles ativam relatórios opcionais adicionais.",
@@ -550,7 +574,11 @@
     "accountEmailProviderVerification": "Verifique seu e-mail para verificar sua conta e tente fazer login com este provedor novamente.",
     "accountIdentityConflict": "Este método de login entra em conflito com uma conta existente. Faça login com e-mail. Se a conexão com o provedor também falhar, entre em contato com o suporte. Não crie outra conta.",
     "inspectionPenaltyLabel": "Penalidade de inspeção",
-    "noPenalty": "Nenhum"
+    "noPenalty": "Nenhum",
+    "continueApple": "Continuar com o Apple",
+    "linkedApple": "Apple conectado",
+    "linkApple": "Conecte o Apple",
+    "confirmAppleIdentity": "Confirme com o Apple"
   },
   "nl": {
     "fixedDuration": "Vaste duur",
@@ -629,7 +657,11 @@
     "helpReason": "Ik heb deze app gebouwd omdat het de opwarmtimer is die ik wilde hebben voor wedstrijden, maar niemand had er zo één gemaakt. Deze app zal altijd gratis zijn :)",
     "youtubeChannel": "YouTube-kanaal",
     "inspectionPenaltyLabel": "Inspectiestraf",
-    "noPenalty": "Geen"
+    "noPenalty": "Geen",
+    "continueApple": "Ga verder met Apple",
+    "linkedApple": "Apple verbonden",
+    "linkApple": "Verbind Apple",
+    "confirmAppleIdentity": "Bevestig met Apple"
   },
   "ru": {
     "fixedDuration": "Фиксированная продолжительность",
@@ -708,7 +740,11 @@
     "helpMobile": "Я делаю версии этого приложения для iOS и Android и надеюсь вскоре опубликовать их!",
     "helpBio": "Я собираю кубики с 10 лет. Я создал канал на YouTube, чтобы делиться своим опытом, а теперь также беру интервью у других ведущих спидкуберов.",
     "helpReason": "Я создал это приложение, потому что это таймер для разминки, который мне нужен для соревнований, но никто не сделал ничего похожего на него. Это приложение всегда будет бесплатным :)",
-    "youtubeChannel": "YouTube-канал"
+    "youtubeChannel": "YouTube-канал",
+    "continueApple": "Продолжить с Apple",
+    "linkedApple": "Apple подключен",
+    "linkApple": "Подключите Apple",
+    "confirmAppleIdentity": "Подтвердите с помощью Apple"
   },
   "uk": {
     "privacyHint": "Відвідування, активність облікових записів і надійність обліковуються автоматично. Ці перемикачі керують додатковими необов’язковими звітами.",
@@ -787,7 +823,11 @@
     "accountFreshConfirmationRequired": "Ще раз підтвердьте свою особу перед видаленням облікового запису.",
     "accountCallbackExpired": "Термін дії запиту на вхід минув. Спробуйте ще раз.",
     "accountEmailProviderVerification": "Перевірте свою електронну пошту, щоб підтвердити свій обліковий запис, а потім спробуйте знову ввійти за допомогою цього постачальника.",
-    "accountIdentityConflict": "Цей спосіб входу конфліктує з існуючим обліковим записом. Натомість увійдіть за допомогою електронної пошти. Якщо підключення провайдера також не вдається, зверніться в службу підтримки. Не створюйте інший обліковий запис."
+    "accountIdentityConflict": "Цей спосіб входу конфліктує з існуючим обліковим записом. Натомість увійдіть за допомогою електронної пошти. Якщо підключення провайдера також не вдається, зверніться в службу підтримки. Не створюйте інший обліковий запис.",
+    "continueApple": "Продовжити з Apple",
+    "linkedApple": "Apple підключено",
+    "linkApple": "Підключіть Apple",
+    "confirmAppleIdentity": "Підтвердьте через Apple"
   },
   "tr": {
     "privacyHint": "Ziyaret, hesap etkinliği ve güvenilirlik sayımları otomatiktir. Bu anahtarlar ek isteğe bağlı raporlamayı kontrol eder.",
@@ -866,7 +906,11 @@
     "accountFreshConfirmationRequired": "Hesabınızı silmeden önce kimliğinizi tekrar doğrulayın.",
     "accountCallbackExpired": "Oturum açma isteğinin süresi doldu. Lütfen tekrar deneyin.",
     "accountEmailProviderVerification": "Hesabınızı doğrulamak için e-postanızı kontrol edin ve ardından bu sağlayıcıyla tekrar oturum açmayı deneyin.",
-    "accountIdentityConflict": "Bu oturum açma yöntemi mevcut bir hesapla çakışıyor. Bunun yerine e-postayla oturum açın. Sağlayıcıya bağlanmak da başarısız olursa desteğe başvurun. Başka bir hesap oluşturmayın."
+    "accountIdentityConflict": "Bu oturum açma yöntemi mevcut bir hesapla çakışıyor. Bunun yerine e-postayla oturum açın. Sağlayıcıya bağlanmak da başarısız olursa desteğe başvurun. Başka bir hesap oluşturmayın.",
+    "continueApple": "Apple ile devam et",
+    "linkedApple": "Apple'a bağlanıldı",
+    "linkApple": "Apple'ı bağlayın",
+    "confirmAppleIdentity": "Apple ile onaylayın"
   },
   "ja": {
     "fixedDuration": "固定の待機時間",
@@ -945,7 +989,11 @@
     "helpMobile": "このアプリの iOS バージョンと Android バージョンを作成しており、近いうちに公開したいと思っています。",
     "helpBio": "私は 10 歳の頃からキューバーです。自分のキューブの旅を共有するために YouTube チャンネルを開始し、今では他のトップ キューバーにもインタビューしています。",
     "helpReason": "私がこのアプリを作成したのは、競技用のウォームアップ タイマーが欲しかったからですが、これほど似たアプリを作った人は誰もいませんでした。このアプリはいつでも無料です:)",
-    "youtubeChannel": "YouTube チャンネル"
+    "youtubeChannel": "YouTube チャンネル",
+    "continueApple": "Apple で続行",
+    "linkedApple": "Apple が接続しました",
+    "linkApple": "Apple に接続する",
+    "confirmAppleIdentity": "Appleに確認する"
   },
   "zh-Hans": {
     "fixedDuration": "固定等待时间",
@@ -1024,7 +1072,11 @@
     "helpMobile": "我正在制作这个应用程序的 iOS 和 Android 版本，希望尽快发布！",
     "helpBio": "我从 10 岁起就开始玩魔方。我开设了 YouTube 频道来分享我的魔方之旅，现在还采访其他顶级魔方玩家。",
     "helpReason": "我构建这个应用程序是因为它是我想要的比赛热身计时器，但没有人制作过类似的应用程序。这个应用程序将永远免费:)",
-    "youtubeChannel": "YouTube 频道"
+    "youtubeChannel": "YouTube 频道",
+    "continueApple": "使用 Apple 继续",
+    "linkedApple": "谷歌已连接",
+    "linkApple": "连接谷歌",
+    "confirmAppleIdentity": "与谷歌确认"
   },
   "zh-Hant": {
     "fixedDuration": "固定等待時間",
@@ -1103,7 +1155,11 @@
     "helpMobile": "我正在製作這個應用程式的 iOS 和 Android 版本，希望盡快發布！",
     "helpBio": "我從 10 歲就開始玩魔術方塊。我開設了 YouTube 頻道來分享我的魔術方塊之旅，現在也訪問其他頂尖魔術方塊玩家。",
     "helpReason": "我建立這個應用程式是因為它是我想要的比賽熱身計時器，但沒有人製作過類似的應用程式。這個應用程式將永遠免費:)",
-    "youtubeChannel": "YouTube 頻道"
+    "youtubeChannel": "YouTube 頻道",
+    "continueApple": "使用 Apple 繼續",
+    "linkedApple": "Apple已連接",
+    "linkApple": "連接谷歌",
+    "confirmAppleIdentity": "與Apple確認"
   },
   "ko": {
     "privacyHint": "기본 방문, 계정 활동 및 안정성 집계는 자동으로 수집됩니다. 이 설정은 추가 선택 보고만 제어합니다.",
@@ -1182,7 +1238,11 @@
     "helpMobile": "iOS와 Android 버전을 개발 중이며 곧 출시할 수 있기를 바랍니다!",
     "helpBio": "저는 10살 때부터 큐브를 해 왔습니다. 큐브 활동을 공유하려고 YouTube 채널을 시작했고, 지금은 다른 정상급 큐버들과 인터뷰도 합니다.",
     "helpReason": "대회 전 몸풀기에 쓰고 싶은 타이머가 없어서 이 앱을 만들었습니다. 이 앱은 언제나 무료입니다 :)",
-    "youtubeChannel": "YouTube 채널"
+    "youtubeChannel": "YouTube 채널",
+    "continueApple": "Apple로 계속하기",
+    "linkedApple": "Apple 연결됨",
+    "linkApple": "Apple 연결",
+    "confirmAppleIdentity": "Apple로 본인 확인"
   },
   "id": {
     "privacyHint": "Jumlah kunjungan, aktivitas akun, dan keandalan dasar dikumpulkan otomatis. Tombol ini mengatur pelaporan tambahan opsional.",
@@ -1261,6 +1321,10 @@
     "helpMobile": "Saya sedang membuat versi iOS dan Android dan berharap dapat segera menerbitkannya!",
     "helpBio": "Saya bermain kubus sejak usia 10 tahun. Saya memulai kanal YouTube untuk berbagi perjalanan cubing dan kini juga mewawancarai cuber papan atas lainnya.",
     "helpReason": "Saya membuat aplikasi ini karena menginginkan timer seperti ini untuk pemanasan sebelum kompetisi, tetapi belum ada yang membuatnya. Aplikasi ini akan selalu gratis :)",
-    "youtubeChannel": "Kanal YouTube"
+    "youtubeChannel": "Kanal YouTube",
+    "continueApple": "Lanjutkan dengan Apple",
+    "linkedApple": "Apple terhubung",
+    "linkApple": "Hubungkan Apple",
+    "confirmAppleIdentity": "Konfirmasi dengan Apple"
   }
 }

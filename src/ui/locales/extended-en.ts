@@ -1,4 +1,8 @@
 export const extendedEn = {
+  "continueApple": "Continue with Apple",
+  "linkedApple": "Apple connected",
+  "linkApple": "Connect Apple",
+  "confirmAppleIdentity": "Confirm with Apple",
   "fixedDuration": "Fixed Duration",
   "randomDuration": "Random Duration",
   "waitRange": "Random wait range",
