@@ -2,10 +2,10 @@ import { useSyncExternalStore } from 'react';
 import type { EventId } from '../core';
 import { isLocale, type Locale } from '../locales';
 import type { MessageKey as BaseMessageKey } from './locales/en';
-import { feedbackEn } from './locales/feedback-en';
-import { workflowEn } from './locales/workflow-en';
-import { accountEn } from './locales/account-en';
-type MessageKey = BaseMessageKey | keyof typeof feedbackEn | keyof typeof workflowEn | keyof typeof accountEn;
+import { extendedEn, type ExtendedKey } from './locales/extended-en';
+import translations from './locales/extended.json';
+export const extendedCatalogs: Record<Locale, Record<ExtendedKey, string>> = translations;
+type MessageKey = BaseMessageKey | ExtendedKey;
 import { en, enEvents, enInspection } from './locales/en';
 import { es, esEvents, esInspection } from './locales/es';
 import { fr, frEvents, frInspection } from './locales/fr';
@@ -83,6 +83,7 @@ const phrases: Record<Locale, { eight: string; twelve: string }> = {
 export function setLocale(next: Locale) {
   if (!isLocale(next)) return;
   if (typeof document !== 'undefined') { document.documentElement.lang = next; document.documentElement.dir = 'ltr'; }
+  try { if (typeof localStorage !== 'undefined') localStorage.setItem('comp-sim-language', next); } catch { /* Standalone pages can still use their language URL. */ }
   if (locale === next) return;
   locale = next;
   for (const listener of listeners) listener();
@@ -92,7 +93,7 @@ export function useLocale() {
 }
 export function t(key: MessageKey, values: Record<string, string | number> = {}): string {
   const message = (catalogs[locale] as Partial<Record<MessageKey, string>>)[key]
-    ?? ({ ...feedbackEn, ...workflowEn, ...accountEn } as Partial<Record<MessageKey, string>>)[key] ?? key;
+    ?? (extendedCatalogs[locale] as Partial<Record<MessageKey, string>>)[key] ?? key;
   return message.replace(/\{(\w+)\}/g, (token, name: string) => name in values ? String(values[name]) : token);
 }
 export const localizedDate = (date: string | number) => new Date(date).toLocaleString(locale);
@@ -109,11 +110,25 @@ const errorKeys: Record<string, MessageKey> = {
   account_deleting: 'cloudAccountDeleting', deletion_not_configured: 'cloudDeletionUnavailable',
   provider_unavailable: 'accountProviderUnavailable', provider_mismatch: 'accountProviderMismatch',
   oauth_expired: 'accountCallbackExpired',
+  identity_conflict: 'accountIdentityConflict',
 };
-export function errorMessage(cause: unknown, fallback: MessageKey = 'requestError') {
-  if (cause && typeof cause === 'object') {
-    if ('name' in cause && cause.name === 'StorageConflictError') return t('storageConflict');
-    if ('code' in cause && typeof cause.code === 'string' && errorKeys[cause.code]) return t(errorKeys[cause.code]);
-  }
-  return t(fallback);
+export function callbackErrorKey(reason?: import('../cloud/types').AccountCallback['reason']): MessageKey {
+  const keys = {
+    email_verification: 'accountEmailProviderVerification',
+    identity_conflict: 'accountIdentityConflict',
+    account_changed: 'accountChangedDuringRedirect',
+    expired: 'accountCallbackExpired',
+  } as const;
+  return reason ? keys[reason] : 'accountCallbackFailed';
 }
+
+export function errorKey(cause: unknown, fallback: MessageKey = 'requestError'): MessageKey {
+  if (cause && typeof cause === 'object') {
+    if ('name' in cause && cause.name === 'StorageConflictError') return 'storageConflict';
+    if ('code' in cause && typeof cause.code === 'string' && errorKeys[cause.code]) return errorKeys[cause.code];
+  }
+  return fallback;
+}
+
+export const errorMessage = (cause: unknown, fallback: MessageKey = 'requestError') => t(errorKey(cause, fallback));
+export const callbackErrorMessage = (reason?: import('../cloud/types').AccountCallback['reason']) => t(callbackErrorKey(reason));

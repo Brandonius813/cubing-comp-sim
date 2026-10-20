@@ -4,7 +4,7 @@ export interface AccountSession {
 }
 
 export type AccountProvider = 'google' | 'wca';
-export interface AccountCallback { purpose: 'signin' | 'link' | 'delete'; status: 'success' | 'error'; provider?: AccountProvider; reason?: 'email_verification' }
+export interface AccountCallback { purpose: 'signin' | 'link' | 'delete'; status: 'success' | 'error'; provider?: AccountProvider; reason?: 'email_verification' | 'identity_conflict' | 'account_changed' | 'expired' }
 
 export interface SaveMetadata {
   revision: number;
@@ -18,7 +18,7 @@ export interface SaveMetadata {
 export type CloudErrorCode =
   | 'not_configured' | 'offline' | 'auth_required' | 'email_unverified'
   | 'conflict' | 'no_save' | 'invalid_save' | 'too_large' | 'rate_limited'
-  | 'auth_error' | 'network_error' | 'server_error' | 'reauth_required' | 'account_deleting' | 'deletion_not_configured';
+  | 'auth_error' | 'identity_conflict' | 'network_error' | 'server_error' | 'reauth_required' | 'account_deleting' | 'deletion_not_configured';
 
 export type DeletionResult = { status: 'deleted' | 'pending' };
 

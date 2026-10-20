@@ -23,4 +23,6 @@ export const accountEn = {
   accountFreshConfirmationRequired: 'Confirm your identity again before deleting your account.',
   accountCallbackExpired: 'The sign-in request expired. Please try again.',
   accountEmailProviderVerification: 'Check your email to verify your account, then try signing in with this provider again.',
+  accountIdentityConflict: 'This sign-in method conflicts with an existing account. Sign in with email instead. If connecting the provider also fails, contact support. Do not create another account.',
+  accountChangedDuringRedirect: 'The active account changed while you were away. Open account settings and connect or confirm the provider again.',
 } as const;

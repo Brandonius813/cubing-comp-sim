@@ -12,6 +12,7 @@ const messages: Record<CloudErrorCode, string> = {
   too_large: 'This save exceeds the cloud size limit. Export a local backup instead.',
   rate_limited: 'Too many requests. Wait a moment and try again.',
   auth_error: 'The account request failed. Please try again.',
+  identity_conflict: 'This sign-in method conflicts with an existing account.',
   network_error: 'The cloud request could not finish. Your local times are unchanged.',
   server_error: 'The cloud service is unavailable. Your local times are unchanged.',
   reauth_required: 'Enter your password again before deleting this account.',
@@ -42,6 +43,9 @@ export class CloudSaves {
     if (!this.configured) throw new CloudError('not_configured', messages.not_configured);
     if (!session?.accessToken) throw new CloudError('auth_required', messages.auth_required);
     if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new CloudError('offline', messages.offline);
+    const started = performance.now();
+    const operation = path.includes('metadata') ? 'metadata' : path.includes('account') ? 'account' : init.method === 'PUT' ? 'upload' : 'download';
+    const observe = (status: number) => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('ccs-api-observed', { detail: { code: operation, status, duration: performance.now()-started } })); };
     let response: Response;
     try {
       response = await this.fetcher(`${this.base}${path}`, {
@@ -49,7 +53,8 @@ export class CloudSaves {
         headers: { ...init.headers, Authorization: `Bearer ${session.accessToken}` },
         signal: AbortSignal.timeout(120_000),
       });
-    } catch { throw new CloudError('network_error', messages.network_error); }
+    } catch { observe(0); throw new CloudError('network_error', messages.network_error); }
+    observe(response.status);
     if (!response.ok) {
       const codes: Record<number, CloudErrorCode> = { 401: 'auth_required', 403: 'email_unverified', 404: 'no_save', 409: 'conflict', 410: 'account_deleting', 413: 'too_large', 422: 'invalid_save', 429: 'rate_limited' };
       let code = codes[response.status] ?? 'server_error';

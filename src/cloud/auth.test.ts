@@ -27,6 +27,51 @@ function sdk(id = 'user-a', providers = ['google']) {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('provider sign-in boundary', () => {
+  it.each(['google', 'wca'] as const)('completes %s sign-in and linking on the existing account', async provider => {
+    for (const purpose of ['signin', 'link'] as const) {
+      const { storage } = browser(`https://app.example.test/?account=${purpose}&code=private-code`);
+      storage.set('ccs-oauth-intent', JSON.stringify({ purpose, provider, startedAt: Date.now(), ...(purpose === 'link' ? { userId: 'user-a' } : {}) }));
+      const { client, methods } = sdk('user-a', ['email', provider === 'wca' ? 'custom:wca' : provider]);
+      const account = new AccountAuth(config, client);
+      expect(await account.completeRedirect()).toEqual({ purpose, provider, status: 'success' });
+      expect((await account.getSession())?.user.id).toBe('user-a');
+      expect(methods.exchangeCodeForSession).toHaveBeenCalledOnce();
+    }
+  });
+  it.each(['link', 'delete'] as const)('does not exchange a stale %s callback over another account or after sign-out', async purpose => {
+    for (const signedOut of [false, true]) {
+      const { storage } = browser(`https://app.example.test/?account=${purpose}&code=private-code`);
+      storage.set('ccs-oauth-intent', JSON.stringify({ purpose, provider: 'google', userId: 'user-a', startedAt: Date.now() }));
+      const { client, methods } = sdk('user-b');
+      if (signedOut) methods.getSession.mockResolvedValue({ data: { session: null }, error: null });
+      expect(await new AccountAuth(config, client).completeRedirect()).toMatchObject({ status: 'error', reason: 'account_changed' });
+      expect(methods.exchangeCodeForSession).not.toHaveBeenCalled();
+    }
+  });
+  it.each(['query', 'hash'])('explains duplicate identities without leaking raw %s error details', async placement => {
+    const details = new URLSearchParams({ error: 'server_error', error_description: 'Multiple accounts with the same email address in the same linking domain detected: private-detail' });
+    const { replaceState } = browser(`https://app.example.test/?account=signin${placement === 'query' ? '&' : '#'}${details}`);
+    const { client, methods } = sdk();
+    const result = await new AccountAuth(config, client).completeRedirect();
+    expect(result).toMatchObject({ status: 'error', reason: 'identity_conflict' });
+    expect(JSON.stringify(result)).not.toContain('private-detail');
+    expect(methods.exchangeCodeForSession).not.toHaveBeenCalled();
+    expect(replaceState).toHaveBeenCalledWith(null, '', '/');
+  });
+  it('returns an actionable expiration result without exchanging a missing-intent code', async () => {
+    browser('https://app.example.test/?account=signin&code=private-code');
+    const { client, methods } = sdk();
+    expect(await new AccountAuth(config, client).completeRedirect()).toMatchObject({ status: 'error', reason: 'expired' });
+    expect(methods.exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+  it('returns the safe auth error when both writing and clearing browser storage fail', async () => {
+    const { sessionStorage } = browser(); const { client, methods } = sdk();
+    methods.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    sessionStorage.setItem.mockImplementation(() => { throw new Error('private storage details'); });
+    sessionStorage.removeItem.mockImplementation(() => { throw new Error('private cleanup details'); });
+    await expect(new AccountAuth(config, client).signInWithProvider('google')).rejects.toMatchObject({ code: 'auth_error' });
+    expect(methods.signInWithOAuth).not.toHaveBeenCalled();
+  });
   it('keeps the competitor ID from the WCA identity when other providers are linked', async () => {
     const { client, methods } = sdk();
     methods.getSession.mockResolvedValue({ data: { session: { access_token: 'app-token', user: {
@@ -97,6 +142,12 @@ describe('provider sign-in boundary', () => {
     const { storage } = browser(); const { client, methods } = sdk();
     methods.signInWithOAuth.mockResolvedValue({ data: {}, error: new Error('private raw detail') });
     await expect(new AccountAuth(config, client).reauthenticateWithProvider('google')).rejects.toMatchObject({ code: 'auth_error' });
+    expect(storage.has('ccs-oauth-intent')).toBe(false);
+  });
+  it('reports an already-linked identity without exposing provider details', async () => {
+    const { storage } = browser(); const { client, methods } = sdk();
+    methods.linkIdentity.mockResolvedValue({ data: {}, error: { code: 'identity_already_exists', message: 'private details' } });
+    await expect(new AccountAuth(config, client).linkProvider('wca')).rejects.toMatchObject({ code: 'identity_conflict' });
     expect(storage.has('ccs-oauth-intent')).toBe(false);
   });
   it('consumes one successful deletion callback but does not delete anything', async () => {

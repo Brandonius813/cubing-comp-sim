@@ -143,11 +143,46 @@ self.addEventListener('fetch',event=>{
     await page.getByRole('button', { name: 'Settings', exact: true }).click();
     assert.ok(await updateButton.isDisabled(), 'Updating must not interrupt a settings/account dialog.');
     await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    const savedData = await evaluate(page, async () => {
+      const db = await new Promise((resolve, reject) => { const request = indexedDB.open('cubing-comp-sim'); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+      try {
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(['meta', 'rounds'], 'readwrite');
+          const request = tx.objectStore('meta').get('state');
+          let expected;
+          request.onsuccess = () => {
+            const now = Date.now();
+            const round = { id: 'update-history-fixture', eventId: '333', format: 'ao5', createdAt: now, updatedAt: now, completedAt: now,
+              attempts: Array.from({length: 5}, (_, index) => ({ id: `update-attempt-${index}`, roundId: 'update-history-fixture', index,
+                rawMs: 12000 + index * 100, penalty: 'none', inspectionPenalty: 'none', inputMethod: 'manual', recordedAt: now,
+                scramble: { eventId: '333', notation: 'R U', engineVersion: 'update-test-fixture', generatedAt: now } })) };
+            const meta = request.result;
+            meta.settings = { ...meta.settings, waitEnabled: true, waitMode: 'random', waitMinSeconds: 15, waitMaxSeconds: 35 };
+            meta.revision++;
+            tx.objectStore('meta').put(meta); tx.objectStore('rounds').put(round);
+            expected = { settings: meta.settings, round };
+          };
+          tx.oncomplete = () => resolve(expected); tx.onabort = () => reject(tx.error);
+        });
+      } finally { db.close(); }
+    });
     await Promise.all([page.waitForEvent('load'), updateButton.click()]);
     await homepage(page);
     await waitForState(page, async name => !(await caches.keys()).includes(name), oldCache);
     assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online');
     assert.equal(await evaluate(page, () => localStorage.getItem('offline-update-fixture')), 'keep-local-data');
+    const retainedData = await evaluate(page, async () => {
+      const db = await new Promise(resolve => { const request = indexedDB.open('cubing-comp-sim'); request.onsuccess = () => resolve(request.result); });
+      try {
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(['meta', 'rounds'], 'readonly');
+          const meta = tx.objectStore('meta').get('state'); const round = tx.objectStore('rounds').get('update-history-fixture');
+          tx.oncomplete = () => resolve({settings: meta.result.settings, round: round.result}); tx.onabort = () => reject(tx.error);
+        });
+      } finally { db.close(); }
+    });
+    assert.deepEqual(retainedData, savedData, 'Updating must preserve every recorded time and all settings.');
+
     await setOffline(context, true); await page.reload(); await homepage(page);
     assert.equal(await page.locator('html').getAttribute('data-release'), 'latest-online', 'Explicit activation must make the new release available offline.');
     await setOffline(context, false);
