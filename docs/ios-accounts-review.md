@@ -36,7 +36,7 @@ For opt-in staging OAuth, verify the Supabase redirect allowlist covers the fixe
 
 ## Actual verification
 
-- Eleven Node mobile contract tests passed: chunked Unicode/protected session replacement and failure recovery, invalid manifest, PKCE callback constraints, authentication independence, public-key configuration rejection, explicit one-use account-bound transfers, invalid downloads, persistence failure, account switching, duplicate browser/deep-link completion, cancellation, and revoked sessions.
+- Twelve Node mobile contract tests passed: chunked Unicode/protected session replacement and failure recovery, invalid manifest, PKCE callback constraints, authentication independence, public-key configuration rejection, explicit one-use account-bound transfers, invalid downloads, persistence failure, account switching, duplicate browser/deep-link completion, cancellation, revoked sessions, and portable cloud-request cancellation without `AbortSignal.timeout`.
 - Twelve focused server checks passed: signed/live account verification and eleven deletion checks, including mixed Apple/email fail-closed behavior. These use synthetic local data and mocked Auth responses, not real accounts.
 - Root TypeScript passed in this worktree.
 - Full server checks initially had three failures: one expected-shape assertion was fixed and re-run; two checks could not load missing `fastify` and `pg` packages in the inherited server dependency directory. They are environment/dependency blockers, not passing API/Postgres integration evidence.

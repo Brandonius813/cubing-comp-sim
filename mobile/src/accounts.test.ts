@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSecureStorage, type SecureKeyValue } from './accounts/secure-storage';
 import { parseCallback, CALLBACK_URL, NativeAccounts, isPublicClientKey } from './accounts/auth';
+import { CloudSaves } from '../../src/cloud/api';
 import { ExplicitTransfers } from './accounts/transfers';
 import type { HistorySnapshot } from '../../src/storage/validation';
 import type { AccountSession, SaveMetadata } from '../../src/cloud/types';
@@ -138,4 +139,15 @@ test('revoked sessions are rejected before cloud use even when local session exi
     getUser: async () => ({ data: { user: null }, error: { message: 'revoked' } }) } } as unknown as SupabaseClient;
   const auth = new NativeAccounts({ url: 'https://example.supabase.co', publicKey: 'sb_publishable_test' }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client);
   await assert.rejects(auth.verifiedSession(), /expired or was revoked/);
+});
+
+
+test('cloud requests use portable AbortController without AbortSignal.timeout', async t => {
+  t.mock.method(AbortSignal, 'timeout', () => { throw new Error('unavailable on React Native'); });
+  const cloud = new CloudSaves('https://api.example.test', async (_input, init) => {
+    assert.ok(init?.signal instanceof AbortSignal);
+    assert.equal(init.signal.aborted, false);
+    return new Response(JSON.stringify({ save: metadata }), { status: 200 });
+  });
+  assert.deepEqual(await cloud.getSaveMetadata(account()), metadata);
 });
