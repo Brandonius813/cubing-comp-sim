@@ -7,7 +7,7 @@ export interface AuthConfiguration { url?: string; publicKey?: string; appUrl?: 
 const INTENT_KEY = 'ccs-oauth-intent';
 const AUTH_STORAGE_KEY = 'ccs-auth-session';
 const MAX_REDIRECT_AGE = 10 * 60_000;
-const PROVIDERS = { google: 'google', wca: 'custom:wca' } as const;
+const PROVIDERS = { google: 'google', wca: 'custom:wca', apple: 'apple' } as const;
 interface RedirectIntent { purpose: AccountCallback['purpose']; provider: AccountProvider; userId?: string; startedAt: number }
 const credentialKeys = ['code', 'sb_flow_id', 'error', 'error_code', 'error_description', 'access_token', 'refresh_token', 'provider_token', 'provider_refresh_token', 'expires_at', 'expires_in', 'token_type', 'type'];
 
@@ -58,7 +58,7 @@ export class AccountAuth {
 
   constructor(config: AuthConfiguration, client?: SupabaseClient) {
     this.initialUrl = typeof location === 'undefined' ? null : new URL(location.href);
-    this.providers = [...new Set((config.providers ?? '').split(',').filter((provider): provider is AccountProvider => provider === 'google' || provider === 'wca'))];
+    this.providers = [...new Set((config.providers ?? '').split(',').filter((provider): provider is AccountProvider => provider === 'google' || provider === 'wca' || provider === 'apple'))];
     this.redirectBase = typeof location === 'undefined' ? 'http://localhost:5173' : location.origin;
     try {
       const base = new URL(config.appUrl || this.redirectBase);
@@ -121,7 +121,7 @@ export class AccountAuth {
     if (isCallback && typeof sessionStorage !== 'undefined') {
       try {
         const value = JSON.parse(sessionStorage.getItem(INTENT_KEY) ?? 'null');
-        if (value && ['signin', 'link', 'delete'].includes(value.purpose) && ['google', 'wca'].includes(value.provider)
+        if (value && ['signin', 'link', 'delete'].includes(value.purpose) && ['google', 'wca', 'apple'].includes(value.provider)
           && Number.isFinite(value.startedAt) && value.startedAt <= Date.now() && value.startedAt >= Date.now() - MAX_REDIRECT_AGE
           && (value.purpose === 'signin' || typeof value.userId === 'string')) intent = value;
       } catch { /* Invalid or unavailable intent fails closed. */ }

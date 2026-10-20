@@ -42,6 +42,9 @@ export class AccountDeletion {
 
   async request(account: VerifiedAccount, confirmation: unknown): Promise<DeletionResult> {
     if (confirmation !== 'DELETE_ACCOUNT') throw new ApiError(400, 'confirmation_required');
+    // Until encrypted grant capture and retryable Apple revocation are wired,
+    // even password reauthentication must not delete a mixed Apple account.
+    if (account.appleIdentityLinked) throw new ApiError(503, 'deletion_not_configured');
     requireRecentAuthentication(account);
     // Persist the deletion request before contacting either external service.
     // Its per-account lock excludes any future cloud-save commit.

@@ -1,0 +1,95 @@
+{
+  "date": "2026-10-20",
+  "nodeVersion": "24.13.0",
+  "productionAlgorithmChanged": false,
+  "referenceFixtureCount": 0,
+  "nativeDeviceTestsRun": false,
+  "runs": [
+    {
+      "engineSha256": "37008dff9676c9c782da7b31bcb0cedf562a07e288bafb0ea16fa68267c17f57",
+      "documentSha256": "c211721799b87f356f08508bdd8120ddee505d7def7d6a42a5af18b2127d9eed",
+      "scope": "Partial Node contextified VM production bridge smoke; 444 and 444bf excluded; no JVM fixtures or native evidence",
+      "timings": [
+        {
+          "eventId": "222",
+          "durationMs": 52
+        },
+        {
+          "eventId": "333",
+          "durationMs": 1625
+        },
+        {
+          "eventId": "555",
+          "durationMs": 537
+        },
+        {
+          "eventId": "666",
+          "durationMs": 907
+        },
+        {
+          "eventId": "777",
+          "durationMs": 1503
+        },
+        {
+          "eventId": "333oh",
+          "durationMs": 249
+        },
+        {
+          "eventId": "333bf",
+          "durationMs": 263
+        },
+        {
+          "eventId": "555bf",
+          "durationMs": 515
+        },
+        {
+          "eventId": "minx",
+          "durationMs": 86
+        },
+        {
+          "eventId": "pyram",
+          "durationMs": 21
+        },
+        {
+          "eventId": "skewb",
+          "durationMs": 30
+        },
+        {
+          "eventId": "sq1",
+          "durationMs": 118
+        },
+        {
+          "eventId": "fto",
+          "durationMs": 4956
+        },
+        {
+          "eventId": "clock",
+          "durationMs": 146
+        }
+      ]
+    },
+    {
+      "engineSha256": "37008dff9676c9c782da7b31bcb0cedf562a07e288bafb0ea16fa68267c17f57",
+      "documentSha256": "c211721799b87f356f08508bdd8120ddee505d7def7d6a42a5af18b2127d9eed",
+      "scope": "Non-contextified Node production bridge diagnostic; no sandbox-isolation, JVM fixtures or native evidence",
+      "timings": [
+        {
+          "eventId": "333",
+          "durationMs": 626
+        },
+        {
+          "eventId": "444",
+          "durationMs": 11813
+        },
+        {
+          "eventId": "444bf",
+          "durationMs": 688
+        },
+        {
+          "eventId": "fto",
+          "durationMs": 5008
+        }
+      ]
+    }
+  ]
+}

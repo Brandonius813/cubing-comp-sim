@@ -10,12 +10,15 @@ The root README introduces the app. This directory contains development, design,
 | --- | --- |
 | Run, build, or test the app | [Development guide](development.md) |
 | Understand the product and architecture | [Architecture specification](architecture-spec.md) |
+| Build iPhone, iPad and Android apps | [Mobile architecture and agent workstreams](mobile-roadmap.md) |
+| Test mobile builds on a computer or device | [Mobile testing guide](mobile-testing.md) |
 | Find the code for a feature | [Repository map](development.md#repository-map) |
 | Understand ownership and proposed changes | [Contribution and review guidance](../CONTRIBUTING.md) |
 
 ## Components and experience
 
 - [Offline scramble engine](../engine/README.md): upstream source, browser adaptations, and correctness evidence.
+- [Mobile engine experiment](mobile-engine.md): isolated native bridge, host evidence, and outstanding device performance checks.
 - [Accounts and observability](auth-and-observability.md): identity, cloud saves, and optional diagnostics.
 - [Google and WCA sign-in setup](social-login-setup.md): application registration, callbacks, credentials and staged acceptance.
 - [Language coverage](languages.md): available catalogs and review needs.

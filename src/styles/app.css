@@ -67,3 +67,4 @@ body{background:var(--app);color:var(--text)}button,input,select,textarea{font-f
 .step-back { position: absolute; bottom: 12px; left: 12px; z-index: 2; min-height: 44px; padding: 8px 12px; }
 
 .inspection-penalty-editor { display: grid; gap: .5rem; }
+.apple-provider-button{background:#000;color:#fff;border:1px solid #fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif}.apple-provider-button:hover:not(:disabled){background:#222}

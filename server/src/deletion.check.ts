@@ -53,7 +53,7 @@ test('OAuth reauthentication needs signed AMR and owned live allowlisted identit
   }
   assert.equal(oauthAuthenticationTime(amr, 'user-a', [identity('email'), identity('google')]), timestamp * 1000);
   for (const identities of [undefined, [], [null], [identity('github')], [identity('wca')],
-    [identity('custom:other')], [identity('google'), identity('github')], [{ ...identity(), user_id: 'victim' }]]) {
+    [identity('custom:other')], [identity('apple')], [identity('google'), identity('apple')], [identity('google'), identity('github')], [{ ...identity(), user_id: 'victim' }]]) {
     assert.equal(oauthAuthenticationTime(amr, 'user-a', identities), undefined);
   }
   for (const method of ['token_refresh', 'recovery', 'magiclink', 'otp', 'totp', 'sso/saml']) {
@@ -64,6 +64,8 @@ test('OAuth reauthentication needs signed AMR and owned live allowlisted identit
   assert.equal(oauthAuthenticationTime(amr, 'user-a', [{ ...identity('email'), identity_data: identity() }]), undefined);
 });
 
+// Apple is deliberately excluded until provider grant revocation joins deletion.
+// A linked identity or editable metadata must not silently bypass that work.
 test('existing-account OAuth accepts server AMR even when live identity sign-in timestamps are stale', () => {
   const now = 1_700_000_000_000;
   const identity = (at: number) => [{ user_id: 'user-a', provider: 'google', last_sign_in_at: new Date(at).toISOString() }];
@@ -155,4 +157,14 @@ test('accounts without cloud saves can be deleted and duplicate requests are saf
   assert.deepEqual(await service.request({ ...account(), emailVerified: false }, 'DELETE_ACCOUNT'), { status: 'deleted' });
   assert.deepEqual(await service.request(account(), 'DELETE_ACCOUNT'), { status: 'deleted' });
   assert.equal(objectCalls, 0);
+});
+
+
+test('mixed Apple and email accounts remain gated even with fresh password authentication', async () => {
+  const repository = new TestDeletions();
+  let deleted = false;
+  const service = new AccountDeletion(repository, { delete: async () => undefined }, async () => { deleted = true; });
+  await assert.rejects(service.request({ ...account(), appleIdentityLinked: true }, 'DELETE_ACCOUNT'), { status: 503, code: 'deletion_not_configured' });
+  assert.equal(repository.jobs.size, 0);
+  assert.equal(deleted, false);
 });
