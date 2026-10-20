@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSaveRepository, type SaveDriver } from './storage-core';
-import { emptySave, recordResult } from './practice';
+import { emptySave, recordResult, recoverDraft, validateMobileSave } from './practice';
 import { exportHistory, prepareHistoryReplacement, updateHistoryAttempt, eventSummary } from './history';
 
 function memoryDriver() {
@@ -82,4 +82,23 @@ test('history corrections retain provenance and recompute derived statistics', (
   assert.equal(eventSummary(save, '333').bestSingle, 12_000);
   assert.throws(() => updateHistoryAttempt(save, round.id, attempt.id, { rawMs: null, penalty: 'none', inspectionPenalty: 'none' }));
   assert.throws(() => updateHistoryAttempt(save, 'missing', attempt.id, {}));
+});
+
+
+test('durable drafts recover interrupted timing without inventing a result and imports retain a recovery copy', async () => {
+  const { repository } = memoryDriver();
+  const save = validateMobileSave({ ...emptySave(), draft: { id: 'draft-1', phase: 'running', scramble, manualText: '12.34' } });
+  await repository.store(save);
+  const loaded = await repository.load();
+  assert.equal(loaded.draft?.scramble.notation, scramble.notation);
+  assert.equal(loaded.draft?.manualText, '12.34');
+  const recovered = recoverDraft(loaded);
+  assert.equal(recovered.draft?.phase, 'review');
+  assert.equal(recovered.draft?.pending?.rawMs, null);
+  assert.equal(recovered.draft?.pending?.penalty, 'DNF');
+  assert.equal(recovered.history.rounds.length, 0);
+  const replacement = prepareHistoryReplacement(loaded, exportHistory(emptySave()));
+  assert.equal(replacement.draft, undefined);
+  await repository.replace(replacement);
+  assert.deepEqual(await repository.loadRecovery(), save);
 });
