@@ -151,6 +151,12 @@ export class NativeAccounts {
         redirectTo, skipBrowserRedirect: true, ...(provider === 'google' ? { queryParams: { prompt: 'select_account' } } : {}),
       } });
       if (error || !data.url) { await this.storage.removeItem(INTENT_KEY); throw new CloudError('auth_error', 'Could not start provider sign-in.'); }
+      const authorization = new URL(data.url);
+      if (authorization.searchParams.get('code_challenge_method')?.toLowerCase() !== 's256'
+        || !authorization.searchParams.get('code_challenge')) {
+        await this.storage.removeItem(INTENT_KEY);
+        throw new CloudError('auth_error', 'Secure provider sign-in is unavailable in this runtime. Use email sign-in.');
+      }
       return { url: data.url, intent: JSON.stringify(intent) };
     });
     try {

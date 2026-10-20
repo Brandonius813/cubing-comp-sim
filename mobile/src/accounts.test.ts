@@ -121,7 +121,7 @@ test('duplicate warm/browser OAuth completion exchanges one code; cancelled brow
   const session = { access_token: 'token', user: { id: 'a', identities: [{ provider: 'google' }] } } as Session;
   const client = { auth: {
     getSession: async () => ({ data: { session: null }, error: null }),
-    signInWithOAuth: async (args: { options: { redirectTo: string } }) => { callback = `${args.options.redirectTo}&code=single`; return { data: { url: 'https://provider.example.test' }, error: null }; },
+    signInWithOAuth: async (args: { options: { redirectTo: string } }) => { callback = `${args.options.redirectTo}&code=single`; return { data: { url: 'https://provider.example.test?code_challenge_method=s256&code_challenge=test-challenge' }, error: null }; },
     exchangeCodeForSession: async () => { exchanges++; return { data: { session }, error: null }; },
   } } as unknown as SupabaseClient;
   const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test', providers: 'google' }, memory.storage, () => 'a'.repeat(36), async () => cancelled ? { type: 'cancel' } : { type: 'success', url: callback }, client);
@@ -163,4 +163,17 @@ test('missing or invalid email callback origin disables native accounts without 
     await assert.rejects(auth.requestPasswordReset('a@example.test'), /not configured/);
     auth.dispose();
   }
+});
+
+
+test('provider sign-in refuses plain PKCE and never opens the browser', async () => {
+  const memory = secureMemory(); let opened = false;
+  const client = { auth: {
+    getSession: async () => ({ data: { session: null }, error: null }),
+    signInWithOAuth: async () => ({ data: { url: 'https://provider.example.test?code_challenge_method=plain&code_challenge=verifier' }, error: null }),
+  } } as unknown as SupabaseClient;
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test', providers: 'google' }, memory.storage, () => 'a'.repeat(36), async () => { opened = true; return { type: 'cancel' }; }, client);
+  await assert.rejects(auth.signInWithProvider('google'), /Secure provider sign-in/);
+  assert.equal(opened, false);
+  assert.equal(await memory.storage.getItem('ccs-native-oauth-intent'), null);
 });
