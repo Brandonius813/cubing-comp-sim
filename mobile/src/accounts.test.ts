@@ -67,7 +67,7 @@ test('auth restores and signs in without any cloud/history dependency; Apple sta
   const memory = secureMemory(); let sdkCalls = 0;
   const rawSession = { access_token: 'token', user: { id: 'a', email: 'a@example.test', email_confirmed_at: 'today', identities: [{ provider: 'email' }] } } as Session;
   const client = { auth: { getSession: async () => { sdkCalls++; return { data: { session: rawSession }, error: null }; }, signInWithPassword: async () => ({ data: { session: rawSession }, error: null }) } } as unknown as SupabaseClient;
-  const auth = new NativeAccounts({ url: 'https://example.supabase.co', publicKey: 'sb_publishable_test', providers: 'google,wca,apple' }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client);
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test', providers: 'google,wca,apple' }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client);
   assert.deepEqual(auth.providers, ['google', 'wca']);
   assert.equal((await auth.getSession())?.user.id, 'a');
   await auth.signIn('a@example.test', 'secret'); assert.equal(sdkCalls, 1);
@@ -124,7 +124,7 @@ test('duplicate warm/browser OAuth completion exchanges one code; cancelled brow
     signInWithOAuth: async (args: { options: { redirectTo: string } }) => { callback = `${args.options.redirectTo}&code=single`; return { data: { url: 'https://provider.example.test' }, error: null }; },
     exchangeCodeForSession: async () => { exchanges++; return { data: { session }, error: null }; },
   } } as unknown as SupabaseClient;
-  const auth = new NativeAccounts({ url: 'https://example.supabase.co', publicKey: 'sb_publishable_test', providers: 'google' }, memory.storage, () => 'a'.repeat(36), async () => cancelled ? { type: 'cancel' } : { type: 'success', url: callback }, client);
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test', providers: 'google' }, memory.storage, () => 'a'.repeat(36), async () => cancelled ? { type: 'cancel' } : { type: 'success', url: callback }, client);
   await auth.signInWithProvider('google'); await auth.handleCallback(callback);
   assert.equal(exchanges, 1);
   cancelled = true; await auth.signInWithProvider('google'); await auth.handleCallback(callback);
@@ -137,7 +137,7 @@ test('revoked sessions are rejected before cloud use even when local session exi
   const rawSession = { access_token: 'old-token', user: { id: 'a', email_confirmed_at: 'today' } } as Session;
   const client = { auth: { getSession: async () => ({ data: { session: rawSession }, error: null }),
     getUser: async () => ({ data: { user: null }, error: { message: 'revoked' } }) } } as unknown as SupabaseClient;
-  const auth = new NativeAccounts({ url: 'https://example.supabase.co', publicKey: 'sb_publishable_test' }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client);
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test' }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client);
   await assert.rejects(auth.verifiedSession(), /expired or was revoked/);
 });
 
@@ -150,4 +150,17 @@ test('cloud requests use portable AbortController without AbortSignal.timeout', 
     return new Response(JSON.stringify({ save: metadata }), { status: 200 });
   });
   assert.deepEqual(await cloud.getSaveMetadata(account()), metadata);
+});
+
+
+test('missing or invalid email callback origin disables native accounts without production fallback', async () => {
+  const memory = secureMemory();
+  for (const webUrl of [undefined, '', 'http://web.example.test', 'https://user:password@web.example.test', 'https://web.example.test/callback', 'https://web.example.test/?other=origin']) {
+    const auth = new NativeAccounts({ url: 'https://example.supabase.co', publicKey: 'sb_publishable_test', webUrl }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }));
+    assert.equal(auth.configured, false);
+    assert.equal(await auth.getSession(), null);
+    await assert.rejects(auth.signUp('a@example.test', 'password-for-test'), /not configured/);
+    await assert.rejects(auth.requestPasswordReset('a@example.test'), /not configured/);
+    auth.dispose();
+  }
 });

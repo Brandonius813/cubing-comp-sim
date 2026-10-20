@@ -28,7 +28,7 @@ Render `mobile/src/accounts/AccountPanel.tsx` inside Settings. Supply:
 />
 ```
 
-Keep the component mounted once. Include `accountBusy` in navigation/practice locks. There are no default production credentials; absent configuration is visibly unavailable without blocking guest practice. Configuration names are in `mobile/accounts.env.example`. Do not copy its placeholders into a release.
+Keep the component mounted once. Include `accountBusy` in navigation/practice locks. There are no default production credentials or callback origins; missing/invalid web callback configuration disables accounts; absent configuration is visibly unavailable without blocking guest practice. Configuration names are in `mobile/accounts.env.example`. Do not copy its placeholders into a release.
 
 The runtime requires `@supabase/supabase-js` pinned to the root version, Expo-compatible `expo-secure-store`, `expo-web-browser`, and `react-native-url-polyfill`. Add SecureStore's config plugin before a native build. The coordinator owns manifest/lock integration.
 
@@ -36,7 +36,7 @@ For opt-in staging OAuth, verify the Supabase redirect allowlist covers the fixe
 
 ## Actual verification
 
-- Twelve Node mobile contract tests passed: chunked Unicode/protected session replacement and failure recovery, invalid manifest, PKCE callback constraints, authentication independence, public-key configuration rejection, explicit one-use account-bound transfers, invalid downloads, persistence failure, account switching, duplicate browser/deep-link completion, cancellation, revoked sessions, and portable cloud-request cancellation without `AbortSignal.timeout`.
+- Thirteen Node mobile contract tests passed: chunked Unicode/protected session replacement and failure recovery, invalid manifest, PKCE callback constraints, authentication independence, public-key configuration rejection, explicit one-use account-bound transfers, invalid downloads, persistence failure, account switching, duplicate browser/deep-link completion, cancellation, revoked sessions, and portable cloud-request cancellation without `AbortSignal.timeout`.
 - Twelve focused server checks passed: signed/live account verification and eleven deletion checks, including mixed Apple/email fail-closed behavior. These use synthetic local data and mocked Auth responses, not real accounts.
 - Root TypeScript passed in this worktree.
 - Full server checks initially had three failures: one expected-shape assertion was fixed and re-run; two checks could not load missing `fastify` and `pg` packages in the inherited server dependency directory. They are environment/dependency blockers, not passing API/Postgres integration evidence.

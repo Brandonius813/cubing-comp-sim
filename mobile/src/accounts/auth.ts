@@ -62,11 +62,11 @@ export class NativeAccounts {
   constructor(private readonly config: NativeAuthConfig, private readonly storage: SessionStorage,
     private readonly uuid: () => string, private readonly browser: OpenAuthBrowser, client?: SupabaseClient) {
     const url = validOrigin(config.url);
-    this.webUrl = validOrigin(config.webUrl) ?? 'https://cubingcompsim.com';
+    this.webUrl = validOrigin(config.webUrl) ?? '';
     // Apple is deliberately not in this allowlist. Grant capture/revocation and
     // native identity/device acceptance must pass before enabling it.
     this.providers = [...new Set((config.providers ?? '').split(',').filter((p): p is NativeProvider => p === 'google' || p === 'wca'))];
-    this.configured = Boolean(url && isPublicClientKey(config.publicKey));
+    this.configured = Boolean(url && this.webUrl && isPublicClientKey(config.publicKey));
     this.client = client ?? (this.configured ? createClient(url!, config.publicKey!, { auth: {
       storage, storageKey: 'ccs-native-session', persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'pkce',
     } }) : null);
