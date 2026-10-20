@@ -1,51 +1,45 @@
-# Cubing Comp Sim mobile foundation
+# Cubing Comp Sim for iPhone and iPad
 
-React Native with Expo SDK 57. This is a development milestone, not an App Store or Play Store release. The existing website is unchanged.
+React Native and Expo SDK 57. This is review code, not an App Store release or proof of native-device acceptance. See [morning review](../docs/ios-morning-review.md) for exact evidence and blockers.
 
-## Current scope
+## Implemented flow
 
-- Three separate native pages: Scorecard on the left, Practice in the center at launch, Settings on the right. Swipe navigation and accessible tab buttons work on phones and tablets. Timing, review, and save operations lock navigation.
-- Bundled offline TNoodle runs in an isolated WebView. The surrounding application is native React Native UI. Every visible scramble and drawing comes from the verified engine; no fallback algorithm or sample scramble is used.
-- Hold for 550 ms, release to start, touch to stop. Inspection starts on a completed stationary tap. Movement, extra fingers, and native cancellation invalidate a hold. Screen-reader activation offers a hold-free control path.
-- Visual inspection, manual input, penalty review, complete event-specific rounds, scorecards, and local SQLite history. The app imports the existing pure TypeScript round, scoring, parsing, and history validation modules.
-- Leaving the app or losing Android focus during inspection/holding/solving creates a reviewable DNF. It cannot be changed to OK. The elapsed solve clock uses monotonic timestamps rather than frame counts.
-- An engine failure preserves the current scramble/result through saving. Retry creates a new isolated engine host before the next scramble.
+- Separate Scorecard, Practice, Settings pages, with Practice initial, swipe and accessible tap navigation.
+- Fresh local TNoodle scramble/drawing bridge for all 16 events, cancellable requests and elapsed generation status. Algorithms and secure randomness remain pinned. On-device conformance/performance remain gates.
+- Timer or typed time, inspection, zero hold-to-start default, configurable hold, fixed/random waits, explicit final-penalty corrections, optional round goals and abandonment confirmation.
+- Bundled recorded callouts, 16 languages and four voices each. No network audio or beep fallback. Native playback still needs device testing.
+- Versioned SQLite history/settings/drafts. Unsafe recovered timing stages become reviewable DNF, never resumed clocks. Draft-only conditional writes preserve newer history/settings; confirmed attempts use stable IDs.
+- Virtualized history with best single/round and editable solves. JSON share/paste import, full validation, atomic replacement and recovery copy. Native document-picker/file export remains unfinished.
+- Optional email accounts and opt-in Google/WCA PKCE adapters, protected Keychain sessions, explicit upload/download confirmations and account-bound transfer tickets. Login never transfers history. See [account configuration](../docs/ios-accounts-review.md).
+- Apple sign-in remains disabled until server-side grant capture/revocation and real acceptance are complete. No provider keys belong in the app.
 
-## Prepare and run
+Interface is currently English and dark. Full translated native UI, theme/font parity, complete web Back checkpoints, native provider deletion and native visual/accessibility acceptance remain unfinished. Do not advertise those as complete.
 
-Use Node 24. From this directory:
+## Reproducible setup
+
+Use Node 24. From the repository root:
 
 ```sh
+npm ci
+npm run engine:verify
+cd mobile
 npm ci
 npm run prepare-engine
 npm run typecheck
 npm test
-npm start
-```
-
-`prepare-engine` requires the verified root `public/engine/` build. Obtain that through the repository's documented engine build/artifact process first. It validates the artifact and produces the ignored bundled module. `npm start` starts Metro for an installed development build; it does not install an app onto a device. See [mobile testing](../docs/mobile-testing.md) for native tools, device signing, development builds, and standalone previews.
-
-```sh
-npm run ios
-npm run android
 npm run export:ios
-npm run export:android
 ```
 
-The export commands compile JavaScript/assets only. They do not produce installable signed native apps or establish that the app works on hardware. Expo Go is not the release acceptance environment.
+Engine verification requires the documented JDK/Maven toolchain. A matching verified artifact can be reused per [engine documentation](../docs/mobile-engine.md); an arbitrary artifact cannot bypass provenance checks. Expo export creates JavaScript/assets, not an installable app.
 
-EAS profiles in `eas.json`: `development`, `development-simulator`, `preview`, and `production`. The project is linked to `@brandonius813/cubing-comp-sim` (ID `52c0c6ad-0940-4756-9376-f29c88631aea`). Signing credentials are not yet verified. `preview` is standalone and is the correct profile for offline testing without Metro; Android uses an APK. Apple device distribution requires its signing setup. The bundle/package identifier `com.cubingcompsim.app` is a proposed identifier, not a claim of store registration.
+Copy `accounts.env.example` to an ignored `.env` only when configuring a known environment. Supply all four public URLs/key fields and register `cubingcompsim://auth/callback` with that environment. Never insert service-role credentials. Providers default off. Missing configuration leaves guest practice usable.
 
-EAS archives from the repository root. The root `.easignore` includes the verified engine inputs and the generated bundle; the EAS pre-install hook reruns verification/bundling. Never place private keys, signing files, or account credentials in the repository.
+The local review checks used existing dependencies plus exact upstream Expo SDK57 package sources and URL-polyfill source because registry DNS was unavailable. New Expo/URL-polyfill lock entries intentionally omit unavailable integrity values; none were invented. Clean `npm ci` and normal registry-backed export must still be verified. The official source package versions and remaining advisories are documented in the morning review.
 
-## Persistence contract and limits
+## Device preview
 
-SQLite stores one atomic state row containing a versioned mobile preferences envelope and the website's `HistorySnapshot` version 1. A failed write keeps the previous row. Invalid or newer saves fail visibly without resetting data. Only attempts confirmed with **Save and continue** are durable; an unfinished round containing saved attempts is restored. The unused scramble is regenerated on restart. A running or unsaved review attempt is not recovered after process termination yet. Settings persist after successful writes.
+Existing EAS project: `@brandonius813/cubing-comp-sim`, ID `52c0c6ad-0940-4756-9376-f29c88631aea`. Bundle ID `com.cubingcompsim.app`. Existing iPhone/iPad registrations need not be repeated.
 
-Snapshot replacement is intentionally small for this first milestone. Large-history storage, row-based migrations, interrupted-attempt recovery, import/export, inspection recordings, wait simulation, statistics/editing parity, auth, and manual cloud upload/download belong to the subsequent workstreams. The Settings page labels account/cloud support as unavailable and has no fake login controls. Full tablet layouts, accessibility gestures, and hardware timing need real-device acceptance.
+Use the internal `preview` profile only after confirming available zero-cost quota and credential readiness. No cloud build was started during this review. A standalone preview must run with Metro stopped and airplane mode enabled before first launch. See [testing checklist](../docs/mobile-testing.md).
 
-## Parallel work
-
-Start from [the roadmap](../docs/mobile-roadmap.md) and the linked GitHub workstream issues. Keep shared pure-core behavior aligned with the website. Do not add browser storage or DOM imports to the core. `metro.config.cjs` resolves runtime modules from `mobile/node_modules` so the web React installation cannot be bundled as a second runtime.
-
-Engine integration is in `src/engine` and `scripts/engine-*`; its contract and proof boundaries are documented in [mobile engine](../docs/mobile-engine.md). App/UI work is in `App.tsx`; portable mobile state transitions are in `src/practice.ts`; SQLite is behind `src/storage.ts`.
+No production deployment, main merge, TestFlight upload, or App Review submission is part of this branch.

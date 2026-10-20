@@ -48,3 +48,18 @@ test('mute remains silent and new inspection disposes old players', () => {
   assert.equal(old[12].releases, 1); assert.equal(next[12].plays, 0);
   playback.tick(18000); assert.equal(next[8].plays, 1);
 });
+
+
+test('every native audio reference resolves to a real bundled recording', async () => {
+  const { readFile, stat } = await import('node:fs/promises');
+  const { URL } = await import('node:url');
+  const assetMap = new URL('./audio/assets.ts', import.meta.url);
+  const source = await readFile(assetMap, 'utf8');
+  const paths = [...source.matchAll(/require\("([^"]+)"\)/g)].map(match => match[1]);
+  assert.equal(paths.length, 128);
+  assert.equal(new Set(paths).size, 128);
+  for (const path of paths) {
+    assert.ok(path.startsWith('../../../public/audio/inspection/v1/'));
+    assert.ok((await stat(new URL(path, assetMap))).size > 0);
+  }
+});
