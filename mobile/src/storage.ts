@@ -1,29 +1,46 @@
 import { openDatabaseAsync, type SQLiteDatabase } from 'expo-sqlite';
-import { emptySave, validateMobileSave, type MobileSave } from './practice';
+import { createSaveRepository } from './storage-core';
 
 let database: Promise<SQLiteDatabase> | undefined;
 async function getDatabase() {
   if (!database) {
     database = (async () => {
       const db = await openDatabaseAsync('cubing-comp-sim.db');
-      await db.execAsync('PRAGMA journal_mode = WAL; CREATE TABLE IF NOT EXISTS app_state (id INTEGER PRIMARY KEY CHECK (id = 1), body TEXT NOT NULL);');
+      // Additive migration from the foundation: the original state row is untouched.
+      await db.execAsync('PRAGMA journal_mode = WAL; CREATE TABLE IF NOT EXISTS app_state (id INTEGER PRIMARY KEY CHECK (id = 1), body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS app_recovery (id INTEGER PRIMARY KEY CHECK (id = 1), body TEXT NOT NULL);');
       return db;
     })().catch(error => { database = undefined; throw error; });
   }
   return database;
 }
 
-export async function loadSave(): Promise<MobileSave> {
-  const db = await getDatabase();
-  const row = await db.getFirstAsync<{ body: string }>('SELECT body FROM app_state WHERE id = 1');
-  // A corrupt or unsupported save must be reported, never replaced with an empty one.
-  return row ? validateMobileSave(JSON.parse(row.body)) : emptySave();
-}
+const repository = createSaveRepository({
+  async read() {
+    const row = await (await getDatabase()).getFirstAsync<{ body: string }>('SELECT body FROM app_state WHERE id = 1');
+    return row?.body ?? null;
+  },
+  async readRecovery() {
+    const row = await (await getDatabase()).getFirstAsync<{ body: string }>('SELECT body FROM app_recovery WHERE id = 1');
+    return row?.body ?? null;
+  },
+  async write(body, backup) {
+    const db = await getDatabase();
+    if (!backup) {
+      await db.runAsync('INSERT INTO app_state (id, body) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET body = excluded.body', body);
+      return;
+    }
+    // Both statements commit or roll back together. Never lose the recovery copy
+    // because a replacement failed after its first statement.
+    await db.withExclusiveTransactionAsync(async transaction => {
+      await transaction.runAsync('INSERT INTO app_recovery (id, body) SELECT id, body FROM app_state WHERE id = 1 ON CONFLICT(id) DO UPDATE SET body = excluded.body');
+      await transaction.runAsync('INSERT INTO app_state (id, body) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET body = excluded.body', body);
+    });
+  },
+});
 
-export async function storeSave(save: MobileSave): Promise<void> {
-  const valid = validateMobileSave(save);
-  const db = await getDatabase();
-  // One SQLite statement atomically commits preferences and the entire compatible
-  // history snapshot. A failed write leaves the previous snapshot untouched.
-  await db.runAsync('INSERT INTO app_state (id, body) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET body = excluded.body', JSON.stringify(valid));
-}
+export const loadSave = repository.load;
+export const storeSave = repository.store;
+/** Only call after explicit confirmation; retains the previous complete local save. */
+export const replaceSave = repository.replace;
+export const loadRecoverySave = repository.loadRecovery;
+export const restoreRecoverySave = repository.restoreRecovery;
