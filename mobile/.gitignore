@@ -1,0 +1,11 @@
+.expo/
+ios/
+android/
+dist/
+assets/engine.generated.ts
+assets/engine.verification.generated.json
+*.jks
+*.keystore
+*.mobileprovision
+*.p12
+*.p8

@@ -1,0 +1,29 @@
+# EAS archives start at the repository root. Keep credentials and local outputs out.
+.git/
+**/node_modules/
+**/.expo/
+**/.env
+**/.env.*
+!**/.env.example
+**/credentials.json
+**/*.p8
+**/*.p12
+**/*.jks
+**/*.keystore
+**/*.mobileprovision
+.DS_Store
+**/.DS_Store
+**/dist/
+**/build/
+**/coverage/
+**/test-results/
+**/*.tsbuildinfo
+engine/target/
+mobile/ios/
+mobile/android/
+public/deployment.json
+wrangler.release.json
+
+# Deliberately include public/engine and mobile/assets/engine.generated.ts.
+# They are ignored by Git, but native builds need the verified compiled engine.
+# The mobile EAS build hook rechecks its proof and rebuilds the embedded document.
