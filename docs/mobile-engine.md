@@ -138,8 +138,70 @@ WebView acceptance result is claimed. The existing artifact's SHA-256 remains
 
 **Release status:** the engine remains a verified-artifact integration with
 passing host/protocol unit tests, not an accepted all-event native runtime.
-Cold 4x4 exceeded the production failure bound even on this Node host. Device
-performance must be measured before release, and a reproducible verified table
-cache or different isolated runtime may be required. Resolving that requires
+Cold 4x4 exceeded the unchanged failure bound in the contextified Node VM
+harness. The diagnostic below shows that this does not establish equivalent
+latency in another JavaScript runtime. Device performance must be measured
+before choosing a table cache or different isolated runtime. Resolving that requires
 compiler/reference tooling and native testing; the timeout and correctness
 gates remain intact.
+
+
+### Additional bounded diagnostics
+
+A separate production-document smoke run excluded `444` and `444bf` and
+completed the other **14 events**, with a 30-second per-request bound and the
+same no-network contextified Node VM setup. No reference fixtures were used.
+
+| Event | Contextified VM first pass, ms |
+| --- | ---: |
+| 222 | 52 |
+| 333 | 1,625 |
+| 555 | 537 |
+| 666 | 907 |
+| 777 | 1,503 |
+| 333oh | 249 |
+| 333bf | 263 |
+| 555bf | 515 |
+| minx | 86 |
+| pyram | 21 |
+| skewb | 30 |
+| sq1 | 118 |
+| fto | 4,956 |
+| clock | 146 |
+
+A second diagnostic executed the **same unmodified production document** in
+Node's ordinary current context with `vm.runInThisContext`, rather than a
+`vm.createContext` context. It used fresh process state, then generated the
+following sequence with a 60-second per-request bound:
+
+| Event | Non-contextified Node diagnostic, ms |
+| --- | ---: |
+| 333 | 626 |
+| 444 | 11,813 |
+| 444bf | 688 |
+| fto | 5,008 |
+
+The 4x4 request was the first 4x4-family request in that process; 4BLD reused
+its initialized tables. Neither run altered TNoodle, seeded production
+randomness, changed timeout settings in the app, or substituted scrambles.
+The results included nonempty notation and SVG and matched each requested
+event and pinned engine identity. No puzzle-state/reference equivalence or
+native UI/rendering claim follows from these checks.
+
+The difference between >180 seconds and 11.813 seconds is consistent with a
+substantial contextified-VM performance penalty, but these are single fresh
+random generations, not identical seeded workloads or a controlled profiler.
+It does not quantify the exact overhead or predict WKWebView latency. FTO was
+similar across the two runs. The ordinary Node context also has Node globals
+available, so its result does **not** replace the isolated no-network harness
+or any reference gate. The diagnostic makes no application/runtime change.
+
+Machine-readable measurements and exact engine/document hashes are in
+[`engine-review-node-evidence.json`](engine-review-node-evidence.json).
+Document SHA-256 was
+`c211721799b87f356f08508bdd8120ddee505d7def7d6a42a5af18b2127d9eed` in both runs.
+Reproduction uses `makeEngineDocument` with the validated artifact and current
+bridge, substitutes a private test channel, extracts the existing script body,
+and executes it unchanged; only the host evaluation method differs. These
+separate diagnostics expand smoke coverage, but do not turn the failed full
+contextified run into a pass or satisfy all-event native acceptance.
