@@ -56,6 +56,7 @@ export class NativeAccounts {
   readonly configured: boolean;
   readonly providers: NativeProvider[];
   private readonly client: SupabaseClient | null;
+  private readonly emailClient: SupabaseClient | null;
   private readonly webUrl: string;
   private tail: Promise<unknown> = Promise.resolve();
   constructor(private readonly config: NativeAuthConfig, private readonly storage: SessionStorage,
@@ -68,6 +69,11 @@ export class NativeAccounts {
     this.configured = Boolean(url && isPublicClientKey(config.publicKey));
     this.client = client ?? (this.configured ? createClient(url!, config.publicKey!, { auth: {
       storage, storageKey: 'ccs-native-session', persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'pkce',
+    } }) : null);
+    // Email confirmation/recovery is completed on the website, potentially on
+    // another device. Do not bind those links to a native PKCE verifier.
+    this.emailClient = client ?? (this.configured ? createClient(url!, config.publicKey!, { auth: {
+      persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'implicit', storageKey: 'ccs-native-email-requests',
     } }) : null);
   }
   private sdk(): SupabaseClient {
@@ -109,12 +115,18 @@ export class NativeAccounts {
   }); }
   signUp(email: string, password: string): Promise<boolean> { return this.serial(async () => {
     await this.storage.removeItem(INTENT_KEY);
-    const { data, error } = await this.sdk().auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${this.webUrl}/` } });
+    this.sdk();
+    const { data, error } = await this.emailClient!.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${this.webUrl}/` } });
     if (error) throw new CloudError('auth_error', 'Could not create an account. Please try again.');
+    if (data.session && this.emailClient !== this.client) {
+      const restored = await this.sdk().auth.setSession({ access_token: data.session.access_token, refresh_token: data.session.refresh_token });
+      if (restored.error) throw new CloudError('auth_error', 'Could not restore your new account. Sign in again.');
+    }
     return Boolean(data.session);
   }); }
   requestPasswordReset(email: string): Promise<void> { return this.serial(async () => {
-    const { error } = await this.sdk().auth.resetPasswordForEmail(email.trim(), { redirectTo: `${this.webUrl}/?account=recovery` });
+    this.sdk();
+    const { error } = await this.emailClient!.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${this.webUrl}/?account=recovery` });
     if (error) throw new CloudError('auth_error', 'Could not send the reset request. Try again later.');
   }); }
   signOut(): Promise<void> { return this.serial(async () => {
@@ -184,5 +196,5 @@ export class NativeAccounts {
       } finally { isolated.auth.dispose(); }
     });
   }
-  dispose(): void { this.client?.auth.dispose(); }
+  dispose(): void { this.client?.auth.dispose(); if (this.emailClient !== this.client) this.emailClient?.auth.dispose(); }
 }
