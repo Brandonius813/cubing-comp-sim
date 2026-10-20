@@ -1,4 +1,4 @@
-import { validateHistorySnapshot, type HistorySnapshot } from '../storage';
+import { validateHistorySnapshot, type HistorySnapshot } from '../storage/validation';
 import { CloudError, type AccountSession, type SaveMetadata, type CloudErrorCode, type DeletionResult } from './types';
 
 const messages: Record<CloudErrorCode, string> = {

@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { ApiError } from './errors.js';
 
-export interface VerifiedAccount { id: string; emailVerified: boolean; passwordAuthenticatedAt?: number; oauthAuthenticatedAt?: number }
+export interface VerifiedAccount { id: string; emailVerified: boolean; passwordAuthenticatedAt?: number; oauthAuthenticatedAt?: number; appleIdentityLinked?: boolean }
 export type VerifyAccount = (authorization: string | undefined) => Promise<VerifiedAccount>;
 
 /** Call only with verified JWT claims; a refreshed iat does not prove sign-in. */
@@ -61,6 +61,7 @@ export function createAccountVerifier(url: string, publicKey: string): VerifyAcc
     if (data.user.is_anonymous || claims.is_anonymous === true) throw new ApiError(401, 'auth_required');
     return {
       id: data.user.id, emailVerified: Boolean(data.user.email_confirmed_at),
+      appleIdentityLinked: data.user.identities?.some(identity => identity.provider === 'apple') ?? false,
       passwordAuthenticatedAt: passwordAuthenticationTime(claims.amr),
       oauthAuthenticatedAt: oauthAuthenticationTime(claims.amr, data.user.id, data.user.identities),
     };

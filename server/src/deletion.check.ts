@@ -158,3 +158,13 @@ test('accounts without cloud saves can be deleted and duplicate requests are saf
   assert.deepEqual(await service.request(account(), 'DELETE_ACCOUNT'), { status: 'deleted' });
   assert.equal(objectCalls, 0);
 });
+
+
+test('mixed Apple and email accounts remain gated even with fresh password authentication', async () => {
+  const repository = new TestDeletions();
+  let deleted = false;
+  const service = new AccountDeletion(repository, { delete: async () => undefined }, async () => { deleted = true; });
+  await assert.rejects(service.request({ ...account(), appleIdentityLinked: true }, 'DELETE_ACCOUNT'), { status: 503, code: 'deletion_not_configured' });
+  assert.equal(repository.jobs.size, 0);
+  assert.equal(deleted, false);
+});
