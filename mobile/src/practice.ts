@@ -48,10 +48,10 @@ export function mobileSettings(preferences: MobilePreferences): Settings {
 
 export function validateMobilePreferences(preferences: MobilePreferences): MobilePreferences {
   const settings = mobileSettings(preferences);
-  const inspectionAudio = preferences.inspectionAudio ?? true;
-  const voiceLanguage = preferences.voiceLanguage ?? 'en';
-  const voice = preferences.voice ?? 'male-1';
-  const voiceVolume = preferences.voiceVolume ?? 1;
+  const inspectionAudio = preferences.inspectionAudio === undefined ? true : preferences.inspectionAudio;
+  const voiceLanguage = preferences.voiceLanguage === undefined ? 'en' : preferences.voiceLanguage;
+  const voice = preferences.voice === undefined ? 'male-1' : preferences.voice;
+  const voiceVolume = preferences.voiceVolume === undefined ? 1 : preferences.voiceVolume;
   if (typeof inspectionAudio !== 'boolean' || !isLocale(voiceLanguage)
     || !['male-1', 'male-2', 'female-1', 'female-2'].includes(voice)
     || typeof voiceVolume !== 'number' || !Number.isFinite(voiceVolume) || voiceVolume < 0 || voiceVolume > 1) throw new Error('Invalid inspection audio settings.');
@@ -138,10 +138,13 @@ export function navigationLocked(phase: TimerPhase, saving: boolean): boolean {
 
 /** Uses the website's exact round, penalty and scoring model. */
 export function recordResult(save: MobileSave, scramble: Scramble, input: PendingResult): MobileSave {
-  const pending = validatePendingResult(input, save.preferences.eventId);
+  const pending = validatePendingResult({ ...input, attemptId: input.attemptId ?? save.draft?.id }, save.preferences.eventId);
   if (scramble.eventId !== save.preferences.eventId) throw new Error('The scramble belongs to a different event.');
   // Retried writes and repeated taps refer to one attempt, even across round completion.
   if (pending.attemptId && save.history.rounds.some(round => round.attempts.some(attempt => attempt.id === pending.attemptId))) return save;
+  if (save.draft && (pending.attemptId !== save.draft.id
+    || scramble.notation !== save.draft.scramble.notation || scramble.engineVersion !== save.draft.scramble.engineVersion
+    || scramble.generatedAt !== save.draft.scramble.generatedAt)) throw new Error('This result belongs to a previous scramble.');
   const active = save.history.rounds.find(round => round.id === save.history.activeRoundId);
   const goalMs = mobileSettings(save.preferences).goalMs;
   const round = active ?? createRound(save.preferences.eventId, goalMs === null ? {} : { goalMs });

@@ -154,3 +154,20 @@ test('event changes and explicit round abandonment clear only active drafts/unfi
   const save = changeEvent({ ...emptySave(), draft }, '222');
   assert.equal(save.draft, undefined); assert.equal(save.preferences.eventId, '222');
 });
+
+test('stale result callbacks cannot replace a newer active draft', () => {
+  const draft = createDraft(scramble, emptySave().preferences);
+  const save = { ...emptySave(), draft };
+  assert.throws(() => recordResult(save, scramble, { rawMs: 10000, penalty: 'none', inputMethod: 'timer', attemptId: 'old-attempt' }));
+  assert.throws(() => recordResult(save, { ...scramble, generatedAt: 2 }, { rawMs: 10000, penalty: 'none', inputMethod: 'timer', attemptId: draft.id }));
+  const result = recordResult(save, scramble, { rawMs: 10000, penalty: 'none', inputMethod: 'timer' });
+  assert.equal(result.history.rounds[0].attempts[0].id, draft.id);
+});
+
+test('audio defaults are migrated but corrupt explicit values fail closed', () => {
+  assert.equal(emptySave().preferences.inspectionAudio, true);
+  assert.equal(emptySave().preferences.voiceLanguage, 'en');
+  for (const patch of [{ inspectionAudio: null }, { voice: 'robot' }, { voiceVolume: 2 }, { voiceLanguage: 'missing' }]) {
+    assert.throws(() => validateMobileSave({ ...emptySave(), preferences: { ...emptySave().preferences, ...patch } }));
+  }
+});

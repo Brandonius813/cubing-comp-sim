@@ -24,3 +24,10 @@ test('native cancellation and additional fingers invalidate an armed hold', () =
   touch.begin(point(0)); touch.move(point(100), 2);
   assert.equal(touch.end(point(600)), null);
 });
+
+test('invalid coordinates and a reversed monotonic clock cancel rather than starting a solve', () => {
+  const touch = new TimerTouch();
+  touch.begin(point(100)); assert.equal(touch.end(point(50)), null);
+  touch.begin(point(0)); assert.equal(touch.move(point(10, NaN)), false);
+  touch.begin(point(Infinity)); assert.equal(touch.end(point(100)), null);
+});
