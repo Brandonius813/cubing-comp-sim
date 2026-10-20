@@ -4,7 +4,7 @@ Prepared October 20, 2026 UTC. **Substantial integrated implementation is ready 
 
 ## Review entry points
 
-Primary review PR and published commit will be added after the branch is published. Existing work is retained: [mobile foundation #43](https://github.com/Brandonius813/cubing-comp-sim/pull/43), [Apple preparation #42](https://github.com/Brandonius813/cubing-comp-sim/pull/42), [launch tracker #36](https://github.com/Brandonius813/cubing-comp-sim/issues/36).
+Primary review: [draft PR #52](https://github.com/Brandonius813/cubing-comp-sim/pull/52), branch `feat/ios-review-ready`. Published implementation: [`4a15b91`](https://github.com/Brandonius813/cubing-comp-sim/commit/4a15b91dbbef7e23ff1370c7ce99e2c70a6096cb). Existing work is retained: [mobile foundation #43](https://github.com/Brandonius813/cubing-comp-sim/pull/43), [Apple preparation #42](https://github.com/Brandonius813/cubing-comp-sim/pull/42), [launch tracker #36](https://github.com/Brandonius813/cubing-comp-sim/issues/36).
 
 Current main `d17fa698c3de7f94fcb1d5675d80c2bceedd24d6`, mobile `f292fb387dcae87a6eb05e70809a7750e53102ec`, and Apple `ee0aee1` were integrated before feature completion. Shell GitHub DNS failed, so main was retrieved through the authenticated GitHub connector and its full tree verified against `31416438afecfa0f87f459eddf612b4c7b37acda`. Publication uses the actual remote parents and verifies identical tree contents. No existing branches are reset or force-pushed.
 
@@ -30,6 +30,8 @@ Local code verification checkpoint: `0537caaf961657650127a125452977b437d8556c`, 
 | iOS binary/install | Blocked | iOS JavaScript/assets export passes | No Xcode/Simulator available; free EAS allowance not confirmed, so no native build submitted |
 
 ## Actual verification
+
+GitHub CI was triggered by the draft PR. Remote checks are pending; the results below are actual local checks, not claims that remote CI passed.
 
 | Check | Result and scope |
 | --- | --- |
