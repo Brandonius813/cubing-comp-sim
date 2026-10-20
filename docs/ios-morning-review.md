@@ -4,11 +4,11 @@ Prepared October 20, 2026 UTC. **Substantial integrated implementation is ready 
 
 ## Review entry points
 
-Primary review: [draft PR #52](https://github.com/Brandonius813/cubing-comp-sim/pull/52), branch `feat/ios-review-ready`. Published implementation: [`4a15b91`](https://github.com/Brandonius813/cubing-comp-sim/commit/4a15b91dbbef7e23ff1370c7ce99e2c70a6096cb). Existing work is retained: [mobile foundation #43](https://github.com/Brandonius813/cubing-comp-sim/pull/43), [Apple preparation #42](https://github.com/Brandonius813/cubing-comp-sim/pull/42), [launch tracker #36](https://github.com/Brandonius813/cubing-comp-sim/issues/36).
+Primary review: [draft PR #52](https://github.com/Brandonius813/cubing-comp-sim/pull/52), branch `feat/ios-review-ready`. Published initial implementation: [`4a15b91`](https://github.com/Brandonius813/cubing-comp-sim/commit/4a15b91dbbef7e23ff1370c7ce99e2c70a6096cb). Existing work is retained: [mobile foundation #43](https://github.com/Brandonius813/cubing-comp-sim/pull/43), [Apple preparation #42](https://github.com/Brandonius813/cubing-comp-sim/pull/42), [launch tracker #36](https://github.com/Brandonius813/cubing-comp-sim/issues/36).
 
 Current main `d17fa698c3de7f94fcb1d5675d80c2bceedd24d6`, mobile `f292fb387dcae87a6eb05e70809a7750e53102ec`, and Apple `ee0aee1` were integrated before feature completion. Shell GitHub DNS failed, so main was retrieved through the authenticated GitHub connector and its full tree verified against `31416438afecfa0f87f459eddf612b4c7b37acda`. Publication uses the actual remote parents and verifies identical tree contents. No existing branches are reset or force-pushed.
 
-Local code verification checkpoint: `0537caaf961657650127a125452977b437d8556c`, tree `6900575a49a0ffe2bbe013065e8ec150a33b4892`. Later commits in this review may add documentation only. Local focused commits are retained in the worktrees; remote publication consolidates the integrated tree because shell git transport is unavailable.
+Local code verification checkpoint: `5b86b2b17351b1b1c44589a426ae6fa2f638fc5c`, tree `3ab41aae6c4bc427451b169ed115f39769fcbed4`. Later commits in this review may add documentation only. Local focused commits are retained in the worktrees; remote publication consolidates the integrated tree because shell git transport is unavailable.
 
 ## What works and what remains
 
@@ -40,7 +40,7 @@ GitHub CI was triggered by the draft PR. Remote checks are pending; the results 
 | `node --test deploy/*.test.mjs` | 26 passed |
 | Server `node --import tsx --test src/*.check.ts` | 24 passed, one PostgreSQL integration test skipped because database URL unavailable |
 | Mobile `npm run typecheck` | Passed using existing installed dependencies plus verified genuine upstream package sources, described below |
-| Mobile `npm test` | 95 TypeScript tests plus 3 bundler tests passed; includes all 16 event × two input-mode lifecycle contracts, persistence races/recovery, auth transfers, engine protocol, gestures and audio asset paths |
+| Mobile `npm test` | 97 TypeScript tests plus 3 bundler tests passed; includes all 16 event × two input-mode lifecycle contracts, persistence races/recovery, auth transfers, engine protocol, gestures and audio asset paths |
 | Mobile `npm run prepare-engine` | Passed; exact engine SHA-256 `37008dff9676c9c782da7b31bcb0cedf562a07e288bafb0ea16fa68267c17f57` |
 | Mobile `npm run export:ios` | Passed with source-staged dependencies; 129 assets including all 128 recordings, one Hermes iOS JS bundle. **Not native compilation or an installable binary.** |
 | Recording integrity | All 128 existing recordings matched the approved pack hashes |
@@ -50,7 +50,7 @@ GitHub CI was triggered by the draft PR. Remote checks are pending; the results 
 | New JVM reference conformance | Not run successfully: no Java compiler. Verifier correctly rejects missing reference fixtures before expensive generation |
 | Native build, Simulator, device tests | Not run; Xcode/simctl unavailable |
 | Screenshots | None captured. Native visual inspection remains pending; no mockup is presented as a screenshot |
-| Clean registry install / npm audit / EAS archive | Registry/API DNS blocked. Clean `npm ci`, current full audit and actual EAS archive inspection remain unverified. Static `.easignore` includes engine and audio assets and excludes credentials |
+| Registry install / audit / EAS archive | Local DNS blocked. Remote CI clean `npm ci --ignore-scripts --no-fund --no-audit` passed. Mobile audit failed with 23 advisories (15 high, 7 moderate, 1 low); root/server audits passed. Normal lifecycle-script install and actual EAS archive remain unverified. Static `.easignore` includes engine/audio and excludes credentials |
 
 An initial export exposed an incorrect relative audio path; it was fixed and a test now resolves every native recording reference. Earlier local server invocation lacked its dependency link; the corrected invocation produced the counts above. Native cloud requests no longer depend on unsupported `AbortSignal.timeout`; browser telemetry dispatch is guarded on native.
 
@@ -64,7 +64,16 @@ The runtime could not resolve registry.npmjs.org. To obtain meaningful type and 
 - `react-native-url-polyfill` 4.0.0: `4598e480a1c7c1093a4cac24990f5dd43203c7a0`
 - Supabase 2.117.3 and Expo Asset 57.0.20 use already installed matching dependencies/lock metadata.
 
-The new Expo/URL-polyfill lock entries omit unavailable integrity fields instead of inventing hashes. Verify clean npm installation and normalize lock integrity with the registry before a native build. The source-based export is not evidence that npm installation or native autolinking succeeds.
+The new Expo/URL-polyfill lock entries omit unavailable integrity fields instead of inventing hashes. Remote CI subsequently verified clean npm installation with lifecycle scripts disabled. Normalize lock integrity with the registry and verify normal installation before a native build. The local source-based export does not establish native autolinking.
+
+### Remote CI observed after publication
+
+- [Initial API workflow](https://github.com/Brandonius813/cubing-comp-sim/actions/runs/39357853499), implementation `4a15b91`: **passed**. It ran 30 server tests with zero skips, including five real PostgreSQL transaction subtests, three encrypted backup checks, API build and Docker image build. Later changes do not modify server behavior.
+- [Audit workflow](https://github.com/Brandonius813/cubing-comp-sim/actions/runs/39357896697): clean mobile install with scripts disabled passed; mobile audit failed with the counts above. No audit gate was suppressed.
+- [Documentation rerun of API workflow](https://github.com/Brandonius813/cubing-comp-sim/actions/runs/39357896674): failed before checkout because the public PostgreSQL container registry reported a download limit. This is separate from the successful application/database tests above.
+- Desktop/mobile engine workflows were still running when inspected. This report does not claim those jobs passed. See the PR Checks tab for later outcomes.
+
+A final source review found that Supabase PKCE needs more than UUID support on Hermes. The native adapter now supplies Expo Crypto secure randomness and SHA-256, preserves existing implementations, and refuses an authorization URL using plain PKCE. A known SHA-256 vector and fail-closed provider test passed; final local mobile total is 97 plus 3 bundler tests, and the iOS JS export passed again. Real OAuth still needs device/staging acceptance.
 
 ## Release blockers
 

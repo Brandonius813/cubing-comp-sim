@@ -34,7 +34,7 @@ Engine verification requires the documented JDK/Maven toolchain. A matching veri
 
 Copy `accounts.env.example` to an ignored `.env` only when configuring a known environment. Supply all four public URLs/key fields and register `cubingcompsim://auth/callback` with that environment. Never insert service-role credentials. Providers default off. Missing configuration leaves guest practice usable.
 
-The local review checks used existing dependencies plus exact upstream Expo SDK57 package sources and URL-polyfill source because registry DNS was unavailable. New Expo/URL-polyfill lock entries intentionally omit unavailable integrity values; none were invented. Clean `npm ci` and normal registry-backed export must still be verified. The official source package versions and remaining advisories are documented in the morning review.
+The local review checks used existing dependencies plus exact upstream Expo SDK57 package sources and URL-polyfill source because registry DNS was unavailable. New Expo/URL-polyfill lock entries intentionally omit unavailable integrity values; none were invented. Remote CI subsequently passed clean `npm ci` with lifecycle scripts disabled. Normal installation and registry-backed native export/build still need verification. The official source package versions and remaining advisories are documented in the morning review.
 
 ## Device preview
 
