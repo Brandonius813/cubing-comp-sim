@@ -21,9 +21,8 @@ const providerMessages = {
   apple: { signin: 'continueApple', link: 'linkApple', linked: 'linkedApple', delete: 'confirmAppleIdentity' },
 } as const satisfies Record<AccountProvider, Record<'signin' | 'link' | 'linked' | 'delete', MessageKey>>;
 function ProviderLogo({ provider }: { provider: AccountProvider }) {
-  // Apple's approved button artwork is a launch checklist item. The provider
-  // remains unavailable in release builds until account revocation is complete.
-  if (provider === 'apple') return null;
+  if (provider === 'apple') return <img className="apple-button-art" aria-hidden="true" alt=""
+    src="/assets/apple-sign-in.png" />;
   return <span className="provider-icon" aria-hidden="true"><img src={provider === 'google' ? '/assets/google-g.png' : '/assets/wca-logo.svg'} width="18" height="18" alt="" /></span>;
 }
 
@@ -193,7 +192,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
           {passwordAvailable && <label>{t('deletePassword')}<input type="password" required autoComplete="current-password" value={deletePassword} disabled={busy} onChange={event => setDeletePassword(event.target.value)} /></label>}
           {deletionProviders.length > 0 && <div className="provider-buttons">
             <p className="muted">{t('providerDeleteDescription')}</p>
-            {deletionProviders.map(provider => <button key={provider} type="button" className={`primary-button provider-button${provider === 'apple' ? ' apple-provider-button' : ''}`} disabled={busy} onClick={() => providerAction(provider, 'delete')}><ProviderLogo provider={provider} /><span>{t(providerMessages[provider].delete)}</span></button>)}
+            {deletionProviders.map(provider => <button key={provider} type="button" className={`primary-button provider-button${provider === 'apple' ? ' apple-provider-button' : ''}`} aria-label={t(providerMessages[provider].delete)} disabled={busy} onClick={() => providerAction(provider, 'delete')}><ProviderLogo provider={provider} /><span>{t(providerMessages[provider].delete)}</span></button>)}
           </div>}
         </>}
         <div className="button-row">
@@ -207,7 +206,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
           <div className="provider-buttons">
             {auth.providers.map(provider => providerIsLinked(provider)
               ? <div key={provider} className="provider-connected-row"><p className="provider-connected">{t(providerMessages[provider].linked)}</p>{provider === 'wca' && session.user.wcaId && <a className="secondary-button provider-button wca-profile-link" href={`https://www.worldcubeassociation.org/persons/${session.user.wcaId}`} target="_blank" rel="noreferrer">{t('wcaId')}: {session.user.wcaId}</a>}</div>
-              : <button key={provider} type="button" className={`primary-button provider-button${provider === 'apple' ? ' apple-provider-button' : ''}`} disabled={busy} onClick={() => providerAction(provider, 'link')}><ProviderLogo provider={provider} /><span>{t(providerMessages[provider].link)}</span></button>)}
+              : <button key={provider} type="button" className={`primary-button provider-button${provider === 'apple' ? ' apple-provider-button' : ''}`} aria-label={t(providerMessages[provider].link)} disabled={busy} onClick={() => providerAction(provider, 'link')}><ProviderLogo provider={provider} /><span>{t(providerMessages[provider].link)}</span></button>)}
           </div>
         </section>}
         <div className="cloud-save-summary">
@@ -239,7 +238,7 @@ export function AccountDialog({ session, recovery, callback, onRecoveryComplete,
         <button type="button" disabled={busy} aria-pressed={mode === 'signUp'} onClick={() => setMode('signUp')}>{t('createAccount')}</button>
       </div>}
       {(mode === 'signIn' || mode === 'signUp') && auth.providers.length > 0 && <div className="provider-buttons account-signin-providers">
-        {auth.providers.map(provider => <button key={provider} type="button" className={`primary-button provider-button${provider === 'apple' ? ' apple-provider-button' : ''}`} disabled={!auth.configured || busy} onClick={() => providerAction(provider, 'signin')}><ProviderLogo provider={provider} /><span>{t(providerMessages[provider].signin)}</span></button>)}
+        {auth.providers.map(provider => <button key={provider} type="button" className={`primary-button provider-button${provider === 'apple' ? ' apple-provider-button' : ''}`} aria-label={t(providerMessages[provider].signin)} disabled={!auth.configured || busy} onClick={() => providerAction(provider, 'signin')}><ProviderLogo provider={provider} /><span>{t(providerMessages[provider].signin)}</span></button>)}
         <p className="muted account-email-alternative">{t('emailAlternative')}</p>
       </div>}
       <form onSubmit={submit} className="account-form">

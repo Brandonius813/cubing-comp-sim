@@ -1,3 +1,9 @@
+## Apple activation and second mobile feedback pass (October 23, 2026)
+
+Owner enabled Apple in production Supabase after registering App/Services IDs. Verified enabled setting and initial Apple redirect; no human consent completed. Prepared native nonce/state login and web grant capture, encrypted private server grant storage, and durable revocation before account deletion. Backend signing/encryption secrets and migration/deployment remain outstanding, so public provider gates remain closed. See docs/apple-sign-in.md.
+
+Mobile now returns idle restored Ready/Wait drafts to the original scramble confirmation, preserving manual text and pending results. Active solve stops immediately on first touch-down, swallowing that touch's subsequent movement/release. Scramble confirmation, Ready and Continue have visible blue rounded controls; review adds Delete. Added Settings heading, Timer Update label, None wait option, Google/WCA logo buttons, All Stats label, normalized two-decimal editing and parentheses around discarded times. Browser-adapter flow checks passed including held/moved stop, manual save, five-solve summary and deletion. Native timing remains to be checked on hardware.
+
 ## Mobile device feedback (October 23, 2026)
 
 Brandon requested correcting the mobile flow to match desktop: scrambling must be explicitly confirmed before waiting, Ready precedes inspection, and typed entry saves directly. Default wait remains fixed zero. Inspection/holding/solving now lock paging, superseding the earlier no-lock preference; stopped review remains navigable. Slider interaction temporarily locks paging. Add adjustable bold scramble text, large scrambling-phase drawing, timer display options, round-completion scorecard popup, compact history, solve/round deletion, a drawn scorecard border and green/red bounds. Individual time editing has X, one immediate penalty selection, notation and drawing.

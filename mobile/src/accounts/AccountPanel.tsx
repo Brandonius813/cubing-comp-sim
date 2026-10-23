@@ -1,5 +1,8 @@
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { SvgXml } from 'react-native-svg';
+import { wcaLogo } from './wca-logo';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, AppState, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CloudError, type AccountSession, type SaveMetadata } from '../../../src/cloud/types';
 import type { HistorySnapshot } from '../../../src/storage/validation';
 import { useMobileTheme } from '../ui';
@@ -31,6 +34,8 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
   const styles = makeStyles(theme);
   const [services] = useState(() => injected ?? createNativeAccountServices());
   const { auth, cloud, transfers } = services;
+  const [appleAvailable, setAppleAvailable] = useState(false);
+  useEffect(() => { void AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => undefined); }, []);
   const [session, setSession] = useState<AccountSession | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -82,8 +87,20 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
   return <View style={styles.panel}>
     <Text accessibilityRole="header" style={styles.title}>Accounts and cloud saves</Text>
     {!auth.configured ? <Text style={styles.notice}>Accounts are not configured in this build. Your times remain on this device.</Text> : !session ? <>
-      {(['google', 'apple', 'wca'] as const).map(provider => <Action key={provider} label={`Sign in with ${provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'WCA'}`} disabled={locked || provider === 'apple' || !auth.providers.includes(provider)} onPress={() => { if (provider !== 'apple') void run(async () => { await auth.signInWithProvider(provider); }); }} />)}
-      <Text style={styles.caption}>Apple sign-in requires provider setup.</Text>
+      {(['google', 'wca'] as const).map(provider => <Pressable key={provider} accessibilityRole="button"
+        disabled={locked || !auth.providers.includes(provider)} style={[styles.providerButton, (locked || !auth.providers.includes(provider)) && styles.disabled]}
+        onPress={() => void run(() => auth.signInWithProvider(provider))}>
+        <View style={{ backgroundColor: '#fff', padding: 4, borderRadius: 4 }}>
+          {provider === 'google' ? <Image source={require('../../assets/google-g.png')} style={{ width: 20, height: 20 }} />
+            : <SvgXml xml={wcaLogo} width={20} height={20} />}
+        </View>
+        <Text style={styles.buttonText}>Sign in with {provider === 'google' ? 'Google' : 'WCA'}</Text>
+      </Pressable>)}
+      {appleAvailable && auth.providers.includes('apple') && <View pointerEvents={locked ? 'none' : 'auto'} style={locked && styles.disabled}>
+        <AppleAuthentication.AppleAuthenticationButton buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+          buttonStyle={theme.background === '#ffffff' ? AppleAuthentication.AppleAuthenticationButtonStyle.BLACK : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+          cornerRadius={10} style={{ height: 48, width: '100%' }} onPress={() => { if (!locked) void run(() => auth.signInWithProvider('apple')); }} />
+      </View>}
       <TextInput accessibilityLabel="Account email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" placeholder="Email" placeholderTextColor={theme.muted} value={email} onChangeText={setEmail} editable={!locked} style={styles.input} />
       <TextInput accessibilityLabel="Account password" autoCapitalize="none" autoCorrect={false} secureTextEntry textContentType="password" placeholder="Password" placeholderTextColor={theme.muted} value={password} onChangeText={setPassword} editable={!locked} style={styles.input} />
       <Action label="Sign in" disabled={locked || !email.trim() || !password} onPress={() => void run(async () => { try { await auth.signIn(email, password); info('Signed in. Use Upload or Download to transfer a save.'); } finally { setPassword(''); } })} />
@@ -112,7 +129,10 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
           try { const status = await auth.deleteWithPassword(password, id, proof => cloud.deleteAccount(proof)); setSession(null); info(status === 'deleted' ? 'Account deleted. Local history is unchanged.' : 'Deletion requested. Cloud access is blocked while cleanup retries. Local history is unchanged.'); }
           finally { setPassword(''); }
         })} />
-      </> : <Text style={styles.notice}>Provider account deletion needs fresh provider confirmation. Use Settings → Account on the website. Native provider deletion is not yet enabled.</Text>}
+      </> : <Action label="Delete account on website" disabled={locked} destructive onPress={() => {
+        const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
+        if (webUrl) void Linking.openURL(webUrl + '/?account=delete');
+      }} />}
     </>}
     {busy && <Text accessibilityLiveRegion="polite" style={styles.caption}>Working…</Text>}
     {!!message && <Text accessibilityLiveRegion="polite" style={styles.notice}>{message}</Text>}
@@ -122,6 +142,7 @@ const makeStyles = (theme: ReturnType<typeof useMobileTheme>) => StyleSheet.crea
   panel: { gap: 10 }, title: { color: theme.text, fontFamily: theme.fontFamily, fontSize: 20, fontWeight: '600', marginBottom: 10 },
   caption: { color: theme.muted, fontFamily: theme.fontFamily, fontSize: 15, lineHeight: 22 }, notice: { color: theme.text, fontFamily: theme.fontFamily, fontSize: 15, lineHeight: 22 },
   identity: { color: theme.text, fontFamily: theme.fontFamily, fontSize: 18, fontWeight: '600' }, input: { color: theme.text, fontFamily: theme.fontFamily, borderBottomWidth: 1, borderColor: theme.border, paddingVertical: 12, minHeight: 48, fontSize: 17 },
+  providerButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1, borderColor: theme.accent, borderRadius: 10, minHeight: 48 },
   button: { paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
   buttonText: { color: theme.accent, fontFamily: theme.fontFamily, fontSize: 17 }, destructive: {}, disabled: { opacity: 0.45 },
 });

@@ -12,7 +12,8 @@
       "bundleIdentifier": "com.cubingcompsim.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.cubingcompsim.app"
@@ -30,7 +31,8 @@
           "enableBackgroundPlayback": false,
           "enableBackgroundRecording": false
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "autolinkingModuleResolution": true

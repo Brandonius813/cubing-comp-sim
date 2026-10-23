@@ -8,11 +8,11 @@ export function validateAuthProviders(value) {
   return [...value];
 }
 
-// This hard gate must be removed only with tested Apple grant revocation.
+// Keep this gate until deployed grant storage/revocation and real-device acceptance pass.
 // A configured provider alone is not proof that account deletion is supported.
 export function assertProviderReleaseReadiness(providers) {
   if (validateAuthProviders(providers).includes('apple')) {
-    throw new Error('apple release is blocked until provider token revocation and account deletion are accepted. See docs/apple-sign-in.md.');
+    throw new Error('apple release is blocked until deployed grant capture, token revocation and account deletion are accepted. See docs/apple-sign-in.md.');
   }
 }
 

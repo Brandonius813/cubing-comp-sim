@@ -7,6 +7,8 @@ class TestDeletions implements DeletionRepository {
   jobs = new Map<string, { completed: boolean; objectKey: string | null }>();
   saves = new Map([['user-a', 'saves/user-a/current'], ['user-b', 'saves/user-b/current']]);
   async request(user: string) { if (!this.jobs.has(user)) this.jobs.set(user, { completed: false, objectKey: null }); }
+  async needsAppleRevocation() { return false; }
+  async markAppleRevoked() {}
   async isBlocked(user: string) { return this.jobs.has(user); }
   async detachCloudData(user: string) {
     const job = this.jobs.get(user)!;
@@ -48,12 +50,12 @@ test('OAuth reauthentication needs signed AMR and owned live allowlisted identit
   const identity = (provider = 'google', time = timestamp * 1000) => ({
     user_id: 'user-a', provider, last_sign_in_at: new Date(time).toISOString(),
   });
-  for (const provider of ['google', 'custom:wca']) {
+  for (const provider of ['google', 'custom:wca', 'apple']) {
     assert.equal(oauthAuthenticationTime(amr, 'user-a', [identity(provider)]), timestamp * 1000);
   }
   assert.equal(oauthAuthenticationTime(amr, 'user-a', [identity('email'), identity('google')]), timestamp * 1000);
   for (const identities of [undefined, [], [null], [identity('github')], [identity('wca')],
-    [identity('custom:other')], [identity('apple')], [identity('google'), identity('apple')], [identity('google'), identity('github')], [{ ...identity(), user_id: 'victim' }]]) {
+    [identity('custom:other')], [identity('google'), identity('github')], [{ ...identity(), user_id: 'victim' }]]) {
     assert.equal(oauthAuthenticationTime(amr, 'user-a', identities), undefined);
   }
   for (const method of ['token_refresh', 'recovery', 'magiclink', 'otp', 'totp', 'sso/saml']) {
@@ -64,8 +66,7 @@ test('OAuth reauthentication needs signed AMR and owned live allowlisted identit
   assert.equal(oauthAuthenticationTime(amr, 'user-a', [{ ...identity('email'), identity_data: identity() }]), undefined);
 });
 
-// Apple is deliberately excluded until provider grant revocation joins deletion.
-// A linked identity or editable metadata must not silently bypass that work.
+// Signed AMR remains required; a linked identity alone is never proof.
 test('existing-account OAuth accepts server AMR even when live identity sign-in timestamps are stale', () => {
   const now = 1_700_000_000_000;
   const identity = (at: number) => [{ user_id: 'user-a', provider: 'google', last_sign_in_at: new Date(at).toISOString() }];

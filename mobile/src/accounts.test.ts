@@ -177,3 +177,41 @@ test('provider sign-in refuses plain PKCE and never opens the browser', async ()
   assert.equal(opened, false);
   assert.equal(await memory.storage.getItem('ccs-native-oauth-intent'), null);
 });
+
+test('native Apple validates state and captures its code before completing sign-in', async () => {
+  const memory = secureMemory(); let current: Session | null = null; let signedOut = 0; let receivedNonce = '';
+  const client = { auth: {
+    getSession: async () => ({ data: { session: current }, error: null }),
+    signInWithIdToken: async (input: { nonce: string }) => {
+      assert.equal(input.nonce, receivedNonce);
+      current = { access_token: 'native-access', user: { id: 'apple-user', identities: [{ provider: 'apple' }] } } as Session;
+      return { data: { session: current }, error: null };
+    },
+    signOut: async () => { signedOut++; current = null; return { error: null }; },
+  } } as unknown as SupabaseClient;
+  const originalFetch = globalThis.fetch;
+  let requests = 0; let fail = false;
+  globalThis.fetch = (async (url, init) => {
+    requests++;
+    assert.equal(String(url), 'https://api.example.test/v1/account/apple-grant');
+    assert.deepEqual(JSON.parse(init!.body as string), { clientId: 'com.cubingcompsim.app', code: 'native-code' });
+    return new Response('{}', { status: fail ? 503 : 200 });
+  }) as typeof fetch;
+  try {
+    const config = { url: 'https://example.supabase.co', webUrl: 'https://web.example.test', apiUrl: 'https://api.example.test', publicKey: 'sb_publishable_test', providers: 'apple' };
+    const auth = new NativeAccounts(config, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client,
+      async (nonce, state) => { receivedNonce = nonce; return { identityToken: 'apple-token', authorizationCode: 'native-code', state }; });
+    await auth.signInWithProvider('apple');
+    assert.equal(requests, 1); assert.equal(current!.user.id, 'apple-user');
+    current = null; fail = true;
+    await assert.rejects(auth.signInWithProvider('apple'), /Could not finish/);
+    assert.equal(signedOut, 1); assert.equal(current, null);
+    const wrong = new NativeAccounts(config, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client,
+      async () => ({ identityToken: 'token', authorizationCode: 'code', state: 'wrong' }));
+    await assert.rejects(wrong.signInWithProvider('apple'), /could not be verified/);
+    assert.equal(requests, 2);
+    const cancelled = new NativeAccounts(config, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client, async () => null);
+    await cancelled.signInWithProvider('apple');
+    assert.equal(requests, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});

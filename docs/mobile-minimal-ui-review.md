@@ -32,3 +32,13 @@ The preview uses the existing public account configuration stored in EAS. No pri
 Install over the existing app. Check slider/pager arbitration on iPhone/iPad, keyboard/X editing, large scramble readability for long events, native round-popup swipe dismissal, voice playback, Google/WCA consent/return, and explicit cloud upload/download. Full desktop translations, bundled fonts, keyboard shortcut customization and native file-picker JSON transfer remain separate parity gaps.
 
 Latest preview: https://expo.dev/accounts/brandonius813/projects/cubing-comp-sim/builds/a4e3242a-b393-4946-ae3d-2350ffe45011 (source af6998d). Submission accepted October 23, 2026. Free allowance was 2/15 iOS builds used before submission, with zero overage. Review: https://github.com/Brandonius813/cubing-comp-sim/pull/53.
+
+## October 23 follow-up verification
+
+- Active solving stops on touch-down; holding/moving/releasing that same finger cannot Continue. Ready retains the stable full-surface touch target across the holding transition.
+- Idle restored Ready/Wait drafts return to scramble confirmation. Pending results and entered manual text remain recoverable.
+- Added blue outlined rounded Scramble is good/Ready/Continue controls, review Delete, Settings heading, All Stats label, None wait mode, and Timer Update naming.
+- Time editor normalizes 1236 to 12.36 on blur and uses two decimals. Measured solves are stored to hundredths. Discarded scorecard times have parentheses plus muted color.
+- Actual App rendered with browser native-service adapters passed touch-down stop before release, drag/hold suppression, edit normalization, penalty, manual save, five-solve summary/dismissal, solve/round deletion, inspection page lock and hidden timer mode. Phone and tablet layouts inspected. This is not physical iOS testing.
+- Mobile typecheck and 114 mobile/bundler tests passed. iOS JavaScript export passed. No new EAS binary submitted.
+- Apple native/web and backend implementation is prepared but remains gated pending server secrets, migration, deployment and real consent/deletion acceptance. Google/WCA remain available. See apple-sign-in.md.

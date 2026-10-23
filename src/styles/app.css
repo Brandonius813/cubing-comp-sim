@@ -68,3 +68,5 @@ body{background:var(--app);color:var(--text)}button,input,select,textarea{font-f
 
 .inspection-penalty-editor { display: grid; gap: .5rem; }
 .apple-provider-button{background:#000;color:#fff;border:1px solid #fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif}.apple-provider-button:hover:not(:disabled){background:#222}
+
+.apple-provider-button{position:relative;min-height:44px;overflow:hidden}.apple-provider-button .apple-button-art{position:absolute;width:100%;height:100%;inset:0;object-fit:contain;background:#000}.apple-provider-button span{position:relative;visibility:hidden}

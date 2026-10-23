@@ -9,6 +9,7 @@ export const auth = new AccountAuth({
   url: import.meta.env.VITE_SUPABASE_URL,
   publicKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   appUrl: import.meta.env.VITE_APP_URL,
+  apiUrl: import.meta.env.VITE_API_URL,
   providers: import.meta.env.VITE_AUTH_PROVIDERS,
 });
 export const cloud = new CloudSaves(import.meta.env.VITE_API_URL);

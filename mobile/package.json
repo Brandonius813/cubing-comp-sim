@@ -15,23 +15,24 @@
     "eas-build-pre-install": "node scripts/engine-bundle.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.117.3",
     "expo": "57.0.30",
+    "expo-apple-authentication": "57.0.2",
+    "expo-asset": "57.0.20",
+    "expo-audio": "57.0.5",
     "expo-crypto": "57.0.4",
     "expo-dev-client": "57.0.20",
     "expo-keep-awake": "57.0.2",
+    "expo-secure-store": "57.0.4",
     "expo-sqlite": "57.0.4",
+    "expo-web-browser": "57.0.3",
     "react": "19.2.3",
     "react-native": "0.86.3",
     "react-native-pager-view": "8.0.2",
     "react-native-safe-area-context": "5.7.0",
     "react-native-svg": "15.15.4",
-    "react-native-webview": "13.16.1",
-    "expo-audio": "57.0.5",
-    "expo-secure-store": "57.0.4",
-    "expo-web-browser": "57.0.3",
     "react-native-url-polyfill": "4.0.0",
-    "@supabase/supabase-js": "2.117.3",
-    "expo-asset": "57.0.20"
+    "react-native-webview": "13.16.1"
   },
   "devDependencies": {
     "@types/react": "19.2.14",
