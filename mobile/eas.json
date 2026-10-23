@@ -21,7 +21,7 @@
       },
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_AUTH_PROVIDERS": ""
+        "EXPO_PUBLIC_AUTH_PROVIDERS": "none"
       }
     },
     "production": {
