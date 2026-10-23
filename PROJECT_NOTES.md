@@ -1,3 +1,9 @@
+## Apple backend deployment preparation (October 23, 2026)
+
+PR #53 was already merged into `feat/ios-review-ready` when this follow-up started. Production still runs API `eb1916b` and web `d17fa698`, with public Apple controls closed. The tested API artifact `4070c38` has the same tree as implementation `c04019d`; its CI passed all 34 API tests including PostgreSQL plus three backup tests. The checksum-verified image and private Apple candidate configuration are staged on the existing host, not activated. Isolated container health, protected-route checks and database TLS preflight passed. Migration 003 passed a rollback-only test including runtime RLS access; it has not been applied persistently. Exact evidence, coordinated cleanup upgrade, and remaining release failures are in `docs/apple-release-activation.md`.
+
+The owner requested no browser/computer control while using the computer. Continue via APIs, CLI and SSH. Production rollout approval remains required by the current task; no new binary, website publication, real Apple consent/revocation or App Store submission occurred in this preparation.
+
 ## Apple activation and second mobile feedback pass (October 23, 2026)
 
 Owner enabled Apple in production Supabase after registering App/Services IDs. Verified enabled setting and initial Apple redirect; no human consent completed. Prepared native nonce/state login and web grant capture, encrypted private server grant storage, and durable revocation before account deletion. Backend signing/encryption secrets and migration/deployment remain outstanding, so public provider gates remain closed. See docs/apple-sign-in.md.
