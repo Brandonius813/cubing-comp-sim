@@ -176,6 +176,7 @@ test('visual preference migrates off and appearance/input controls survive a sav
   const legacy = emptySave();
   delete legacy.preferences.showScrambleDrawing;
   assert.equal(validateMobileSave(legacy).preferences.showScrambleDrawing, false);
+  assert.equal(validateMobileSave({ ...legacy, preferences: { ...legacy.preferences, holdMs: 300 } }).preferences.holdMs, 550);
   const next = validateMobileSave({ ...legacy, preferences: { ...legacy.preferences, showScrambleDrawing: true, theme: 'light', inputMethod: 'manual', holdMs: 550, waitMode: 'random', waitMinSeconds: 0, waitMaxSeconds: 180, voiceVolume: .37, textFont: 'georgia', numberFont: 'system-mono' } });
   const restored = validateMobileSave(JSON.parse(JSON.stringify(next)));
   assert.deepEqual(restored.preferences, next.preferences);

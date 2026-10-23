@@ -57,7 +57,7 @@ export function validateMobilePreferences(preferences: MobilePreferences): Mobil
   if (typeof showScrambleDrawing !== 'boolean' || typeof inspectionAudio !== 'boolean' || !isLocale(voiceLanguage)
     || !['male-1', 'male-2', 'female-1', 'female-2'].includes(voice)
     || typeof voiceVolume !== 'number' || !Number.isFinite(voiceVolume) || voiceVolume < 0 || voiceVolume > 1) throw new Error('Invalid inspection audio settings.');
-  return { ...settings, showScrambleDrawing, inspectionAudio, voiceLanguage, voice, voiceVolume };
+  return { ...settings, holdMs: settings.holdMs > 0 ? 550 : 0, showScrambleDrawing, inspectionAudio, voiceLanguage, voice, voiceVolume };
 }
 
 export function emptySave(): MobileSave {
