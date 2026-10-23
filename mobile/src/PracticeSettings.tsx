@@ -92,6 +92,10 @@ export function PracticeSettings({ preferences, onChange, disabled }: Props) {
         disabled={disabled}
         onChange={mode => update(mode === "none" ? { waitEnabled: false } : { waitEnabled: true, waitMode: mode })}
       />
+      {!settings.waitEnabled && <SettingRow label="Ready Screen">
+        <Toggle label="Ready Screen" value={preferences.readyScreen ?? false} disabled={disabled}
+          onChange={readyScreen => update({ readyScreen })} />
+      </SettingRow>}
       {settings.waitEnabled && (
         <>
           {settings.waitMode === "fixed" ? (
@@ -247,6 +251,7 @@ export function PracticeSettings({ preferences, onChange, disabled }: Props) {
                     eventId: preferences.eventId,
                     language: preferences.language ?? "en",
                     showScrambleDrawing: false,
+                    readyScreen: false,
                     scrambleFontSize: 24,
                     timerDisplay: "decimal",
                     inspectionAudio: true,

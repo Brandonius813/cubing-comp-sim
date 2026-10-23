@@ -9,7 +9,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SvgXml } from "react-native-svg";
+import { PuzzleDrawing } from "./PuzzleDrawing";
 import { parseTimeInput, selectedPenalty } from "../../src/core/timing";
 import type { Attempt, EventId, Penalty } from "../../src/core/types";
 import { useMobileTheme } from "./ui";
@@ -172,7 +172,7 @@ export function TimeEditor({
           {attempt.scramble.notation}
         </Text>
         {svg ? (
-          <SvgXml xml={svg} width="100%" height={190} />
+          <PuzzleDrawing svg={svg} eventId={attempt.scramble.eventId} height={190} />
         ) : (
           <Text style={{ color: theme.muted, textAlign: "center" }}>•••</Text>
         )}

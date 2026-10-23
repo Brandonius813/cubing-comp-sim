@@ -13,6 +13,7 @@ export const TnoodleEngineHost = memo(function TnoodleEngineHost({ service, onSt
   const status = useRef(onStatus); status.current = onStatus;
   const [binding, setBinding] = useState<EngineBinding | null>(null);
   const [failed, setFailed] = useState(false);
+  const [revision, setRevision] = useState(0);
   const source = useMemo(() => binding ? {
     html: ENGINE_DOCUMENT.replace('"__CCS_ENGINE_CHANNEL__"', JSON.stringify(binding.channel)), baseUrl: 'about:blank',
   } : null, [binding]);
@@ -21,10 +22,10 @@ export const TnoodleEngineHost = memo(function TnoodleEngineHost({ service, onSt
     const connection = service.bind(ENGINE_VERSION, script => {
       if (!webview.current) throw new Error('Engine view is not mounted.');
       webview.current.injectJavaScript(script);
-    }, value => { setFailed(value.phase === 'error'); status.current?.(value); });
+    }, value => { setFailed(value.phase === 'error'); status.current?.(value); }, () => setRevision(value => value + 1));
     setBinding(connection);
     return () => connection.dispose();
-  }, [service]);
+  }, [service, revision]);
   if (!binding || !source || failed) return null;
   return <View pointerEvents="none" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.host}>
     <WebView

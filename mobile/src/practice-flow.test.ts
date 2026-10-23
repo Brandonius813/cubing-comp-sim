@@ -13,6 +13,7 @@ for (const event of EVENTS) {
   for (const inputMethod of ['timer', 'manual'] as const) {
     test(`${event.id}: ${inputMethod} round survives draft/review restarts and repeated confirmation`, () => {
       let save = changeEvent(emptySave(), event.id);
+      save.preferences.readyScreen = true; // Exercise the optional paused Ready flow across restarts.
       for (let i = 0; i < event.attemptCount; i++) {
         const scramble = { eventId: event.id, notation: `synthetic-${i}`, svg: '<svg/>', engineVersion: 'contract-test-only', generatedAt: i };
         const draft = createDraft(scramble, save.preferences);

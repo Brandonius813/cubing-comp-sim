@@ -31,10 +31,11 @@ export class MobileScrambleService implements ScrambleService {
   private progressTimer: ReturnType<typeof setInterval> | undefined;
   private startedAt = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  private restartHost: (() => void) | undefined;
 
   constructor(private readonly options: { generationTimeoutMs?: number; bootTimeoutMs?: number } = {}) {}
 
-  bind(engineVersion: string, send: (script: string) => void, status: (status: EngineStatus) => void): EngineBinding {
+  bind(engineVersion: string, send: (script: string) => void, status: (status: EngineStatus) => void, restart?: () => void): EngineBinding {
     if (this.disposed) throw new ScrambleError('DISPOSED', 'The scramble service has closed.');
     this.binding?.dispose();
     const channel = `ccs_${Date.now()}_${++nextHost}`;
@@ -42,7 +43,7 @@ export class MobileScrambleService implements ScrambleService {
     const binding: EngineBinding = {
       channel,
       receive: raw => {
-        if (closed) return;
+        if (closed || this.binding !== binding) return;
         try {
           const response = parseEngineResponse(raw, channel, engineVersion);
           if (!response) return;
@@ -68,7 +69,7 @@ export class MobileScrambleService implements ScrambleService {
         } catch { binding.fail(); }
       },
       fail: () => {
-        if (closed) return;
+        if (closed || this.binding !== binding) return;
         closed = true; this.ready = false; this.send = undefined;
         this.rejectAll(new ScrambleError('ENGINE_UNAVAILABLE', 'The local scramble engine stopped. Retry to restart it.'));
         status({ phase: 'error', message: 'The local scramble engine stopped. Retry to restart it.' });
@@ -81,6 +82,7 @@ export class MobileScrambleService implements ScrambleService {
       },
     };
     this.binding = binding; this.send = send; this.ready = false; this.report = status;
+    this.restartHost = restart;
     status({ phase: 'loading' });
     this.timer = setTimeout(binding.fail, this.options.bootTimeoutMs ?? 15_000);
     return binding;
@@ -105,10 +107,14 @@ export class MobileScrambleService implements ScrambleService {
         this.queue = this.queue.filter(request => request !== pending);
         pending.cleanup?.();
         reject(new ScrambleError('DISPOSED', 'Scramble request cancelled.'));
-        // Synchronous TNoodle cannot be interrupted by an injected message. Keep
-        // the active slot until completion/timeout, discarding its stale result.
-        // This also retains expensive initialized tables for the next request.
-        this.progress();
+        // An injected message cannot interrupt synchronous TNoodle. Retire the
+        // WebView instead, so a cancelled event cannot block the selected event.
+        if (this.active === pending && this.restartHost) {
+          this.clearTimer(); this.active = undefined; this.ready = false;
+          this.send = undefined; this.binding = undefined;
+          this.report?.({ phase: 'loading' });
+          this.restartHost();
+        } else this.progress();
       };
       pending.cleanup = () => options.signal?.removeEventListener('abort', cancel);
       options.signal?.addEventListener('abort', cancel, { once: true });
@@ -147,5 +153,10 @@ export class MobileScrambleService implements ScrambleService {
     this.active = undefined; this.queue = [];
     for (const request of pending) { request.cleanup?.(); if (!request.cancelled) request.reject(error); }
   }
-  dispose(): void { this.binding?.dispose(); this.disposed = true; }
+  dispose(): void {
+    this.disposed = true;
+    this.binding?.dispose();
+    this.restartHost = undefined;
+    this.rejectAll(new ScrambleError('DISPOSED', 'The scramble service has closed.'));
+  }
 }

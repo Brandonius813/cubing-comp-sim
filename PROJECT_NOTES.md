@@ -1,3 +1,29 @@
+## Portrait orientation (October 23, 2026)
+
+The owner requested portrait lock. Mobile orientation is portrait; iPad also declares portrait with full-screen mode so multitasking does not restore landscape orientations. This requires a new native build and is not included in preview 5dcaa7f0.
+
+## Selected-event stats and scramble layout (October 23, 2026)
+
+The owner's latest feedback supersedes the earlier all-event All Stats decision: filter the popup and its round numbering to the currently selected CompSim event. Preserve the full stored history. Give notation more vertical space, place the drawing lower with less padding, and show a gray down chevron only while more notation remains below the viewport. Render Megaminx U/F labels as centered vector shapes in native views to avoid SVG text baseline differences; preserve engine face geometry and stored SVG provenance.
+
+The owner cancelled the paid Supabase Pro/custom auth domain plan because of ongoing cost. Keep the existing URL and callbacks. No domain was created or activated, and no paid upgrade is authorized. See docs/auth-custom-domain.md.
+
+## Device feedback and branded authentication (October 23, 2026)
+
+The owner requested fixing scramble stalls and long-text sizing, optional no-wait Ready, no-inspection 0.00 arming, concise cloud controls, and failed cloud download before another free iOS preview. Read-only diagnosis confirmed web saves may select a completed active round, which native import wrongly rejected. Normalize only the native active pointer, retain all solves and recovery, verify persistence, and show all events in All Stats. UI/domain verification is recorded in docs/mobile-device-feedback.md; native acceptance and the next build remain pending.
+
+The owner explicitly requested a subagent for actual 4×4 performance, preserving verified scramble correctness. The owner also chose a branded Supabase domain and will upgrade to paid Supabase. Prepare auth.cubingcompsim.com; provider callbacks must be added before activation. No browser/computer UI control is allowed. App Store Connect remains unset; focus on device review.
+
+## Approved Apple backend activation and device preview (October 23, 2026)
+
+The owner approved backend activation and requested a device preview before App Store Connect setup, which has not been done. Production now runs the checksum-verified `4070c38` API and cleanup image. Migration 003 is applied with private-schema runtime ownership, RLS and restored administrator restrictions. Live API health and runtime transactional access passed; the upgraded account cleanup completed and both timers resumed. Apple is enabled in the internal preview for human acceptance, retaining the public web release gate until consent/revocation checks pass. Mobile typecheck and 114 tests passed. Preview `e50ec086-f245-4f45-9dfc-20e742af50ba` finished successfully from `263bb62`; the downloaded IPA's signed Apple entitlement, team/bundle and two-device provisioning were verified. Physical device testing remains pending. See `docs/apple-release-activation.md` for the install link, evidence and limitations.
+
+## Apple backend deployment preparation (October 23, 2026)
+
+PR #53 was already merged into `feat/ios-review-ready` when this follow-up started. Production still runs API `eb1916b` and web `d17fa698`, with public Apple controls closed. The tested API artifact `4070c38` has the same tree as implementation `c04019d`; its CI passed all 34 API tests including PostgreSQL plus three backup tests. The checksum-verified image and private Apple candidate configuration are staged on the existing host, not activated. Isolated container health, protected-route checks and database TLS preflight passed. Migration 003 passed a rollback-only test including runtime RLS access; it has not been applied persistently. Exact evidence, coordinated cleanup upgrade, and remaining release failures are in `docs/apple-release-activation.md`.
+
+The owner requested no browser/computer control while using the computer. Continue via APIs, CLI and SSH. Production rollout approval remains required by the current task; no new binary, website publication, real Apple consent/revocation or App Store submission occurred in this preparation.
+
 ## Apple activation and second mobile feedback pass (October 23, 2026)
 
 Owner enabled Apple in production Supabase after registering App/Services IDs. Verified enabled setting and initial Apple redirect; no human consent completed. Prepared native nonce/state login and web grant capture, encrypted private server grant storage, and durable revocation before account deletion. Backend signing/encryption secrets and migration/deployment remain outstanding, so public provider gates remain closed. See docs/apple-sign-in.md.

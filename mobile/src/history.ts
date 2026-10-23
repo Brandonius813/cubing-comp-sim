@@ -14,9 +14,11 @@ export function exportHistory(save: MobileSave): string {
 export function prepareHistoryReplacement(current: MobileSave, source: string | HistorySnapshot): MobileSave {
   const history = typeof source === 'string' ? parseHistoryJson(source) : validateHistorySnapshot(source);
   const active = history.rounds.find(round => round.id === history.activeRoundId);
-  if (active?.completedAt !== undefined) throw new Error('A completed round cannot be active.');
+  // Web keeps the last completed round selected. Native's active pointer means
+  // an unfinished round to append to, so clear only that pointer on import.
+  const nativeHistory = active?.completedAt !== undefined ? { ...history, activeRoundId: null } : history;
   return validateMobileSave({
-    ...current, draft: undefined, history,
+    ...current, draft: undefined, history: nativeHistory,
     preferences: { ...current.preferences, eventId: active?.eventId ?? current.preferences.eventId },
   });
 }

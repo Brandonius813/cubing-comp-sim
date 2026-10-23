@@ -167,3 +167,40 @@ test('drawing notation is passed as data, never evaluated as script',()=>{
  vm.runInContext(requestScript({version:1,channel:'safe',type:'generate',id:1,eventId:'333',notation}),context);
  assert.equal((received as {notation:string}).notation,notation);assert.equal(context.injected,undefined);
 });
+
+test('native host retirement frees cancelled synchronous work and rejects late results', async () => {
+  const service = new MobileScrambleService();
+  let restarts = 0;
+  const binding = service.bind(version, () => {}, () => {}, () => { restarts++; });
+  const ready = (b: typeof binding) => b.receive(JSON.stringify({ version: 1, channel: b.channel, type: 'ready', engineVersion: version, events: SCRAMBLE_EVENTS }));
+  ready(binding);
+  const controller = new AbortController();
+  const first = service.generate('444', { signal: controller.signal });
+  const rejected = assert.rejects(first, /cancelled/);
+  controller.abort(); await rejected;
+  assert.equal(restarts, 1);
+  const next = service.bind(version, () => {}, () => {});
+  binding.dispose(); // retired React effect cleanup cannot dispose the new host
+  ready(next);
+  const second = service.generate('333');
+  const response = (channel: string, id: number, eventId: string) => JSON.stringify({ version: 1, channel, type: 'result', id, durationMs: 1,
+    scramble: { eventId, notation: 'R', svg: '<svg></svg>', engineVersion: version, generatedAt: 1 } });
+  binding.receive(response(binding.channel, 1, '444'));
+  binding.fail(); // late native errors from the retired WebView are ignored
+  next.receive(response(next.channel, 2, '333'));
+  assert.equal((await second).eventId, '333');
+  service.dispose();
+});
+
+
+test('disposing during native host retirement rejects queued requests', async () => {
+  const service = new MobileScrambleService();
+  const binding = service.bind(version, () => {}, () => {}, () => {});
+  binding.receive(JSON.stringify({ version: 1, channel: binding.channel, type: 'ready', engineVersion: version, events: SCRAMBLE_EVENTS }));
+  const controller = new AbortController();
+  const first = assert.rejects(service.generate('444', { signal: controller.signal }), /cancelled/);
+  const second = assert.rejects(service.generate('333'), /closed/);
+  controller.abort();
+  service.dispose();
+  await Promise.all([first, second]);
+});

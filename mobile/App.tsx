@@ -23,7 +23,8 @@ import {
 } from "react-native";
 import PagerView from "react-native-pager-view";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { SvgXml } from "react-native-svg";
+import { PuzzleDrawing } from "./src/PuzzleDrawing";
+import { ScrambleNotation } from "./src/ScrambleNotation";
 import { useKeepAwake } from "expo-keep-awake";
 import { getEvent } from "../src/core/events";
 import {
@@ -46,6 +47,7 @@ import {
   confirmScramble,
   recoverDraft,
   manualResult,
+  mobileSettings,
   pendingInspection,
   selectedPendingPenalty,
   selectPendingPenalty,
@@ -216,7 +218,7 @@ function MobileApp() {
     useColorScheme(),
   );
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
 
   const transition = useCallback((next: TimerPhase) => {
     phaseRef.current = next;
@@ -701,7 +703,12 @@ function MobileApp() {
     );
     setWaitRemaining(confirmed.waitRemainingMs ?? 0);
     waitUntil.current = performance.now() + (confirmed.waitRemainingMs ?? 0);
-    transition(confirmed.phase);
+    if (confirmed.phase === "inspection") startInspection();
+    else {
+      transition(confirmed.phase);
+      if (confirmed.phase === "ready" && !mobileSettings(save.preferences).waitEnabled && !save.preferences.readyScreen && manualMode)
+        setManualOpen(true);
+    }
   };
   const persistResult = async (result: PendingResult) => {
     if (!saveRef.current || !scramble || savingRef.current) return false;
@@ -787,7 +794,11 @@ function MobileApp() {
     setSaving(true);
     try {
       await replaceSave(next);
-      updateSave(next);
+      const stored = await loadSave();
+      if (JSON.stringify(stored.history) !== JSON.stringify(next.history))
+        throw new Error("The downloaded history could not be verified on this device.");
+      updateSave(stored);
+      setCompletedRoundId(null);
       nextScramble();
     } finally {
       savingRef.current = false;
@@ -857,7 +868,7 @@ function MobileApp() {
     phase === "scramble"
       ? "Confirm scramble"
       : phase === "ready"
-        ? "Ready"
+        ? save?.preferences.inspection && event.inspection ? "Ready" : holdMs > 0 ? "Hold, then release to solve" : "Tap and release to solve"
         : phase === "running"
           ? "Tap to stop"
           : phase === "holding"
@@ -902,7 +913,7 @@ function MobileApp() {
               inspectionPenalty: pendingInspection(pending, eventId),
             })
           : phase === "ready" && !manualEntry
-            ? "Ready"
+            ? "0.00"
             : phase === "running" && save?.preferences.timerDisplay === "solve"
               ? "Solve"
               : phase === "running" &&
@@ -1034,41 +1045,29 @@ function MobileApp() {
                             <ThinkingDots />
                           ) : (
                             <>
-                              <Text
-                                adjustsFontSizeToFit
-                                minimumFontScale={0.65}
-                                numberOfLines={height > width ? 10 : 5}
-                                style={[
-                                  styles.notation,
-                                  {
-                                    fontSize:
-                                      save.preferences.scrambleFontSize ?? 24,
-                                    lineHeight:
-                                      (save.preferences.scrambleFontSize ??
-                                        24) * 1.35,
-                                    maxHeight: "48%",
-                                  },
-                                ]}
-                              >
-                                {scramble.notation}
-                              </Text>
+                              <ScrambleNotation
+                                key={`${scramble.notation}:${save.preferences.scrambleFontSize ?? 24}`}
+                                notation={scramble.notation}
+                                fontSize={save.preferences.scrambleFontSize ?? 24}
+                              />
                               {save.preferences.showScrambleDrawing && (
                                 <View
                                   style={{
-                                    flex: 1,
+                                    flexBasis: "28%",
+                                    flexShrink: 1,
+                                    maxHeight: 200,
                                     width: "100%",
-                                    paddingTop: 24,
-                                    paddingBottom: 20,
+                                    paddingTop: 6,
                                   }}
                                 >
-                                  <SvgXml
-                                    xml={scramble.svg}
-                                    width="100%"
+                                  <PuzzleDrawing
+                                    svg={scramble.svg}
+                                    eventId={eventId}
                                     height="100%"
                                   />
                                 </View>
                               )}
-                              <View style={{ marginTop: "auto", paddingTop: 16 }}
+                              <View style={{ marginTop: "auto", paddingTop: 8 }}
                                 onTouchStart={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>
                                 <Button label="Scramble is good" disabled={draftError || saving} onPress={confirmPuzzle} />
                               </View>
@@ -1101,7 +1100,7 @@ function MobileApp() {
                                   { fontSize: width > 600 ? 112 : 72 },
                                 ]}
                               />
-                            ) : phase === "ready" ? (
+                            ) : phase === "ready" && save.preferences.inspection && event.inspection ? (
                               <View>
                                 <Button label="Ready" disabled={draftError || saving} onPress={() => { if (screenReader) accessibleActivate(); }} />
                               </View>
@@ -1510,9 +1509,9 @@ const makeStyles = (theme: ReturnType<typeof resolveMobileTheme>) =>
     practice: { flex: 1, position: "relative" },
     scramblePhase: {
       flex: 1,
-      paddingTop: 28,
+      paddingTop: 16,
       paddingHorizontal: 22,
-      paddingBottom: 24,
+      paddingBottom: 12,
       alignItems: "center",
     },
     reviewActions: {
@@ -1538,13 +1537,6 @@ const makeStyles = (theme: ReturnType<typeof resolveMobileTheme>) =>
       left: 18,
       right: 18,
       alignItems: "center",
-    },
-    notation: {
-      color: theme.text,
-      fontFamily: theme.fontFamily,
-      textAlign: "center",
-      lineHeight: 32,
-      fontWeight: "600",
     },
     timeCenter: {
       position: "absolute",

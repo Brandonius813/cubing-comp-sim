@@ -2,7 +2,7 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import { SvgXml } from 'react-native-svg';
 import { wcaLogo } from './wca-logo';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Image, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, AppState, Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CloudError, type AccountSession, type SaveMetadata } from '../../../src/cloud/types';
 import type { HistorySnapshot } from '../../../src/storage/validation';
 import { useMobileTheme } from '../ui';
@@ -17,10 +17,10 @@ export interface AccountPanelProps {
   onBusyChange?: (busy: boolean) => void;
   services?: NativeAccountServices;
 }
-function confirm(title: string, message: string): Promise<boolean> {
+function confirm(title: string, message: string, action: string): Promise<boolean> {
   return new Promise(resolve => Alert.alert(title, message, [
     { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-    { text: 'Replace', style: 'destructive', onPress: () => resolve(true) },
+    { text: action, onPress: () => resolve(true) },
   ], { cancelable: true, onDismiss: () => resolve(false) }));
 }
 function Action({ label, onPress, disabled = false, destructive = false }: { label: string; onPress: () => void; disabled?: boolean; destructive?: boolean }) {
@@ -39,6 +39,7 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
   const [session, setSession] = useState<AccountSession | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [message, setMessage] = useState('');
@@ -66,7 +67,7 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
     if (busyRef.current || disabled) return;
     busyRef.current = true; setBusy(true); onBusyChange?.(true); setMessage('');
     try { await task(); }
-    catch (error) { if (mounted.current) setMessage(error instanceof CloudError ? error.message : 'The operation could not finish. Your local history has not been replaced.'); }
+    catch (error) { if (mounted.current) setMessage(error instanceof CloudError ? error.message : 'The operation could not finish. Please retry.'); }
     finally { busyRef.current = false; if (mounted.current) setBusy(false); onBusyChange?.(false); }
   }
   const locked = busy || disabled;
@@ -75,14 +76,13 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
     const expectedLocal = getSnapshot();
     const ticket = direction === 'upload' ? await transfers.prepareUpload(expectedLocal) : await transfers.prepareDownload();
     const count = ticket.snapshot.rounds.reduce((total, round) => total + round.attempts.length, 0);
-    const approved = await confirm(direction === 'upload' ? 'Replace cloud save?' : 'Replace local history?',
-      direction === 'upload'
-        ? `Upload ${count} solves in ${ticket.snapshot.rounds.length} rounds to ${session?.user.email || 'this account'}? This replaces its previous cloud save. Local history stays on this device.`
-        : `Download ${count} solves in ${ticket.snapshot.rounds.length} rounds? This replaces local history and ends the current local draft. A recovery copy will be kept. Settings stay on this device.`);
+    const approved = await confirm(`${direction === 'upload' ? 'Upload' : 'Download'} ${count} solves and ${ticket.snapshot.rounds.length} rounds?`,
+      direction === 'upload' ? 'This will overwrite the cloud save.' : 'This will overwrite the local save.',
+      direction === 'upload' ? 'Upload' : 'Download');
     if (!approved) { transfers.cancel(); return; }
     const result = await transfers.confirm(ticket, snapshot => replaceSnapshot(snapshot, expectedLocal));
     setMetadata(result);
-    info(direction === 'upload' ? 'Cloud save uploaded. Local history is unchanged.' : 'Cloud save downloaded and stored on this device.');
+    info(`${direction === 'upload' ? 'Uploaded' : 'Downloaded'} ${count} solves and ${ticket.snapshot.rounds.length} rounds.`);
   });
   return <View style={styles.panel}>
     <Text accessibilityRole="header" style={styles.title}>Accounts and cloud saves</Text>
@@ -110,29 +110,46 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
     </> : <>
       <Text style={styles.identity}>{session.user.email || 'Signed-in account'}</Text>
       {!session.user.emailVerified && <Text style={styles.notice}>Verify your email before using cloud saves.</Text>}
-      <Text style={styles.caption}>{metadata === undefined ? 'Cloud save has not been checked.' : metadata === null ? 'No cloud save on this account.' : `Last cloud save: ${new Date(metadata.savedAt).toLocaleString()} · ${metadata.attemptCount} solves · revision ${metadata.revision}`}</Text>
       {!cloud.configured && <Text style={styles.notice}>The cloud API is not configured in this build.</Text>}
-      <Action label="Check cloud save" disabled={locked || !cloud.configured || !session.user.emailVerified} onPress={() => void run(async () => { setMetadata(await cloud.getSaveMetadata(await auth.verifiedSession())); })} />
-      <Action label="Upload local history" disabled={locked || !cloud.configured || !session.user.emailVerified} onPress={() => transfer('upload')} />
-      <Action label="Download cloud history" disabled={locked || !cloud.configured || !session.user.emailVerified} onPress={() => transfer('download')} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={styles.caption}>Cloud Save</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Refresh cloud save" disabled={locked || !cloud.configured || !session.user.emailVerified}
+          style={{ padding: 12 }} onPress={() => void run(async () => { setMetadata(await cloud.getSaveMetadata(await auth.verifiedSession())); })}>
+          <Text style={{ color: theme.accent, fontSize: 24 }}>↻</Text>
+        </Pressable>
+      </View>
+      {metadata !== undefined && <Text style={styles.caption}>{metadata === null ? 'No cloud save.' : `${metadata.attemptCount} solves · ${metadata.roundCount} rounds · ${new Date(metadata.savedAt).toLocaleString()}`}</Text>}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 24 }}>
+        <Action label="Upload" disabled={locked || !cloud.configured || !session.user.emailVerified} onPress={() => transfer('upload')} />
+        <Action label="Download" disabled={locked || !cloud.configured || !session.user.emailVerified} onPress={() => transfer('download')} />
+      </View>
       <Action label="Sign out" disabled={locked} onPress={() => void run(async () => { await auth.signOut(); info('Signed out. Local history is unchanged.'); })} />
-      {session.user.providers?.includes('email') ? <>
-        <Text style={styles.caption}>To delete your account and cloud save, enter your password again. Local history will remain on this device.</Text>
-        <TextInput accessibilityLabel="Confirm password for account deletion" secureTextEntry autoCapitalize="none" autoCorrect={false} value={password} onChangeText={setPassword} editable={!locked} style={styles.input} />
-        <Action label="Delete account and cloud save" destructive disabled={locked || !password || !cloud.configured} onPress={() => void run(async () => {
-          const id = session.user.id;
-          const approved = await new Promise<boolean>(resolve => Alert.alert('Permanently delete account?', 'Your account and cloud save will be deleted. Local practice history stays on this device. This cannot be undone.', [
-            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'Delete account', style: 'destructive', onPress: () => resolve(true) },
-          ], { cancelable: true, onDismiss: () => resolve(false) }));
-          if (!approved) return;
-          try { const status = await auth.deleteWithPassword(password, id, proof => cloud.deleteAccount(proof)); setSession(null); info(status === 'deleted' ? 'Account deleted. Local history is unchanged.' : 'Deletion requested. Cloud access is blocked while cleanup retries. Local history is unchanged.'); }
-          finally { setPassword(''); }
-        })} />
-      </> : <Action label="Delete account on website" disabled={locked} destructive onPress={() => {
-        const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
-        if (webUrl) void Linking.openURL(webUrl + '/?account=delete');
-      }} />}
+      <Action label="Delete account and cloud save" destructive disabled={locked} onPress={() => { setMessage(''); setDeleteOpen(true); }} />
+      <Modal visible={deleteOpen} transparent animationType="fade" onRequestClose={() => { if (!busy) { setDeleteOpen(false); setPassword(''); } }}>
+        <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: theme.background, borderRadius: 16, padding: 24, gap: 12 }}>
+            <Text style={styles.title}>Delete account and cloud save?</Text>
+            <Text style={styles.notice}>This is permanent. Local history stays on this device.</Text>
+            {session.user.providers?.includes('email') ? <>
+              <TextInput accessibilityLabel="Confirm password for account deletion" placeholder="Password" placeholderTextColor={theme.muted}
+                secureTextEntry autoCapitalize="none" autoCorrect={false} value={password} onChangeText={setPassword} editable={!locked} style={styles.input} />
+              <Action label="Delete account" destructive disabled={locked || !password || !cloud.configured} onPress={() => void run(async () => {
+                try {
+                  const status = await auth.deleteWithPassword(password, session.user.id, proof => cloud.deleteAccount(proof));
+                  setSession(null); setDeleteOpen(false);
+                  info(status === 'deleted' ? 'Account deleted.' : 'Deletion requested. Cleanup is pending.');
+                } finally { setPassword(''); }
+              })} />
+            </> : <Action label="Continue on website" destructive disabled={locked} onPress={() => {
+              const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
+              if (webUrl) void Linking.openURL(webUrl + '/?account=delete');
+              setDeleteOpen(false);
+            }} />}
+            <Action label="Cancel" disabled={busy} onPress={() => { setDeleteOpen(false); setPassword(''); }} />
+            {!!message && <Text style={styles.notice}>{message}</Text>}
+          </View>
+        </View>
+      </Modal>
     </>}
     {busy && <Text accessibilityLiveRegion="polite" style={styles.caption}>Working…</Text>}
     {!!message && <Text accessibilityLiveRegion="polite" style={styles.notice}>{message}</Text>}

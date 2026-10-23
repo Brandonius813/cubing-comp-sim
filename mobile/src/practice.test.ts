@@ -187,9 +187,9 @@ test('visual preference migrates off and appearance/input controls survive a sav
   assert.throws(() => validateMobileSave({ ...next, preferences: { ...next.preferences, showScrambleDrawing: 'yes' } }));
 });
 
-test('zero wait still requires scramble confirmation before Ready, in every event',()=>{
+test('Ready Screen preserves explicit confirmation and Ready in every event',()=>{
  for(const eventId of ['222','333','444','555','666','777','333oh','333bf','444bf','555bf','minx','pyram','skewb','sq1','fto','clock'] as const){
-  const preferences={...emptySave().preferences,eventId};const fresh=createDraft({...scramble,eventId},preferences);
+  const preferences={...emptySave().preferences,eventId,readyScreen:true};const fresh=createDraft({...scramble,eventId},preferences);
   assert.equal(fresh.phase,'scramble');assert.equal(confirmScramble(fresh,preferences).phase,'ready');
  }
 });
@@ -203,4 +203,20 @@ test('display preferences migrate and validate without losing custom values',()=
  assert.equal(emptySave().preferences.scrambleFontSize,24);assert.equal(emptySave().preferences.timerDisplay,'decimal');
  const save=emptySave();save.preferences={...save.preferences,scrambleFontSize:32,timerDisplay:'solve'};assert.equal(validateMobileSave(save).preferences.scrambleFontSize,32);
  assert.throws(()=>validateMobileSave({...save,preferences:{...save.preferences,scrambleFontSize:200}}));
+});
+
+
+test('no wait and no Ready Screen enters inspection directly, while no-inspection stays armed at zero', () => {
+  for (const inspection of [true, false]) {
+    const preferences = {...emptySave().preferences, inspection, waitEnabled: false, readyScreen: false};
+    assert.equal(confirmScramble(createDraft(scramble, preferences), preferences).phase, inspection ? 'inspection' : 'ready');
+    const blind = {...preferences, eventId: '333bf' as const};
+    assert.equal(confirmScramble(createDraft({...scramble, eventId: '333bf'}, blind), blind).phase, 'ready');
+    const waiting = {...preferences, waitEnabled: true, waitSeconds: 1};
+    assert.equal(confirmScramble(createDraft(scramble, waiting), waiting).phase, 'waiting');
+  }
+  const save = emptySave();
+  assert.equal(save.preferences.readyScreen, false);
+  assert.equal(validateMobileSave({...save, preferences: {...save.preferences, readyScreen: true}}).preferences.readyScreen, true);
+  assert.throws(() => validateMobileSave({...save, preferences: {...save.preferences, readyScreen: 'yes'}}));
 });

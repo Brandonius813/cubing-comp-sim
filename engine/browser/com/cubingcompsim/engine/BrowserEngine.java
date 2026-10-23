@@ -18,6 +18,7 @@ public final class BrowserEngine {
 
     @JSExport
     public static String[] generate(String event) throws InvalidScrambleException {
+        if (event.equals("444") || event.equals("444bf")) FourTables.load();
         return EngineCommon.generate(event, ENTROPY);
     }
 
@@ -29,6 +30,7 @@ public final class BrowserEngine {
     /** Deterministic conformance input, never called by the application. */
     @JSExport
     public static String[] generateForConformance(String event, int seed) throws InvalidScrambleException {
+        if (event.equals("444") || event.equals("444bf")) FourTables.load();
         return EngineCommon.generate(event, new JvmCompatibleRandom(new Random(seed)));
     }
 
