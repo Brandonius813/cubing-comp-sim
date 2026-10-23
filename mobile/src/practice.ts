@@ -10,6 +10,7 @@ import { sampleWaitMs } from '../../src/ui/simulatorInput';
 export type TimerPhase = 'scramble' | 'ready' | 'waiting' | 'inspection' | 'holding' | 'running' | 'review';
 export type MobilePreferences = Pick<Settings, 'eventId' | 'inspection'> & Partial<Settings> & {
   scrambleFontSize?: number;
+  readyScreen?: boolean;
   timerDisplay?: 'decimal' | 'seconds' | 'solve';
   showScrambleDrawing?: boolean;
   inspectionAudio?: boolean;
@@ -51,6 +52,8 @@ export function mobileSettings(preferences: MobilePreferences): Settings {
 
 export function validateMobilePreferences(preferences: MobilePreferences): MobilePreferences {
   const settings = mobileSettings(preferences);
+  const readyScreen = preferences.readyScreen ?? false;
+  if (typeof readyScreen !== 'boolean') throw new Error('Invalid Ready Screen setting.');
   const scrambleFontSize = preferences.scrambleFontSize ?? 24;
   const timerDisplay = preferences.timerDisplay ?? 'decimal';
   if (!Number.isInteger(scrambleFontSize) || scrambleFontSize < 16 || scrambleFontSize > 40 || !['decimal', 'seconds', 'solve'].includes(timerDisplay)) throw new Error('Invalid display settings.');
@@ -62,7 +65,7 @@ export function validateMobilePreferences(preferences: MobilePreferences): Mobil
   if (typeof showScrambleDrawing !== 'boolean' || typeof inspectionAudio !== 'boolean' || !isLocale(voiceLanguage)
     || !['male-1', 'male-2', 'female-1', 'female-2'].includes(voice)
     || typeof voiceVolume !== 'number' || !Number.isFinite(voiceVolume) || voiceVolume < 0 || voiceVolume > 1) throw new Error('Invalid inspection audio settings.');
-  return { ...settings, scrambleFontSize, timerDisplay, holdMs: settings.holdMs > 0 ? 550 : 0, showScrambleDrawing, inspectionAudio, voiceLanguage, voice, voiceVolume };
+  return { ...settings, readyScreen, scrambleFontSize, timerDisplay, holdMs: settings.holdMs > 0 ? 550 : 0, showScrambleDrawing, inspectionAudio, voiceLanguage, voice, voiceVolume };
 }
 
 export function emptySave(): MobileSave {
@@ -187,8 +190,10 @@ export function createDraft(scramble: Scramble, preferences: MobilePreferences):
 /** Sample only when the user confirms the scrambled puzzle. */
 export function confirmScramble(draft: MobileDraft, preferences: MobilePreferences, random: () => number = Math.random): MobileDraft {
   if (draft.phase !== 'scramble') return draft;
-  const waitRemainingMs = sampleWaitMs(mobileSettings(preferences), random);
-  return validateMobileDraft({ ...draft, phase: waitRemainingMs > 0 ? 'waiting' : 'ready', waitRemainingMs }, preferences.eventId);
+  const settings = mobileSettings(preferences);
+  const waitRemainingMs = sampleWaitMs(settings, random);
+  const skipReady = !settings.waitEnabled && !preferences.readyScreen && settings.inspection && getEvent(preferences.eventId).inspection;
+  return validateMobileDraft({ ...draft, phase: waitRemainingMs > 0 ? 'waiting' : skipReady ? 'inspection' : 'ready', waitRemainingMs }, preferences.eventId);
 }
 
 /** Process death never resumes a clock or manufactures a measured time. */

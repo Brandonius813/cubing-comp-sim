@@ -467,12 +467,12 @@ export function Scorecard({
             <>
               <View style={styles.sheetHeading}>
                 <Text style={[styles.sheetTitle, text]}>
-                  {event.name} history
+                  All Stats
                 </Text>
                 <Action title="Done" onPress={() => setHistoryOpen(false)} />
               </View>
               <FlatList
-                data={rounds.slice().reverse()}
+                data={save.history.rounds.slice().reverse()}
                 keyExtractor={(round) => round.id}
                 contentContainerStyle={styles.content}
                 initialNumToRender={12}
@@ -492,7 +492,7 @@ export function Scorecard({
                         <Text
                           style={[text, { fontSize: 16, fontWeight: "600" }]}
                         >
-                          Round {rounds.length - index}
+                          {getEvent(item.eventId).name} · Round {save.history.rounds.length - index}
                         </Text>
                         <Text style={[muted, { fontSize: 12, marginTop: 4 }]}>
                           {new Date(item.createdAt).toLocaleString()}

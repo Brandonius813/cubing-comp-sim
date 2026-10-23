@@ -215,3 +215,46 @@ test('native Apple validates state and captures its code before completing sign-
     assert.equal(requests, 2);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+test('web-shaped cloud history replaces mobile history, survives reopening, and retains recovery', async () => {
+  const { createSaveRepository } = await import('./storage-core');
+  const { emptySave, recordResult, changeEvent } = await import('./practice');
+  const { prepareHistoryReplacement } = await import('./history');
+  const scramble = { eventId: '333' as const, notation: 'R U', svg: '<svg/>', engineVersion: 'fixture', generatedAt: 1 };
+  const result = { rawMs: 10000, penalty: 'none' as const, inputMethod: 'timer' as const };
+  const local = recordResult(emptySave(), scramble, result);
+  let desktop = emptySave();
+  for (let i = 0; i < 10; i++) desktop = recordResult(desktop, scramble, result);
+  desktop = changeEvent(desktop, '555');
+  for (let i = 0; i < 5; i++) desktop = recordResult(desktop, {...scramble, eventId: '555'}, result);
+  desktop.history.activeRoundId = desktop.history.rounds.at(-1)!.id; // Web selects its completed round.
+  let body: string | null = null; let backup: string | null = null;
+  const driver = { read: async () => body, readRecovery: async () => backup,
+    write: async (next: string, recovery: boolean) => { if (recovery) backup = body; body = next; } };
+  const repository = createSaveRepository(driver);
+  await repository.store(local);
+  let visible = local;
+  const remoteMetadata = {...metadata, roundCount: 3, attemptCount: 15};
+  const cloud = new CloudSaves('https://api.example.test', async (_url, init) => {
+    assert.equal(init?.method, undefined);
+    return new Response(JSON.stringify({ save: remoteMetadata, snapshot: desktop.history }));
+  });
+  const transfers = new ExplicitTransfers(cloud, async () => account(), () => 'download-15');
+  const ticket = await transfers.prepareDownload();
+  assert.equal(visible.history.rounds.length, 1, 'preparation cannot modify local history');
+  await transfers.confirm(ticket, async snapshot => {
+    const next = prepareHistoryReplacement(visible, snapshot);
+    await repository.replace(next);
+    const stored = await repository.load();
+    assert.deepEqual(stored.history, next.history);
+    visible = stored;
+  });
+  assert.equal(visible.history.rounds.length, 3);
+  assert.equal(visible.history.rounds.reduce((n, r) => n + r.attempts.length, 0), 15);
+  assert.ok(!visible.history.rounds.some(r => r.id === local.history.rounds[0].id));
+  assert.deepEqual((await createSaveRepository(driver).load()).history.rounds, desktop.history.rounds);
+  assert.equal(visible.history.activeRoundId, null);
+  assert.equal(visible.preferences.eventId, '555');
+  assert.notEqual(desktop.history.activeRoundId, null, 'import must not mutate the cloud snapshot');
+  assert.deepEqual((await repository.loadRecovery())?.history, local.history);
+});
