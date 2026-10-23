@@ -195,6 +195,8 @@ export function confirmScramble(draft: MobileDraft, preferences: MobilePreferenc
 export function recoverDraft(save: MobileSave): MobileSave {
   const valid = validateMobileSave(save);
   const draft = valid.draft;
+  if (draft && ['ready', 'waiting'].includes(draft.phase) && !draft.manualText && !draft.inspectionText)
+    return validateMobileSave({ ...valid, draft: { ...draft, phase: 'scramble', waitRemainingMs: 0 } });
   if (!draft || !['inspection', 'holding', 'running'].includes(draft.phase)) return valid;
   return validateMobileSave({ ...valid, draft: { ...draft, phase: 'review', pending: {
     rawMs: null, penalty: 'DNF', inputMethod: 'timer', interrupted: true, attemptId: draft.id,

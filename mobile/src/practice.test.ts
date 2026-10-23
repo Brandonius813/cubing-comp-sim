@@ -76,7 +76,8 @@ test('fixed and inclusive random waits are sampled once into a durable draft', (
   assert.equal(confirmScramble(createDraft(scramble, preferences), preferences, () => 0).waitRemainingMs, 15000);
   assert.equal(confirmScramble(createDraft(scramble, preferences), preferences, () => 0.999999).waitRemainingMs, 45000);
   const save = validateMobileSave({ ...emptySave(), draft: fixed });
-  assert.equal(recoverDraft(save).draft?.waitRemainingMs, 15000);
+  assert.equal(recoverDraft(save).draft?.waitRemainingMs, 0);
+  assert.equal(recoverDraft(save).draft?.phase, 'scramble');
   assert.equal(navigationLocked('waiting', false), false);
 });
 

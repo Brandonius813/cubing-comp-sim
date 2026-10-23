@@ -93,6 +93,11 @@ function Button({
         minHeight: 44,
         justifyContent: "center",
         paddingVertical: 10,
+        paddingHorizontal: 22,
+        borderWidth: 1,
+        borderColor: theme.accent,
+        borderRadius: 10,
+        alignItems: "center",
         opacity: disabled ? 0.4 : 1,
       }}
     >
@@ -195,6 +200,7 @@ function MobileApp() {
   const inspectionStart = useRef<number | null>(null);
   const inspectionDuration = useRef<number | undefined>(undefined);
   const touch = useRef(new TimerTouch()).current;
+  const stoppedTouch = useRef(false);
   const inspectionTap = useRef(false);
   const eventId = save?.preferences.eventId ?? "333";
   const event = getEvent(eventId);
@@ -421,7 +427,7 @@ function MobileApp() {
         phaseRef.current === "running"
           ? Math.min(
               MAX_TIME_MS,
-              Math.max(0, Math.floor(stoppedAt - solveStart.current)),
+              Math.max(0, Math.floor((stoppedAt - solveStart.current) / 10) * 10),
             )
           : null;
       setPending({
@@ -538,15 +544,22 @@ function MobileApp() {
   };
   const touchStart = (nativeEvent: GestureResponderEvent) => {
     if (screenReader) return;
+    if (phaseRef.current === "running") {
+      stoppedTouch.current = true;
+      touch.cancel();
+      finish(false, performance.now());
+      return;
+    }
+    if (stoppedTouch.current) return;
     if (
       !scramble ||
       generating ||
       savingRef.current ||
-      (draftError && phaseRef.current !== "running")
+      draftError
     )
       return;
     const current = phaseRef.current;
-    if (current === "running" || current === "review") {
+    if (current === "review") {
       touch.begin(
         touchPoint(nativeEvent),
         nativeEvent.nativeEvent.touches.length,
@@ -588,12 +601,17 @@ function MobileApp() {
     transition("holding");
   };
   const touchMove = (event: GestureResponderEvent) => {
-    if (screenReader) return;
+    if (screenReader || stoppedTouch.current) return;
     if (!touch.move(touchPoint(event), event.nativeEvent.touches.length))
       cancelTouch();
   };
   const touchEnd = (event: GestureResponderEvent) => {
     if (screenReader) return;
+    if (stoppedTouch.current) {
+      if (event.nativeEvent.touches.length === 0) stoppedTouch.current = false;
+      touch.cancel();
+      return;
+    }
     if (event.nativeEvent.touches.length !== 0) {
       cancelTouch();
       return;
@@ -1008,10 +1026,10 @@ function MobileApp() {
                       onTouchStart={touchStart}
                       onTouchMove={touchMove}
                       onTouchEnd={touchEnd}
-                      onTouchCancel={cancelTouch}
+                      onTouchCancel={() => { stoppedTouch.current = false; cancelTouch(); }}
                     >
                       {phase === "scramble" ? (
-                        <View pointerEvents="none" style={styles.scramblePhase}>
+                        <View style={styles.scramblePhase}>
                           {generating || !scramble ? (
                             <ThinkingDots />
                           ) : (
@@ -1050,13 +1068,17 @@ function MobileApp() {
                                   />
                                 </View>
                               )}
+                              <View style={{ marginTop: "auto", paddingTop: 16 }}
+                                onTouchStart={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>
+                                <Button label="Scramble is good" disabled={draftError || saving} onPress={confirmPuzzle} />
+                              </View>
                             </>
                           )}
                         </View>
                       ) : (
                         <>
                           <View
-                            pointerEvents={manualEntry ? "auto" : "none"}
+                            pointerEvents={manualEntry || phase === "review" ? "auto" : "none"}
                             style={styles.timeCenter}
                           >
                             {manualEntry ? (
@@ -1079,6 +1101,10 @@ function MobileApp() {
                                   { fontSize: width > 600 ? 112 : 72 },
                                 ]}
                               />
+                            ) : phase === "ready" ? (
+                              <View>
+                                <Button label="Ready" disabled={draftError || saving} onPress={() => { if (screenReader) accessibleActivate(); }} />
+                              </View>
                             ) : (
                               <Text
                                 adjustsFontSizeToFit
@@ -1095,9 +1121,9 @@ function MobileApp() {
                               </Text>
                             )}
                             {phase === "review" && (
-                              <Text style={styles.continue}>
-                                {saving ? "…" : "Continue"}
-                              </Text>
+                              <View style={{ marginTop: 22 }} onTouchStart={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>
+                                <Button label={saving ? "…" : "Continue"} disabled={saving} onPress={() => { void saveResult(); }} />
+                              </View>
                             )}
                             {phase === "waiting" && (
                               <Text style={styles.continue}>Wait</Text>
@@ -1158,7 +1184,7 @@ function MobileApp() {
                             }}
                             style={[
                               styles.reviewAction,
-                              { borderColor: theme.border },
+                              { borderColor: theme.accent },
                             ]}
                           >
                             <Text
@@ -1181,13 +1207,19 @@ function MobileApp() {
                           onPress={() => setPendingEdit(true)}
                           style={[
                             styles.reviewAction,
-                            { borderColor: theme.border },
+                            { borderColor: theme.accent },
                           ]}
                         >
                           <Text style={{ color: theme.text, fontSize: 18 }}>
-                            Edit time
+                            Edit
                           </Text>
                         </Pressable>
+                        <Button label="Delete" disabled={saving} onPress={() => {
+                          Alert.alert("Delete solve?", "This solve will not be saved.", [
+                            { text: "Keep solve", style: "cancel" },
+                            { text: "Delete", style: "destructive", onPress: () => { void deletePending(); } },
+                          ]);
+                        }} />
                       </View>
                     )}
                     {(generationError || engineStatus.phase === "error") && (
@@ -1236,6 +1268,7 @@ function MobileApp() {
                     keyboardShouldPersistTaps="handled"
                     automaticallyAdjustKeyboardInsets
                   >
+                    <Text style={{ color: theme.text, fontSize: 24, fontWeight: "700", textAlign: "center", marginBottom: 20 }}>Settings</Text>
                     <PracticeSettings
                       preferences={save.preferences}
                       disabled={saving || accountBusy || activeClock}
@@ -1489,11 +1522,13 @@ const makeStyles = (theme: ReturnType<typeof resolveMobileTheme>) =>
       right: 20,
       flexDirection: "row",
       justifyContent: "center",
-      gap: 12,
+      gap: 8,
+      flexWrap: "wrap",
     },
     reviewAction: {
-      padding: 14,
-      minWidth: 64,
+      padding: 12,
+      borderRadius: 10,
+      minWidth: 54,
       borderWidth: 1,
       alignItems: "center",
     },

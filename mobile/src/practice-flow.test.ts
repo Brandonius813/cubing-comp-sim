@@ -19,7 +19,8 @@ for (const event of EVENTS) {
         save = restart({ ...save, draft });
         assert.equal(save.draft?.phase, 'scramble');
         save = restart({ ...save, draft: confirmScramble(save.draft!, save.preferences) });
-        assert.equal(save.draft?.phase, 'ready');
+        assert.equal(save.draft?.phase, 'scramble');
+        assert.equal(confirmScramble(save.draft!, save.preferences).phase, 'ready');
         assert.equal(save.history.rounds.flatMap(round => round.attempts).length, i);
         const pending: PendingResult = inputMethod === 'manual'
           ? manualResult('12.34', event.inspection ? '1000' : '', event.id, draft.id)

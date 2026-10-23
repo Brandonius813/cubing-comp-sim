@@ -39,7 +39,7 @@ export function TimeEditor({
 }) {
   const theme = useMobileTheme();
   const [input, setInput] = useState(
-    attempt.rawMs === null ? "" : (attempt.rawMs / 1000).toFixed(3),
+    attempt.rawMs === null ? "" : (attempt.rawMs / 1000).toFixed(2),
   );
   const [penalty, setPenalty] = useState<Penalty>(selectedPenalty(attempt));
   const [busy, setBusy] = useState(false);
@@ -84,7 +84,9 @@ export function TimeEditor({
       });
       if (saved) {
         setPenalty(nextPenalty);
-        last.current = { input, penalty: nextPenalty };
+        const normalized = parsed?.rawMs == null ? "" : (parsed.rawMs / 1000).toFixed(2);
+        setInput(normalized);
+        last.current = { input: normalized, penalty: nextPenalty };
       } else setError("Could not save this change.");
       return saved;
     } catch (cause) {
@@ -214,6 +216,7 @@ export function TimeEditor({
               }}
               style={{
                 padding: 14,
+                borderRadius: 10,
                 borderWidth: 1,
                 borderColor: penalty === value ? theme.accent : theme.border,
               }}

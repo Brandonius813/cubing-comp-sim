@@ -85,26 +85,15 @@ export function PracticeSettings({ preferences, onChange, disabled }: Props) {
           onChange={(enabled) => update({ holdMs: enabled ? 550 : 0 })}
         />
       </SettingRow>
-      <SettingRow label="Wait between solves">
-        <Toggle
-          label="Wait between solves"
-          value={settings.waitEnabled}
-          disabled={disabled}
-          onChange={(waitEnabled) => update({ waitEnabled })}
-        />
-      </SettingRow>
+      <SelectSetting
+        label="Wait duration"
+        value={settings.waitEnabled ? settings.waitMode : "none"}
+        options={[{ value: "fixed", label: "Fixed" }, { value: "random", label: "Random" }, { value: "none", label: "None" }]}
+        disabled={disabled}
+        onChange={mode => update(mode === "none" ? { waitEnabled: false } : { waitEnabled: true, waitMode: mode })}
+      />
       {settings.waitEnabled && (
         <>
-          <SelectSetting
-            label="Wait duration"
-            value={settings.waitMode}
-            options={[
-              { value: "fixed", label: "Fixed" },
-              { value: "random", label: "Random" },
-            ]}
-            disabled={disabled}
-            onChange={(waitMode) => update({ waitMode })}
-          />
           {settings.waitMode === "fixed" ? (
             <SettingRow label="Wait seconds">
               <TextInput
@@ -198,7 +187,7 @@ export function PracticeSettings({ preferences, onChange, disabled }: Props) {
         />
       </View>
       <SelectSetting
-        label="Timer display"
+        label="Timer Update"
         value={preferences.timerDisplay ?? "decimal"}
         options={[
           { value: "decimal", label: "Decimals" },

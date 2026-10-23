@@ -166,7 +166,7 @@ export function RoundCard({
                   score?.discardedIndices.includes(i) && { color: theme.muted },
                 ]}
               >
-                {attempt ? formatAttempt(attempt) : "—"}
+                {attempt ? (score?.discardedIndices.includes(i) ? `(${formatAttempt(attempt)})` : formatAttempt(attempt)) : "—"}
               </Text>
             </Pressable>
             {onPenalty && (
@@ -376,7 +376,7 @@ export function Scorecard({
             {error}
           </Text>
         )}
-        <Action title="History ↑" onPress={() => setHistoryOpen(true)} />
+        <Action title="All Stats ↑" onPress={() => setHistoryOpen(true)} />
       </ScrollView>
       {eventsOpen && (
         <>
