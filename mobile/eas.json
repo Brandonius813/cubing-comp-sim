@@ -21,7 +21,7 @@
       },
       "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_AUTH_PROVIDERS": "google,wca"
+        "EXPO_PUBLIC_AUTH_PROVIDERS": "google,wca,apple"
       }
     },
     "production": {

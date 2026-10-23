@@ -1,3 +1,7 @@
+## Approved Apple backend activation and device preview (October 23, 2026)
+
+The owner approved backend activation and requested a device preview before App Store Connect setup, which has not been done. Production now runs the checksum-verified `4070c38` API and cleanup image. Migration 003 is applied with private-schema runtime ownership, RLS and restored administrator restrictions. Live API health and runtime transactional access passed; the upgraded account cleanup completed and both timers resumed. Enable Apple in the internal preview for human acceptance, retaining the public web release gate until consent/revocation checks pass. Mobile typecheck and 114 tests passed. See `docs/apple-release-activation.md` for evidence and limitations.
+
 ## Apple backend deployment preparation (October 23, 2026)
 
 PR #53 was already merged into `feat/ios-review-ready` when this follow-up started. Production still runs API `eb1916b` and web `d17fa698`, with public Apple controls closed. The tested API artifact `4070c38` has the same tree as implementation `c04019d`; its CI passed all 34 API tests including PostgreSQL plus three backup tests. The checksum-verified image and private Apple candidate configuration are staged on the existing host, not activated. Isolated container health, protected-route checks and database TLS preflight passed. Migration 003 passed a rollback-only test including runtime RLS access; it has not been applied persistently. Exact evidence, coordinated cleanup upgrade, and remaining release failures are in `docs/apple-release-activation.md`.

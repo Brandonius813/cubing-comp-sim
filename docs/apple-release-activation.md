@@ -1,6 +1,10 @@
 # Apple backend release candidate, October 23, 2026
 
-Status: prepared and checked, not activated. No new native build, website publication, real Apple consent, revocation, or App Store submission is claimed.
+Status: backend activated after owner approval on October 23. Migration 003 is applied with runtime ownership and RLS enabled. The API is healthy, runtime grant read/write passed inside a rolled-back transaction, the upgraded account cleanup completed with zero pending accounts, and both cleanup timers are active. Public health returned 200 and unauthenticated Apple grant submission returned 401. No real Apple consent/revocation or App Store submission is claimed.
+
+The host's containerd image ID is the archive's OCI manifest digest `sha256:f61209e2adc68e05a3287b024c10c948f0259945ab375d88b7d44fdfc3be8b45`; CI's Docker image ID below is its config digest. Both were verified against the same checksum-verified archive.
+
+The owner requested device testing before App Store Connect setup. Apple is enabled only in the internal EAS preview configuration for acceptance testing. Public website Apple gating remains closed. Mobile typecheck and all 114 tests passed again. Native build status will be recorded after EAS returns a result.
 
 ## Verified starting state
 
