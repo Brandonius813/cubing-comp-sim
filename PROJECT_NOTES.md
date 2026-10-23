@@ -1,3 +1,7 @@
+## Portrait orientation (October 23, 2026)
+
+The owner requested portrait lock. Mobile orientation is portrait; iPad also declares portrait with full-screen mode so multitasking does not restore landscape orientations. This requires a new native build and is not included in preview 5dcaa7f0.
+
 ## Selected-event stats and scramble layout (October 23, 2026)
 
 The owner's latest feedback supersedes the earlier all-event All Stats decision: filter the popup and its round numbering to the currently selected CompSim event. Preserve the full stored history. Give notation more vertical space, place the drawing lower with less padding, and show a gray down chevron only while more notation remains below the viewport. Render Megaminx U/F labels as centered vector shapes in native views to avoid SVG text baseline differences; preserve engine face geometry and stored SVG provenance.

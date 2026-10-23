@@ -4,16 +4,20 @@
     "slug": "cubing-comp-sim",
     "version": "0.1.0",
     "scheme": "cubingcompsim",
-    "orientation": "default",
+    "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cubingcompsim.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait"
+        ]
       },
-      "usesAppleSignIn": true
+      "usesAppleSignIn": true,
+      "requireFullScreen": true
     },
     "android": {
       "package": "com.cubingcompsim.app"
