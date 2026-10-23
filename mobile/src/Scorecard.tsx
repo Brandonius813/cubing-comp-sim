@@ -28,7 +28,7 @@ export interface ScorecardProps {
   onSelectEvent?: (eventId: EventId) => void;
   onExport?: () => void;
   onEditingChange?: (open: boolean) => void;
-  review?: { round: Round; attemptId: string; onPenalty: (penalty: Penalty) => void; interrupted?: boolean };
+  review?: { round: Round; attemptId: string; onPenalty: (penalty: Penalty) => void; onEdit?: (patch: Pick<Attempt, 'rawMs' | 'penalty' | 'inspectionPenalty'>) => void; interrupted?: boolean };
 }
 
 /** The main view is the current paper scorecard. Full history lives in its own sheet. */
@@ -54,7 +54,7 @@ export function Scorecard({ save, onSave, disabled = false, onSelectEvent, onEdi
   const muted = { color: theme.muted, fontFamily: theme.fontFamily };
   const number = { color: theme.text, fontFamily: theme.numberFontFamily, fontVariant: ['tabular-nums'] as ('tabular-nums')[] };
   const openEdit = (round: Round, attempt: Attempt) => {
-    if (attempt.id === review?.attemptId) return;
+    if (attempt.id === review?.attemptId && !review.onEdit) return;
     setEdit({ round, attempt }); setInput(attempt.rawMs === null ? '' : (attempt.rawMs / 1000).toFixed(3));
     setPenalty(attempt.penalty); setInspection(attempt.inspectionPenalty); setError('');
   };
@@ -63,6 +63,9 @@ export function Scorecard({ save, onSave, disabled = false, onSelectEvent, onEdi
     const parsed = input.trim() ? parseTimeInput(input) : null;
     if (input.trim() && (!parsed || parsed.rawMs === null || parsed.penalty !== 'none')) { setError('Enter a time without a penalty suffix.'); return; }
     try {
+      if (edit.attempt.id === review?.attemptId && review.onEdit) {
+        review.onEdit({ rawMs: parsed?.rawMs ?? null, penalty, inspectionPenalty: inspection }); setEdit(null); return;
+      }
       const next = updateHistoryAttempt(save, edit.round.id, edit.attempt.id, { rawMs: parsed?.rawMs ?? null, penalty, inspectionPenalty: inspection });
       busyRef.current = true; setBusy(true);
       if (await onSave(next)) setEdit(null); else setError('The edit was not saved.');
@@ -91,7 +94,7 @@ export function Scorecard({ save, onSave, disabled = false, onSelectEvent, onEdi
         const attempt = round?.attempts[i];
         return <View key={i} style={styles.solveRow}>
           <Text style={[styles.index, muted]}>{i + 1}</Text>
-          <Pressable style={[styles.timeBox, { borderColor: theme.border }]} disabled={!attempt || disabled || attempt.id === review?.attemptId} accessibilityRole="button" accessibilityLabel={attempt ? `Edit solve ${i + 1}: ${formatAttempt(attempt)}` : `Solve ${i + 1}, empty`} onPress={() => attempt && round && openEdit(round, attempt)}>
+          <Pressable style={[styles.timeBox, { borderColor: theme.border }]} disabled={!attempt || disabled || (attempt.id === review?.attemptId && !review.onEdit)} accessibilityRole="button" accessibilityLabel={attempt ? `Edit solve ${i + 1}: ${formatAttempt(attempt)}` : `Solve ${i + 1}, empty`} onPress={() => attempt && round && openEdit(round, attempt)}>
             <Text style={[styles.result, number, score?.discardedIndices.includes(i) && { color: theme.muted }]}>{attempt ? formatAttempt(attempt) : '—'}</Text>
           </Pressable>
           <View style={styles.penalties}>{(['+2', 'DNF'] as const).map(value => {
