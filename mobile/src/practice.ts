@@ -9,6 +9,7 @@ import { sampleWaitMs } from '../../src/ui/simulatorInput';
 
 export type TimerPhase = 'ready' | 'waiting' | 'inspection' | 'holding' | 'running' | 'review';
 export type MobilePreferences = Pick<Settings, 'eventId' | 'inspection'> & Partial<Settings> & {
+  showScrambleDrawing?: boolean;
   inspectionAudio?: boolean;
   voiceLanguage?: Locale;
   voice?: 'male-1' | 'male-2' | 'female-1' | 'female-2';
@@ -48,14 +49,15 @@ export function mobileSettings(preferences: MobilePreferences): Settings {
 
 export function validateMobilePreferences(preferences: MobilePreferences): MobilePreferences {
   const settings = mobileSettings(preferences);
+  const showScrambleDrawing = preferences.showScrambleDrawing === undefined ? false : preferences.showScrambleDrawing;
   const inspectionAudio = preferences.inspectionAudio === undefined ? true : preferences.inspectionAudio;
   const voiceLanguage = preferences.voiceLanguage === undefined ? 'en' : preferences.voiceLanguage;
   const voice = preferences.voice === undefined ? 'male-1' : preferences.voice;
   const voiceVolume = preferences.voiceVolume === undefined ? 1 : preferences.voiceVolume;
-  if (typeof inspectionAudio !== 'boolean' || !isLocale(voiceLanguage)
+  if (typeof showScrambleDrawing !== 'boolean' || typeof inspectionAudio !== 'boolean' || !isLocale(voiceLanguage)
     || !['male-1', 'male-2', 'female-1', 'female-2'].includes(voice)
     || typeof voiceVolume !== 'number' || !Number.isFinite(voiceVolume) || voiceVolume < 0 || voiceVolume > 1) throw new Error('Invalid inspection audio settings.');
-  return { ...settings, inspectionAudio, voiceLanguage, voice, voiceVolume };
+  return { ...settings, showScrambleDrawing, inspectionAudio, voiceLanguage, voice, voiceVolume };
 }
 
 export function emptySave(): MobileSave {

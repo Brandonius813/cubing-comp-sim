@@ -171,3 +171,13 @@ test('audio defaults are migrated but corrupt explicit values fail closed', () =
     assert.throws(() => validateMobileSave({ ...emptySave(), preferences: { ...emptySave().preferences, ...patch } }));
   }
 });
+
+test('visual preference migrates off and appearance/input controls survive a saved round trip', () => {
+  const legacy = emptySave();
+  delete legacy.preferences.showScrambleDrawing;
+  assert.equal(validateMobileSave(legacy).preferences.showScrambleDrawing, false);
+  const next = validateMobileSave({ ...legacy, preferences: { ...legacy.preferences, showScrambleDrawing: true, theme: 'light', inputMethod: 'manual', holdMs: 550, waitMode: 'random', waitMinSeconds: 0, waitMaxSeconds: 180, voiceVolume: .37, textFont: 'georgia', numberFont: 'system-mono' } });
+  const restored = validateMobileSave(JSON.parse(JSON.stringify(next)));
+  assert.deepEqual(restored.preferences, next.preferences);
+  assert.throws(() => validateMobileSave({ ...next, preferences: { ...next.preferences, showScrambleDrawing: 'yes' } }));
+});
