@@ -1,13 +1,14 @@
+import { captureAppleGrant } from './apple-grant';
 import { createClient, type Session, type SupabaseClient, type AuthChangeEvent } from '@supabase/supabase-js';
 import { CloudError, type AccountSession, type AccountProvider, type AccountCallback } from './types';
 
 export type AccountListener = (session: AccountSession | null, event: AuthChangeEvent) => void;
-export interface AuthConfiguration { url?: string; publicKey?: string; appUrl?: string; providers?: string }
+export interface AuthConfiguration { url?: string; publicKey?: string; appUrl?: string; providers?: string; apiUrl?: string }
 
 const INTENT_KEY = 'ccs-oauth-intent';
 const AUTH_STORAGE_KEY = 'ccs-auth-session';
 const MAX_REDIRECT_AGE = 10 * 60_000;
-const PROVIDERS = { google: 'google', wca: 'custom:wca' } as const;
+const PROVIDERS = { google: 'google', wca: 'custom:wca', apple: 'apple' } as const;
 interface RedirectIntent { purpose: AccountCallback['purpose']; provider: AccountProvider; userId?: string; startedAt: number }
 const credentialKeys = ['code', 'sb_flow_id', 'error', 'error_code', 'error_description', 'access_token', 'refresh_token', 'provider_token', 'provider_refresh_token', 'expires_at', 'expires_in', 'token_type', 'type'];
 
@@ -56,9 +57,9 @@ export class AccountAuth {
   private redirectCompletion?: Promise<AccountCallback | null>;
   private deletionProof?: { userId: string; at: number };
 
-  constructor(config: AuthConfiguration, client?: SupabaseClient) {
+  constructor(private readonly config: AuthConfiguration, client?: SupabaseClient) {
     this.initialUrl = typeof location === 'undefined' ? null : new URL(location.href);
-    this.providers = [...new Set((config.providers ?? '').split(',').filter((provider): provider is AccountProvider => provider === 'google' || provider === 'wca'))];
+    this.providers = [...new Set((config.providers ?? '').split(',').filter((provider): provider is AccountProvider => provider === 'google' || provider === 'wca' || provider === 'apple'))];
     this.redirectBase = typeof location === 'undefined' ? 'http://localhost:5173' : location.origin;
     try {
       const base = new URL(config.appUrl || this.redirectBase);
@@ -121,7 +122,7 @@ export class AccountAuth {
     if (isCallback && typeof sessionStorage !== 'undefined') {
       try {
         const value = JSON.parse(sessionStorage.getItem(INTENT_KEY) ?? 'null');
-        if (value && ['signin', 'link', 'delete'].includes(value.purpose) && ['google', 'wca'].includes(value.provider)
+        if (value && ['signin', 'link', 'delete'].includes(value.purpose) && ['google', 'wca', 'apple'].includes(value.provider)
           && Number.isFinite(value.startedAt) && value.startedAt <= Date.now() && value.startedAt >= Date.now() - MAX_REDIRECT_AGE
           && (value.purpose === 'signin' || typeof value.userId === 'string')) intent = value;
       } catch { /* Invalid or unavailable intent fails closed. */ }
@@ -160,6 +161,16 @@ export class AccountAuth {
       const session = await this.getSession();
       if (!session || session.user.id !== exchanged.data.session.user.id || (intent.userId && session.user.id !== intent.userId)
         || !session.user.providers?.includes(PROVIDERS[intent.provider])) throw new Error('Account mismatch');
+      if (intent.provider === 'apple') {
+        const token = exchanged.data.session.provider_refresh_token;
+        try {
+          if (!token) throw new Error('Apple did not provide a revocable grant');
+          await captureAppleGrant(this.config.apiUrl, session.accessToken, { clientId: 'com.cubingcompsim.web', refreshToken: token });
+        } catch (error) {
+          if (intent.purpose === 'signin') await this.sdk().auth.signOut({ scope: 'local' });
+          throw error;
+        }
+      }
       if (intent.purpose === 'delete') this.deletionProof = { userId: session.user.id, at: intent.startedAt };
       return { purpose: intent.purpose, provider: intent.provider, status: 'success' };
     } catch {

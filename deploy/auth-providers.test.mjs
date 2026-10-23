@@ -1,13 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { verifyProviderRedirects, validateAuthProviders } from './auth-providers.mjs';
+import { verifyProviderRedirects, validateAuthProviders, assertProviderReleaseReadiness } from './auth-providers.mjs';
 
 const config = { appUrl: 'https://staging.example.com', supabaseUrl: 'https://abcdefghijklmnopqrst.supabase.co', authProviders: ['google', 'wca'] };
 function responseFor(provider, alter = () => {}) {
-  const target = new URL(provider === 'wca' ? 'https://www.worldcubeassociation.org/oauth/authorize' : 'https://accounts.google.com/o/oauth2/v2/auth');
+  const target = new URL(provider === 'wca' ? 'https://www.worldcubeassociation.org/oauth/authorize' : provider === 'apple' ? 'https://appleid.apple.com/auth/authorize' : 'https://accounts.google.com/o/oauth2/v2/auth');
   target.searchParams.set('redirect_uri', `${config.supabaseUrl}/auth/v1/callback`);
   target.searchParams.set('response_type', 'code');
   target.searchParams.set('state', 'opaque-test-state');
+  if (provider === 'apple') target.searchParams.set('response_mode', 'form_post');
   target.searchParams.set('scope', 'public openid profile email');
   target.searchParams.set('code_challenge', 'opaque-provider-challenge');
   target.searchParams.set('code_challenge_method', 'S256');
@@ -18,7 +19,7 @@ function responseFor(provider, alter = () => {}) {
 test('empty gate performs no requests and provider list rejects mistakes', async () => {
   assert.deepEqual(await verifyProviderRedirects({ ...config, authProviders: [] }, 'public', () => assert.fail('unexpected network request')), []);
   assert.deepEqual(validateAuthProviders(undefined), []);
-  for (const value of ['google,wca', ['google', 'google'], ['custom:wca'], ['apple']]) assert.throws(() => validateAuthProviders(value));
+  for (const value of ['google,wca', ['google', 'google'], ['custom:wca'], ['github']]) assert.throws(() => validateAuthProviders(value));
 });
 
 test('configured providers require manual redirects and browser PKCE', async () => {
@@ -67,3 +68,29 @@ test('malformed redirect error never includes the sensitive location', async () 
     return /invalid OAuth authorization target/.test(error.message);
   });
 });
+
+
+test('Apple initial redirect can be checked separately from its blocked release', async () => {
+  const providers = ['google', 'wca', 'apple'];
+  assert.deepEqual(validateAuthProviders(providers), providers);
+  assert.throws(() => assertProviderReleaseReadiness(providers), /revocation/);
+  assert.doesNotThrow(() => assertProviderReleaseReadiness(['google', 'wca']));
+  const result = await verifyProviderRedirects({ ...config, authProviders: ['apple'] }, 'public', async url => {
+    assert.equal(url.searchParams.get('provider'), 'apple');
+    return responseFor('apple');
+  });
+  assert.deepEqual(result, ['apple']);
+});
+
+for (const [name, alter] of [
+  ['wrong Apple host', url => { url.hostname = 'attacker.example'; }],
+  ['wrong callback', url => { url.searchParams.set('redirect_uri', 'https://attacker.example/callback'); }],
+  ['missing state', url => { url.searchParams.delete('state'); }],
+  ['implicit tokens', url => { url.searchParams.set('response_type', 'token'); }],
+  ['missing email', url => { url.searchParams.set('scope', 'name'); }],
+  ['wrong response mode', url => { url.searchParams.set('response_mode', 'query'); }],
+]) {
+  test(`Apple initial redirect rejects ${name}`, async () => {
+    await assert.rejects(verifyProviderRedirects({ ...config, authProviders: ['apple'] }, 'public', async () => responseFor('apple', alter)));
+  });
+}

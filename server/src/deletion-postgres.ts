@@ -3,15 +3,22 @@ import type { DeletionRepository } from './deletion.js';
 
 export class PostgresDeletions implements DeletionRepository {
   constructor(private readonly pool: Pool) {}
-  async request(userId: string): Promise<void> {
+  async request(userId: string, appleRequired = false): Promise<void> {
     const db = await this.pool.connect();
     try {
       await db.query('BEGIN');
       await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [userId]);
-      await db.query('INSERT INTO account_deletions(user_id) VALUES($1) ON CONFLICT(user_id) DO NOTHING', [userId]);
+      await db.query('INSERT INTO account_deletions(user_id,apple_revocation_required) VALUES($1,$2) ON CONFLICT(user_id) DO NOTHING', [userId, appleRequired]);
       await db.query('COMMIT');
     } catch (error) { await db.query('ROLLBACK').catch(() => undefined); throw error; }
     finally { db.release(); }
+  }
+  async needsAppleRevocation(userId: string): Promise<boolean> {
+    const result = await this.pool.query('SELECT apple_revocation_required FROM account_deletions WHERE user_id=$1', [userId]);
+    return Boolean(result.rows[0]?.apple_revocation_required);
+  }
+  async markAppleRevoked(userId: string): Promise<void> {
+    await this.pool.query('UPDATE account_deletions SET apple_revocation_required=false WHERE user_id=$1', [userId]);
   }
   async isBlocked(userId: string): Promise<boolean> {
     const result = await this.pool.query('SELECT 1 FROM account_deletions WHERE user_id=$1', [userId]);

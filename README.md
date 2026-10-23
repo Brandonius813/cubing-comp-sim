@@ -23,7 +23,7 @@ A competition includes more than a timer. There is waiting between attempts, lim
 
 ## Current status
 
-The desktop web app is available as an **early guest preview** and is under active development. Accounts and cloud saves require separately configured services; they are not needed for guest practice. Translation review, audio assets, and real-device testing are ongoing. Native apps are a later phase.
+The desktop web app is available and is under active development. Accounts and cloud saves require configured services; they are not needed for guest practice. Native iPhone, iPad and Android development has begun with React Native and Expo. See the [mobile roadmap and agent workstreams](docs/mobile-roadmap.md) and [testing guide](docs/mobile-testing.md) for current scope. An initial mobile foundation is not a signed, device-accepted store release.
 
 Local history belongs to the browser and site address you use. Export it before clearing site data or moving to another address.
 

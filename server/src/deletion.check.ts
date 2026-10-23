@@ -7,6 +7,8 @@ class TestDeletions implements DeletionRepository {
   jobs = new Map<string, { completed: boolean; objectKey: string | null }>();
   saves = new Map([['user-a', 'saves/user-a/current'], ['user-b', 'saves/user-b/current']]);
   async request(user: string) { if (!this.jobs.has(user)) this.jobs.set(user, { completed: false, objectKey: null }); }
+  async needsAppleRevocation() { return false; }
+  async markAppleRevoked() {}
   async isBlocked(user: string) { return this.jobs.has(user); }
   async detachCloudData(user: string) {
     const job = this.jobs.get(user)!;
@@ -48,7 +50,7 @@ test('OAuth reauthentication needs signed AMR and owned live allowlisted identit
   const identity = (provider = 'google', time = timestamp * 1000) => ({
     user_id: 'user-a', provider, last_sign_in_at: new Date(time).toISOString(),
   });
-  for (const provider of ['google', 'custom:wca']) {
+  for (const provider of ['google', 'custom:wca', 'apple']) {
     assert.equal(oauthAuthenticationTime(amr, 'user-a', [identity(provider)]), timestamp * 1000);
   }
   assert.equal(oauthAuthenticationTime(amr, 'user-a', [identity('email'), identity('google')]), timestamp * 1000);
@@ -64,6 +66,7 @@ test('OAuth reauthentication needs signed AMR and owned live allowlisted identit
   assert.equal(oauthAuthenticationTime(amr, 'user-a', [{ ...identity('email'), identity_data: identity() }]), undefined);
 });
 
+// Signed AMR remains required; a linked identity alone is never proof.
 test('existing-account OAuth accepts server AMR even when live identity sign-in timestamps are stale', () => {
   const now = 1_700_000_000_000;
   const identity = (at: number) => [{ user_id: 'user-a', provider: 'google', last_sign_in_at: new Date(at).toISOString() }];
@@ -155,4 +158,14 @@ test('accounts without cloud saves can be deleted and duplicate requests are saf
   assert.deepEqual(await service.request({ ...account(), emailVerified: false }, 'DELETE_ACCOUNT'), { status: 'deleted' });
   assert.deepEqual(await service.request(account(), 'DELETE_ACCOUNT'), { status: 'deleted' });
   assert.equal(objectCalls, 0);
+});
+
+
+test('mixed Apple and email accounts remain gated even with fresh password authentication', async () => {
+  const repository = new TestDeletions();
+  let deleted = false;
+  const service = new AccountDeletion(repository, { delete: async () => undefined }, async () => { deleted = true; });
+  await assert.rejects(service.request({ ...account(), appleIdentityLinked: true }, 'DELETE_ACCOUNT'), { status: 503, code: 'deletion_not_configured' });
+  assert.equal(repository.jobs.size, 0);
+  assert.equal(deleted, false);
 });

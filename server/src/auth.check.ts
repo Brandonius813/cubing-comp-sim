@@ -30,7 +30,7 @@ test('account verifier uses a verified JWT and a live matching user, never edita
     throw new Error('Unexpected auth request');
   });
   const verify = createAccountVerifier(url, 'test-publishable-key');
-  assert.deepEqual(await verify(`Bearer ${jwt()}`), { id, emailVerified: true, passwordAuthenticatedAt: undefined, oauthAuthenticatedAt: now * 1000 });
+  assert.deepEqual(await verify(`Bearer ${jwt()}`), { id, emailVerified: true, appleIdentityLinked: false, passwordAuthenticatedAt: undefined, oauthAuthenticatedAt: now * 1000 });
   const { privateKey: wrongKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
   const beforeForgery = liveLookups;
   await assert.rejects(verify(`Bearer ${jwt({}, wrongKey)}`), { status: 401 });
@@ -46,7 +46,11 @@ test('account verifier uses a verified JWT and a live matching user, never edita
     user_metadata: { provider: 'google', oauthAuthenticatedAt: now * 1000, email_verified: true },
     app_metadata: { provider: 'google' } };
   assert.deepEqual(await verify(`Bearer ${jwt({ user_metadata: { provider: 'google', oauthAuthenticatedAt: now * 1000 } })}`),
-    { id, emailVerified: false, passwordAuthenticatedAt: undefined, oauthAuthenticatedAt: undefined });
+    { id, emailVerified: false, appleIdentityLinked: false, passwordAuthenticatedAt: undefined, oauthAuthenticatedAt: undefined });
+  user = { id, identities: [{ ...supportedIdentity, provider: 'apple' }, { ...supportedIdentity, provider: 'email' }] };
+  assert.equal((await verify(`Bearer ${jwt({ amr: [{ method: 'password', timestamp: now }] })}`)).appleIdentityLinked, true);
+  user = { id, identities: [{ ...supportedIdentity, provider: 'email' }], user_metadata: { provider: 'apple', appleIdentityLinked: true } };
+  assert.equal((await verify(`Bearer ${jwt()}`)).appleIdentityLinked, false);
   user = { id, is_anonymous: true, identities: [supportedIdentity] };
   await assert.rejects(verify(`Bearer ${jwt()}`), { status: 401 });
 });
