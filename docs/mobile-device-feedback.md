@@ -4,7 +4,7 @@
 
 Web history permits its selected `activeRoundId` to refer to a completed round. Native uses that field only for unfinished rounds. Native import previously rejected the otherwise valid save after the user approved Download. Normalize a completed selected round to a null active pointer, preserving every round, solve and provenance field. The selected event follows the imported round. Keep the recovery copy and read back the committed history before reporting success.
 
-All Stats now lists every event with event labels. Upload and Download are adjacent; Cloud Save has an accessible refresh icon. Confirmations show solve/round counts and one overwrite sentence. Account deletion and password entry live behind a red action and popup.
+The earlier build listed every event; the latest feedback below supersedes that choice. Upload and Download are adjacent; Cloud Save has an accessible refresh icon. Confirmations show solve/round counts and one overwrite sentence. Account deletion and password entry live behind a red action and popup.
 
 ## Practice
 
@@ -36,6 +36,15 @@ Implementation commit: `a90cefb7333cd0be1fa6c8b6700310009ef452a0` on PR #54.
 - EAS archive inspection confirmed the downloaded engine checksum, generated engine document, and exclusion of credential files.
 - Expo reported the Free plan, four iOS builds used, zero overage metrics and zero total cost before submission. Existing ad hoc credentials were reused.
 - Preview build: `ff9a3a22-f944-4ea7-bc6b-28170d27e512`, source `a90cefb`, internal iOS distribution. [Build finished](https://expo.dev/accounts/brandonius813/projects/cubing-comp-sim/builds/ff9a3a22-f944-4ea7-bc6b-28170d27e512) successfully. Downloaded IPA inspection verified bundle ID, iPhone/iPad support, the signed Apple Sign In entitlement, and the exact engine checksum marker in the bundled application. Physical-device behavior remains unverified.
-- The auth custom-domain check still returned `entitlement_required`; DNS returned no CNAME for `auth.cubingcompsim.com`. The existing auth URL was retained. Provider callbacks and custom-domain activation remain pending owner setup.
+- The auth custom-domain check still returned `entitlement_required`; DNS returned no CNAME for `auth.cubingcompsim.com`. The existing auth URL was retained. The owner subsequently cancelled this paid plan; no callback/domain setup is required.
 
 No production deployment, merge, TestFlight submission, or App Store submission was performed in this recovery.
+
+
+## Selected-event history and drawing follow-up
+
+All Stats now uses the currently selected event's rounds and numbers rounds within that event. The drawing uses at most 28% of available space (capped at 200 points), with reduced padding; notation receives the remaining height. A muted down chevron appears when more than four points of content remain below, disappears at the bottom, and returns when scrolling upward. Changing scramble/font resets scroll position.
+
+Megaminx U/F SVG text is replaced only in native presentation with vector glyphs centered at the engine's face coordinates. Both practice and solve-detail drawings use this adapter. Stored SVGs and the engine are unchanged.
+
+Verification: mobile TypeScript and 120 tests passed. The headless native-adapter harness passed cloud download with only the selected event's five solves visible (all fifteen retained in storage/upload), existing timer flows, and overflow indicator visibility at top/bottom for 6x6/7x7 at 16/40-point font sizes. Screenshot review confirmed the larger notation area, lower drawing, gray arrow, and accessible confirmation control. Actual iOS rendering remains a device acceptance check.

@@ -1,3 +1,9 @@
+## Selected-event stats and scramble layout (October 23, 2026)
+
+The owner's latest feedback supersedes the earlier all-event All Stats decision: filter the popup and its round numbering to the currently selected CompSim event. Preserve the full stored history. Give notation more vertical space, place the drawing lower with less padding, and show a gray down chevron only while more notation remains below the viewport. Render Megaminx U/F labels as centered vector shapes in native views to avoid SVG text baseline differences; preserve engine face geometry and stored SVG provenance.
+
+The owner cancelled the paid Supabase Pro/custom auth domain plan because of ongoing cost. Keep the existing URL and callbacks. No domain was created or activated, and no paid upgrade is authorized. See docs/auth-custom-domain.md.
+
 ## Device feedback and branded authentication (October 23, 2026)
 
 The owner requested fixing scramble stalls and long-text sizing, optional no-wait Ready, no-inspection 0.00 arming, concise cloud controls, and failed cloud download before another free iOS preview. Read-only diagnosis confirmed web saves may select a completed active round, which native import wrongly rejected. Normalize only the native active pointer, retain all solves and recovery, verify persistence, and show all events in All Stats. UI/domain verification is recorded in docs/mobile-device-feedback.md; native acceptance and the next build remain pending.

@@ -23,7 +23,8 @@ import {
 } from "react-native";
 import PagerView from "react-native-pager-view";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { SvgXml } from "react-native-svg";
+import { PuzzleDrawing } from "./src/PuzzleDrawing";
+import { ScrambleNotation } from "./src/ScrambleNotation";
 import { useKeepAwake } from "expo-keep-awake";
 import { getEvent } from "../src/core/events";
 import {
@@ -1044,40 +1045,29 @@ function MobileApp() {
                             <ThinkingDots />
                           ) : (
                             <>
-                              <ScrollView style={{ flex: 1, width: "100%" }} contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
-                                onTouchStart={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>
-                              <Text
-                                style={[
-                                  styles.notation,
-                                  {
-                                    fontSize:
-                                      save.preferences.scrambleFontSize ?? 24,
-                                    lineHeight:
-                                      (save.preferences.scrambleFontSize ??
-                                        24) * 1.35,
-                                  },
-                                ]}
-                              >
-                                {scramble.notation}
-                              </Text>
-                              </ScrollView>
+                              <ScrambleNotation
+                                key={`${scramble.notation}:${save.preferences.scrambleFontSize ?? 24}`}
+                                notation={scramble.notation}
+                                fontSize={save.preferences.scrambleFontSize ?? 24}
+                              />
                               {save.preferences.showScrambleDrawing && (
                                 <View
                                   style={{
-                                    flex: 1,
+                                    flexBasis: "28%",
+                                    flexShrink: 1,
+                                    maxHeight: 200,
                                     width: "100%",
-                                    paddingTop: 24,
-                                    paddingBottom: 20,
+                                    paddingTop: 6,
                                   }}
                                 >
-                                  <SvgXml
-                                    xml={scramble.svg}
-                                    width="100%"
+                                  <PuzzleDrawing
+                                    svg={scramble.svg}
+                                    eventId={eventId}
                                     height="100%"
                                   />
                                 </View>
                               )}
-                              <View style={{ marginTop: "auto", paddingTop: 16 }}
+                              <View style={{ marginTop: "auto", paddingTop: 8 }}
                                 onTouchStart={e => e.stopPropagation()} onTouchEnd={e => e.stopPropagation()}>
                                 <Button label="Scramble is good" disabled={draftError || saving} onPress={confirmPuzzle} />
                               </View>
@@ -1519,9 +1509,9 @@ const makeStyles = (theme: ReturnType<typeof resolveMobileTheme>) =>
     practice: { flex: 1, position: "relative" },
     scramblePhase: {
       flex: 1,
-      paddingTop: 28,
+      paddingTop: 16,
       paddingHorizontal: 22,
-      paddingBottom: 24,
+      paddingBottom: 12,
       alignItems: "center",
     },
     reviewActions: {
@@ -1547,13 +1537,6 @@ const makeStyles = (theme: ReturnType<typeof resolveMobileTheme>) =>
       left: 18,
       right: 18,
       alignItems: "center",
-    },
-    notation: {
-      color: theme.text,
-      fontFamily: theme.fontFamily,
-      textAlign: "center",
-      lineHeight: 32,
-      fontWeight: "600",
     },
     timeCenter: {
       position: "absolute",
