@@ -5,14 +5,15 @@
     "version": "0.1.0",
     "scheme": "cubingcompsim",
     "orientation": "default",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cubingcompsim.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.cubingcompsim.app"
@@ -30,7 +31,8 @@
           "enableBackgroundPlayback": false,
           "enableBackgroundRecording": false
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "autolinkingModuleResolution": true

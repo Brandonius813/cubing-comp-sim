@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AccountAuth, withoutProviderTokens } from './auth';
 
-const config = { appUrl: 'https://app.example.test', providers: 'google,wca' };
+const config = { apiUrl: 'https://api.example.test', appUrl: 'https://app.example.test', providers: 'google,wca' };
 function browser(url = 'https://app.example.test/') {
   const storage = new Map<string, string>();
   const sessionStorage = { getItem: vi.fn((key: string) => storage.get(key) ?? null), setItem: vi.fn((key: string, value: string) => storage.set(key, value)), removeItem: vi.fn((key: string) => storage.delete(key)) };
@@ -14,7 +14,7 @@ function browser(url = 'https://app.example.test/') {
   return { storage, sessionStorage, replaceState };
 }
 function sdk(id = 'user-a', providers = ['google']) {
-  const session = { access_token: 'app-token', user: { id, email: 'solver@example.test', email_confirmed_at: '2026-01-01', identities: providers.map(provider => ({ provider })) } };
+  const session = { provider_refresh_token: 'apple-test-refresh', access_token: 'app-token', user: { id, email: 'solver@example.test', email_confirmed_at: '2026-01-01', identities: providers.map(provider => ({ provider })) } };
   const methods = {
     initialize: vi.fn().mockResolvedValue({ error: null }),
     exchangeCodeForSession: vi.fn().mockResolvedValue({ data: { session }, error: null }),
@@ -248,6 +248,7 @@ describe('Apple provider preparation', () => {
   it.each(['user-a', 'user-b'])('accepts only the expected Apple account after code exchange (%s)', async userId => {
     const { storage, replaceState } = browser('https://app.example.test/?account=link&code=apple-test-code');
     const { client } = sdk(userId, ['apple']);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 200 })));
     storage.set('ccs-oauth-intent', JSON.stringify({ purpose: 'link', provider: 'apple', userId: 'user-a', startedAt: Date.now() }));
     const result = await new AccountAuth({ ...config, providers: 'apple' }, client).completeRedirect();
     expect(result).toMatchObject({ purpose: 'link', provider: 'apple', status: userId === 'user-a' ? 'success' : 'error' });

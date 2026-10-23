@@ -3,7 +3,7 @@ import test from 'node:test';
 import { scoreRound } from '../../src/core/scoring';
 import { parseTimeInput } from '../../src/core/timing';
 import type { Scramble } from '../../src/core/types';
-import { backDraft, changeEvent, createDraft, emptySave, manualResult, navigationLocked, pendingInspection, recordResult, recoverDraft, selectedPendingPenalty, selectPendingPenalty, validateMobileSave } from './practice';
+import { backDraft, changeEvent, createDraft, confirmScramble, emptySave, manualResult, navigationLocked, pendingInspection, recordResult, recoverDraft, selectedPendingPenalty, selectPendingPenalty, validateMobileSave } from './practice';
 
 // Synthetic notation is test input only. The application uses bundled TNoodle.
 const scramble: Scramble = { eventId: '333', notation: 'R U', svg: '<svg/>', engineVersion: 'test', generatedAt: 1 };
@@ -40,10 +40,10 @@ test('manual entry and event isolation use the website contracts', () => {
   assert.throws(() => recordResult(emptySave(), { ...scramble, eventId: '222' }, { rawMs: 10_000, penalty: 'none', inputMethod: 'manual' }));
 });
 
-test('navigation cannot interrupt inspection, holds, solves, review, or writes', () => {
+test('navigation cannot interrupt inspection, holds, solves, or writes', () => {
   assert.equal(navigationLocked('ready', false), false);
   assert.equal(navigationLocked('ready', true), true);
-  for (const phase of ['inspection', 'holding', 'running', 'review'] as const) assert.equal(navigationLocked(phase, false), true);
+  for (const phase of ['inspection', 'holding', 'running'] as const) assert.equal(navigationLocked(phase, false), true);
 });
 
 test('invalid or newer saves fail without silently discarding history', () => {
@@ -67,13 +67,17 @@ test('legacy saves migrate to zero hold and disabled waits without discarding hi
 
 test('fixed and inclusive random waits are sampled once into a durable draft', () => {
   let samples = 0;
-  const fixed = createDraft(scramble, { eventId: '333', inspection: true, waitEnabled: true, waitMode: 'fixed', waitSeconds: 15 }, () => { samples++; return 0.5; });
+  const fixedPrefs = { ...emptySave().preferences, waitEnabled: true, waitMode: 'fixed' as const, waitSeconds: 15 };
+  const fresh = createDraft(scramble, fixedPrefs);
+  assert.equal(fresh.phase, 'scramble'); assert.equal(fresh.waitRemainingMs, 0);
+  const fixed = confirmScramble(fresh, fixedPrefs, () => { samples++; return 0.5; });
   assert.equal(fixed.phase, 'waiting'); assert.equal(fixed.waitRemainingMs, 15000); assert.equal(samples, 0);
   const preferences = { eventId: '333' as const, inspection: true, waitEnabled: true, waitMode: 'random' as const, waitMinSeconds: 15, waitMaxSeconds: 45 };
-  assert.equal(createDraft(scramble, preferences, () => 0).waitRemainingMs, 15000);
-  assert.equal(createDraft(scramble, preferences, () => 0.999999).waitRemainingMs, 45000);
+  assert.equal(confirmScramble(createDraft(scramble, preferences), preferences, () => 0).waitRemainingMs, 15000);
+  assert.equal(confirmScramble(createDraft(scramble, preferences), preferences, () => 0.999999).waitRemainingMs, 45000);
   const save = validateMobileSave({ ...emptySave(), draft: fixed });
-  assert.equal(recoverDraft(save).draft?.waitRemainingMs, 15000);
+  assert.equal(recoverDraft(save).draft?.waitRemainingMs, 0);
+  assert.equal(recoverDraft(save).draft?.phase, 'scramble');
   assert.equal(navigationLocked('waiting', false), false);
 });
 
@@ -170,4 +174,33 @@ test('audio defaults are migrated but corrupt explicit values fail closed', () =
   for (const patch of [{ inspectionAudio: null }, { voice: 'robot' }, { voiceVolume: 2 }, { voiceLanguage: 'missing' }]) {
     assert.throws(() => validateMobileSave({ ...emptySave(), preferences: { ...emptySave().preferences, ...patch } }));
   }
+});
+
+test('visual preference migrates off and appearance/input controls survive a saved round trip', () => {
+  const legacy = emptySave();
+  delete legacy.preferences.showScrambleDrawing;
+  assert.equal(validateMobileSave(legacy).preferences.showScrambleDrawing, false);
+  assert.equal(validateMobileSave({ ...legacy, preferences: { ...legacy.preferences, holdMs: 300 } }).preferences.holdMs, 550);
+  const next = validateMobileSave({ ...legacy, preferences: { ...legacy.preferences, showScrambleDrawing: true, theme: 'light', inputMethod: 'manual', holdMs: 550, waitMode: 'random', waitMinSeconds: 0, waitMaxSeconds: 180, voiceVolume: .37, textFont: 'georgia', numberFont: 'system-mono' } });
+  const restored = validateMobileSave(JSON.parse(JSON.stringify(next)));
+  assert.deepEqual(restored.preferences, next.preferences);
+  assert.throws(() => validateMobileSave({ ...next, preferences: { ...next.preferences, showScrambleDrawing: 'yes' } }));
+});
+
+test('zero wait still requires scramble confirmation before Ready, in every event',()=>{
+ for(const eventId of ['222','333','444','555','666','777','333oh','333bf','444bf','555bf','minx','pyram','skewb','sq1','fto','clock'] as const){
+  const preferences={...emptySave().preferences,eventId};const fresh=createDraft({...scramble,eventId},preferences);
+  assert.equal(fresh.phase,'scramble');assert.equal(confirmScramble(fresh,preferences).phase,'ready');
+ }
+});
+test('random wait samples on confirmation only and cannot resample an already confirmed draft',()=>{
+ const preferences={...emptySave().preferences,waitEnabled:true,waitMode:'random' as const,waitMinSeconds:10,waitMaxSeconds:20};
+ const draft=createDraft(scramble,preferences);let calls=0;const random=()=>{calls++;return .5};
+ const confirmed=confirmScramble(draft,preferences,random);assert.equal(confirmed.waitRemainingMs,15000);assert.equal(calls,1);
+ assert.equal(confirmScramble(confirmed,preferences,random),confirmed);assert.equal(calls,1);
+});
+test('display preferences migrate and validate without losing custom values',()=>{
+ assert.equal(emptySave().preferences.scrambleFontSize,24);assert.equal(emptySave().preferences.timerDisplay,'decimal');
+ const save=emptySave();save.preferences={...save.preferences,scrambleFontSize:32,timerDisplay:'solve'};assert.equal(validateMobileSave(save).preferences.scrambleFontSize,32);
+ assert.throws(()=>validateMobileSave({...save,preferences:{...save.preferences,scrambleFontSize:200}}));
 });

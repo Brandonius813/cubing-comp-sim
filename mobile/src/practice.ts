@@ -7,8 +7,11 @@ import { DEFAULT_SETTINGS, validateSettings, type Settings } from '../../src/sto
 import { isLocale, type Locale } from '../../src/locales';
 import { sampleWaitMs } from '../../src/ui/simulatorInput';
 
-export type TimerPhase = 'ready' | 'waiting' | 'inspection' | 'holding' | 'running' | 'review';
+export type TimerPhase = 'scramble' | 'ready' | 'waiting' | 'inspection' | 'holding' | 'running' | 'review';
 export type MobilePreferences = Pick<Settings, 'eventId' | 'inspection'> & Partial<Settings> & {
+  scrambleFontSize?: number;
+  timerDisplay?: 'decimal' | 'seconds' | 'solve';
+  showScrambleDrawing?: boolean;
   inspectionAudio?: boolean;
   voiceLanguage?: Locale;
   voice?: 'male-1' | 'male-2' | 'female-1' | 'female-2';
@@ -48,14 +51,18 @@ export function mobileSettings(preferences: MobilePreferences): Settings {
 
 export function validateMobilePreferences(preferences: MobilePreferences): MobilePreferences {
   const settings = mobileSettings(preferences);
+  const scrambleFontSize = preferences.scrambleFontSize ?? 24;
+  const timerDisplay = preferences.timerDisplay ?? 'decimal';
+  if (!Number.isInteger(scrambleFontSize) || scrambleFontSize < 16 || scrambleFontSize > 40 || !['decimal', 'seconds', 'solve'].includes(timerDisplay)) throw new Error('Invalid display settings.');
+  const showScrambleDrawing = preferences.showScrambleDrawing === undefined ? false : preferences.showScrambleDrawing;
   const inspectionAudio = preferences.inspectionAudio === undefined ? true : preferences.inspectionAudio;
   const voiceLanguage = preferences.voiceLanguage === undefined ? 'en' : preferences.voiceLanguage;
   const voice = preferences.voice === undefined ? 'male-1' : preferences.voice;
   const voiceVolume = preferences.voiceVolume === undefined ? 1 : preferences.voiceVolume;
-  if (typeof inspectionAudio !== 'boolean' || !isLocale(voiceLanguage)
+  if (typeof showScrambleDrawing !== 'boolean' || typeof inspectionAudio !== 'boolean' || !isLocale(voiceLanguage)
     || !['male-1', 'male-2', 'female-1', 'female-2'].includes(voice)
     || typeof voiceVolume !== 'number' || !Number.isFinite(voiceVolume) || voiceVolume < 0 || voiceVolume > 1) throw new Error('Invalid inspection audio settings.');
-  return { ...settings, inspectionAudio, voiceLanguage, voice, voiceVolume };
+  return { ...settings, scrambleFontSize, timerDisplay, holdMs: settings.holdMs > 0 ? 550 : 0, showScrambleDrawing, inspectionAudio, voiceLanguage, voice, voiceVolume };
 }
 
 export function emptySave(): MobileSave {
@@ -99,7 +106,7 @@ export function validatePendingResult(value: unknown, eventId: EventId): Pending
 }
 export function validateMobileDraft(value: unknown, eventId: EventId): MobileDraft {
   const source = object(value);
-  if (!['ready', 'waiting', 'inspection', 'holding', 'running', 'review'].includes(String(source.phase))) throw new Error('Invalid saved practice stage.');
+  if (!['scramble', 'ready', 'waiting', 'inspection', 'holding', 'running', 'review'].includes(String(source.phase))) throw new Error('Invalid saved practice stage.');
   const id = identifier(source.id);
   const pending = source.pending === undefined ? undefined : validatePendingResult(source.pending, eventId);
   if (source.phase === 'review' && !pending) throw new Error('Review is missing its result.');
@@ -133,7 +140,7 @@ export function validateMobileSave(value: unknown): MobileSave {
 }
 
 export function navigationLocked(phase: TimerPhase, saving: boolean): boolean {
-  return saving || (phase !== 'ready' && phase !== 'waiting');
+  return saving || ['inspection', 'holding', 'running'].includes(phase);
 }
 
 /** Uses the website's exact round, penalty and scoring model. */
@@ -171,17 +178,25 @@ export function changeEvent(save: MobileSave, eventId: EventId): MobileSave {
   });
 }
 
-/** Sample once, then persist this draft before exposing its timer. */
-export function createDraft(scramble: Scramble, preferences: MobilePreferences, random: () => number = Math.random): MobileDraft {
+/** A new scramble never starts the wait clock. */
+export function createDraft(scramble: Scramble, preferences: MobilePreferences): MobileDraft {
   if (scramble.eventId !== preferences.eventId) throw new Error('The scramble belongs to a different event.');
+  return validateMobileDraft({ id: createId(), scramble, phase: 'scramble', waitRemainingMs: 0 }, preferences.eventId);
+}
+
+/** Sample only when the user confirms the scrambled puzzle. */
+export function confirmScramble(draft: MobileDraft, preferences: MobilePreferences, random: () => number = Math.random): MobileDraft {
+  if (draft.phase !== 'scramble') return draft;
   const waitRemainingMs = sampleWaitMs(mobileSettings(preferences), random);
-  return validateMobileDraft({ id: createId(), scramble, phase: waitRemainingMs > 0 ? 'waiting' : 'ready', waitRemainingMs }, preferences.eventId);
+  return validateMobileDraft({ ...draft, phase: waitRemainingMs > 0 ? 'waiting' : 'ready', waitRemainingMs }, preferences.eventId);
 }
 
 /** Process death never resumes a clock or manufactures a measured time. */
 export function recoverDraft(save: MobileSave): MobileSave {
   const valid = validateMobileSave(save);
   const draft = valid.draft;
+  if (draft && ['ready', 'waiting'].includes(draft.phase) && !draft.manualText && !draft.inspectionText)
+    return validateMobileSave({ ...valid, draft: { ...draft, phase: 'scramble', waitRemainingMs: 0 } });
   if (!draft || !['inspection', 'holding', 'running'].includes(draft.phase)) return valid;
   return validateMobileSave({ ...valid, draft: { ...draft, phase: 'review', pending: {
     rawMs: null, penalty: 'DNF', inputMethod: 'timer', interrupted: true, attemptId: draft.id,

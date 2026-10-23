@@ -1,14 +1,16 @@
+import { captureAppleGrant } from '../../../src/cloud/apple-grant';
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import { CloudError, type AccountSession } from '../../../src/cloud/types';
 
 export interface SessionStorage { getItem(key: string): Promise<string | null>; setItem(key: string, value: string): Promise<void>; removeItem(key: string): Promise<void> }
-export type NativeProvider = 'google' | 'wca';
+export type NativeProvider = 'google' | 'wca' | 'apple';
+export type NativeAppleAuthorize = (nonce: string, state: string) => Promise<{ identityToken: string; authorizationCode: string; state: string } | null>;
 export const CALLBACK_URL = 'cubingcompsim://auth/callback';
 const INTENT_KEY = 'ccs-native-oauth-intent';
 const INTENT_AGE = 10 * 60_000;
-const providers = { google: 'google', wca: 'custom:wca' } as const;
+const providers = { google: 'google', wca: 'custom:wca', apple: 'apple' } as const;
 interface Intent { state: string; provider: NativeProvider; startedAt: number }
-export interface NativeAuthConfig { url?: string; publicKey?: string; providers?: string; webUrl?: string }
+export interface NativeAuthConfig { url?: string; publicKey?: string; providers?: string; webUrl?: string; apiUrl?: string }
 export interface BrowserResult { type: string; url?: string }
 export type OpenAuthBrowser = (url: string, redirect: string) => Promise<BrowserResult>;
 
@@ -40,7 +42,7 @@ export function parseCallback(url: string, pending: string | null, now = Date.no
   const intent = JSON.parse(pending) as Intent;
   const parsed = new URL(url); const expected = new URL(CALLBACK_URL);
   if (parsed.protocol !== expected.protocol || parsed.hostname !== expected.hostname || parsed.pathname !== expected.pathname || parsed.hash
-    || parsed.username || parsed.password || parsed.port || !Object.hasOwn(providers, intent.provider)
+    || parsed.username || parsed.password || parsed.port || intent.provider === 'apple' || !Object.hasOwn(providers, intent.provider)
     || typeof intent.state !== 'string' || intent.state.length < 32 || parsed.searchParams.getAll('ccs_state').length !== 1
     || parsed.searchParams.get('ccs_state') !== intent.state || !Number.isSafeInteger(intent.startedAt)
     || intent.startedAt > now + 30_000 || intent.startedAt < now - INTENT_AGE || parsed.searchParams.has('error')
@@ -60,12 +62,10 @@ export class NativeAccounts {
   private readonly webUrl: string;
   private tail: Promise<unknown> = Promise.resolve();
   constructor(private readonly config: NativeAuthConfig, private readonly storage: SessionStorage,
-    private readonly uuid: () => string, private readonly browser: OpenAuthBrowser, client?: SupabaseClient) {
+    private readonly uuid: () => string, private readonly browser: OpenAuthBrowser, client?: SupabaseClient, private readonly appleAuthorize?: NativeAppleAuthorize) {
     const url = validOrigin(config.url);
     this.webUrl = validOrigin(config.webUrl) ?? '';
-    // Apple is deliberately not in this allowlist. Grant capture/revocation and
-    // native identity/device acceptance must pass before enabling it.
-    this.providers = [...new Set((config.providers ?? '').split(',').filter((p): p is NativeProvider => p === 'google' || p === 'wca'))];
+    this.providers = [...new Set((config.providers ?? '').split(',').filter((p): p is NativeProvider => p === 'google' || p === 'wca' || (p === 'apple' && Boolean(appleAuthorize))))];
     this.configured = Boolean(url && this.webUrl && isPublicClientKey(config.publicKey));
     this.client = client ?? (this.configured ? createClient(url!, config.publicKey!, { auth: {
       storage, storageKey: 'ccs-native-session', persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'pkce',
@@ -135,6 +135,7 @@ export class NativeAccounts {
     if (error) throw new CloudError('auth_error', 'Could not sign out. Try again.');
   }); }
   async signInWithProvider(provider: NativeProvider): Promise<void> {
+    if (provider === 'apple') return this.signInWithApple();
     const target = await this.serial(async () => {
       if (!this.providers.includes(provider)) throw new CloudError('not_configured', 'This provider is not enabled in this build.');
       if (await this.getSession()) throw new CloudError('auth_error', 'Sign out before changing accounts.');
@@ -168,6 +169,29 @@ export class NativeAccounts {
       throw error;
     }
   }
+  private signInWithApple(): Promise<void> { return this.serial(async () => {
+    if (!this.providers.includes('apple') || !this.appleAuthorize) throw new CloudError('not_configured', 'Apple sign-in is unavailable.');
+    if (await this.getSession()) throw new CloudError('auth_error', 'Sign out before changing accounts.');
+    await this.storage.removeItem(INTENT_KEY);
+    const nonce = this.uuid() + this.uuid();
+    const state = this.uuid();
+    const credential = await this.appleAuthorize(nonce, state);
+    if (!credential) return;
+    if (credential.state !== state || !credential.identityToken || !credential.authorizationCode)
+      throw new CloudError('auth_error', 'Apple sign-in could not be verified.');
+    const { data, error } = await this.sdk().auth.signInWithIdToken({ provider: 'apple', token: credential.identityToken, nonce });
+    if (error || !data.session || !data.session.user.identities?.some(identity => identity.provider === 'apple'))
+      throw new CloudError('auth_error', 'Apple sign-in could not be verified.');
+    try {
+      await captureAppleGrant(this.config.apiUrl, data.session.access_token, {
+        clientId: 'com.cubingcompsim.app', code: credential.authorizationCode,
+      });
+    } catch (error) {
+      await this.sdk().auth.signOut({ scope: 'local' });
+      await this.storage.removeItem('ccs-native-session');
+      throw error;
+    }
+  }); }
   handleCallback(url: string): Promise<void> { return this.serial(async () => {
     if (!url.startsWith(`${CALLBACK_URL}?`)) return;
     const pending = await this.storage.getItem(INTENT_KEY);

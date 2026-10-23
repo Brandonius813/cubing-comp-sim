@@ -1,3 +1,4 @@
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { SCRAMBLE_EVENTS } from '../../../src/scramble/types';
@@ -145,4 +146,24 @@ test('boot timeout rejects queued requests and late readiness cannot revive a fa
   assert.equal(f.statuses.at(-1), 'error');
   await assert.rejects(f.service.generate('333'), /not ready/);
   f.service.dispose();
+});
+
+test('historical drawing requests retain exact notation and do not generate replacement scrambles', async () => {
+  const f=fixture(); f.ready();
+  try { const pending=f.service.draw('333', "R U R'"); assert.match(f.sent[0],/"notation":"R U R'"/); f.binding.receive(f.result(1)); assert.equal(await pending,'<svg></svg>'); }
+  finally {f.service.dispose();}
+});
+test('invalid historical notation fails only that drawing, not the generation host',async()=>{
+ const f=fixture();f.ready();try{
+  const drawing=f.service.draw('333','not a scramble');const rejected=assert.rejects(drawing,/Could not draw/);const next=f.service.generate('222');
+  f.binding.receive(JSON.stringify({version:1,channel:f.binding.channel,type:'error',id:1,code:'GENERATION_FAILED'}));await rejected;
+  f.binding.receive(f.result(2,'222'));assert.equal((await next).eventId,'222');
+ }finally{f.service.dispose();}
+});
+
+test('drawing notation is passed as data, never evaluated as script',()=>{
+ const notation='R\"; globalThis.injected = true; //';
+ let received:unknown;const context=vm.createContext({__ccsEngineReceive:(request:unknown)=>{received=request}});
+ vm.runInContext(requestScript({version:1,channel:'safe',type:'generate',id:1,eventId:'333',notation}),context);
+ assert.equal((received as {notation:string}).notation,notation);assert.equal(context.injected,undefined);
 });

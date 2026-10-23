@@ -1,10 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import type { AppleGrants } from './apple.js';
 import type { VerifiedAccount } from './auth.js';
 import { ApiError } from './errors.js';
 import type { SaveObjects } from './contracts.js';
 
 export interface DeletionRepository {
-  request(userId: string): Promise<void>;
+  request(userId: string, appleRequired?: boolean): Promise<void>;
+  needsAppleRevocation(userId: string): Promise<boolean>;
+  markAppleRevoked(userId: string): Promise<void>;
   isBlocked(userId: string): Promise<boolean>;
   detachCloudData(userId: string): Promise<string | null>;
   complete(userId: string): Promise<void>;
@@ -36,24 +39,29 @@ export function createIdentityDeleter(url: string, serviceRoleKey: string): Dele
 
 export class AccountDeletion {
   constructor(private readonly repository: DeletionRepository, private readonly objects: Pick<SaveObjects, 'delete'>,
-    private readonly deleteIdentity: DeleteIdentity, private readonly reportPending: () => void = () => undefined) {}
+    private readonly deleteIdentity: DeleteIdentity, private readonly reportPending: () => void = () => undefined,
+    private readonly apple?: Pick<AppleGrants, 'hasGrant' | 'revoke'>) {}
 
   isBlocked(userId: string): Promise<boolean> { return this.repository.isBlocked(userId); }
 
   async request(account: VerifiedAccount, confirmation: unknown): Promise<DeletionResult> {
     if (confirmation !== 'DELETE_ACCOUNT') throw new ApiError(400, 'confirmation_required');
-    // Until encrypted grant capture and retryable Apple revocation are wired,
-    // even password reauthentication must not delete a mixed Apple account.
-    if (account.appleIdentityLinked) throw new ApiError(503, 'deletion_not_configured');
+    // Mixed-provider accounts also require a durable Apple grant before deletion.
+    if (account.appleIdentityLinked && (!this.apple || !(await this.apple.hasGrant(account.id)))) throw new ApiError(503, 'deletion_not_configured');
     requireRecentAuthentication(account);
     // Persist the deletion request before contacting either external service.
     // Its per-account lock excludes any future cloud-save commit.
-    await this.repository.request(account.id);
+    await this.repository.request(account.id, Boolean(account.appleIdentityLinked));
     return this.finish(account.id);
   }
 
   private async finish(userId: string): Promise<DeletionResult> {
     try {
+      if (await this.repository.needsAppleRevocation(userId)) {
+        if (!this.apple) throw new ApiError(503, 'deletion_not_configured');
+        await this.apple.revoke(userId);
+        await this.repository.markAppleRevoked(userId);
+      }
       await this.deleteIdentity(userId);
       const objectKey = await this.repository.detachCloudData(userId);
       if (objectKey) await this.objects.delete(objectKey);

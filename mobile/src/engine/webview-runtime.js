@@ -15,7 +15,8 @@ function installEngineBridge(engine, configuration) {
     if (!events.includes(request.eventId)) { send({ type: 'error', id: request.id, code: 'UNSUPPORTED_EVENT' }); return; }
     try {
       const started = performance.now();
-      const [notation, svg] = engine.generate(request.eventId);
+      if (request.notation !== undefined && (typeof request.notation !== 'string' || !request.notation.trim() || request.notation.length > 20000)) throw new Error('Invalid notation.');
+      const [notation, svg] = request.notation === undefined ? engine.generate(request.eventId) : [request.notation, engine.draw(request.eventId, request.notation)];
       if (typeof notation !== 'string' || !notation.trim() || typeof svg !== 'string'
         || !svg.startsWith('<svg') || !svg.trimEnd().endsWith('</svg>')) throw new Error('Invalid engine output.');
       send({ type: 'result', id: request.id, durationMs: Math.max(0, performance.now() - started),

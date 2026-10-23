@@ -54,3 +54,18 @@ export function eventSummary(save: MobileSave, eventId: EventId) {
   }
   return { bestSingle, bestRound, completed, attempts };
 }
+
+/** Removing a result leaves that historical round incomplete, never refills it with unrelated solves. */
+export function deleteHistoryAttempt(save: MobileSave, roundId: string, attemptId: string): MobileSave {
+  const round = save.history.rounds.find(item => item.id === roundId);
+  if (!round?.attempts.some(attempt => attempt.id === attemptId)) throw new Error('Solve not found.');
+  const attempts = round.attempts.filter(attempt => attempt.id !== attemptId).map((attempt, index) => ({ ...attempt, index }));
+  if (!attempts.length) return deleteHistoryRound(save, roundId);
+  const { completedAt, ...remaining } = round;
+  const rounds = save.history.rounds.map(item => item.id === roundId ? { ...remaining, attempts, updatedAt: Date.now() } : item);
+  return validateMobileSave({ ...save, history: { ...save.history, rounds, exportedAt: Date.now() } });
+}
+export function deleteHistoryRound(save: MobileSave, roundId: string): MobileSave {
+  if (!save.history.rounds.some(round => round.id === roundId)) throw new Error('Round not found.');
+  return validateMobileSave({ ...save, history: { ...save.history, rounds: save.history.rounds.filter(round => round.id !== roundId), activeRoundId: save.history.activeRoundId === roundId ? null : save.history.activeRoundId, exportedAt: Date.now() } });
+}

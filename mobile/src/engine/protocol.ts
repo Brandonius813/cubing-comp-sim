@@ -7,7 +7,7 @@ export type EngineStatus = {
   /** Elapsed time is observational, never an invented percentage or ETA. */
   generation?: { eventId: string; elapsedMs: number; queued: number };
 };
-export type EngineRequest = { version: 1; channel: string; type: 'generate'; id: number; eventId: string };
+export type EngineRequest = { version: 1; channel: string; type: 'generate'; id: number; eventId: string; notation?: string };
 export type EngineResponse =
   | { version: 1; channel: string; type: 'ready'; engineVersion: string; events: string[] }
   | { version: 1; channel: string; type: 'result'; id: number; scramble: GeneratedScramble; durationMs: number }
@@ -43,9 +43,10 @@ export function parseEngineResponse(raw: string, channel: string, engineVersion:
   return value as unknown as EngineResponse;
 }
 
-/** Only validated enum input and numeric IDs enter evaluated source. */
+/** Validated IDs and bounded, JSON-encoded notation enter evaluated source. */
 export function requestScript(request: EngineRequest): string {
   if (!isScrambleEvent(request.eventId) || !Number.isSafeInteger(request.id) || request.id < 1
     || !/^[a-zA-Z0-9_-]{1,100}$/.test(request.channel)) throw new Error('Invalid engine request.');
+  if (request.notation !== undefined && (typeof request.notation !== 'string' || !request.notation.trim() || request.notation.length > 20_000)) throw new Error('Invalid drawing notation.');
   return `globalThis.__ccsEngineReceive(${JSON.stringify(request)});true;`;
 }
