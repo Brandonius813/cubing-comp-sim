@@ -3,7 +3,7 @@ import test from 'node:test';
 import { EVENTS } from '../../src/core/events';
 import { scoreRound } from '../../src/core/scoring';
 import { formatAttempt } from '../../src/core/timing';
-import { changeEvent, createDraft, emptySave, manualResult, recordResult, recoverDraft, selectPendingPenalty, validateMobileSave, type MobileSave, type PendingResult } from './practice';
+import { changeEvent, createDraft, confirmScramble, emptySave, manualResult, recordResult, recoverDraft, selectPendingPenalty, validateMobileSave, type MobileSave, type PendingResult } from './practice';
 
 // Contract integration, not a native UI or TNoodle test. Synthetic notation is
 // deliberately marked test-only; engine correctness is verified separately.
@@ -17,6 +17,8 @@ for (const event of EVENTS) {
         const scramble = { eventId: event.id, notation: `synthetic-${i}`, svg: '<svg/>', engineVersion: 'contract-test-only', generatedAt: i };
         const draft = createDraft(scramble, save.preferences);
         save = restart({ ...save, draft });
+        assert.equal(save.draft?.phase, 'scramble');
+        save = restart({ ...save, draft: confirmScramble(save.draft!, save.preferences) });
         assert.equal(save.draft?.phase, 'ready');
         assert.equal(save.history.rounds.flatMap(round => round.attempts).length, i);
         const pending: PendingResult = inputMethod === 'manual'

@@ -4,6 +4,7 @@ import { BRIDGE_VERSION, parseEngineResponse, requestScript, type EngineStatus }
 interface Pending {
   id: number;
   eventId: string;
+  notation?: string;
   resolve: (scramble: GeneratedScramble) => void;
   reject: (error: ScrambleError) => void;
   cleanup?: () => void;
@@ -50,11 +51,15 @@ export class MobileScrambleService implements ScrambleService {
             this.clearTimer(); this.ready = true; status({ phase: 'ready' }); this.pump();
           } else if (response.type === 'error') {
             // A runtime failure invalidates the host. Re-mount to retry cleanly.
-            if (response.id === undefined || response.id === this.active?.id) binding.fail();
+            if (response.id === this.active?.id && this.active?.notation !== undefined) {
+              const active = this.active; this.clearTimer(); this.active = undefined; active.cleanup?.();
+              if (!active.cancelled) active.reject(new ScrambleError('GENERATION_FAILED', 'Could not draw this scramble.'));
+              this.progress(); this.pump();
+            } else if (response.id === undefined || response.id === this.active?.id) binding.fail();
           } else {
             const active = this.active;
             if (!active || response.id !== active.id) return;
-            if (response.scramble.eventId !== active.eventId) throw new Error('Wrong event in engine response.');
+            if (response.scramble.eventId !== active.eventId || (active.notation !== undefined && active.notation !== response.scramble.notation)) throw new Error('Wrong event in engine response.');
             this.clearTimer(); this.active = undefined;
             active.cleanup?.();
             if (!active.cancelled) active.resolve(response.scramble);
@@ -81,14 +86,20 @@ export class MobileScrambleService implements ScrambleService {
     return binding;
   }
 
+  draw(eventId: string, notation: string, signal?: AbortSignal): Promise<string> {
+    return this.request(eventId, { signal, notation }).then(result => result.svg);
+  }
   generate(eventId: string, options: { signal?: AbortSignal } = {}): Promise<GeneratedScramble> {
+    return this.request(eventId, options);
+  }
+  private request(eventId: string, options: { signal?: AbortSignal; notation?: string }): Promise<GeneratedScramble> {
     if (options.signal?.aborted) return Promise.reject(new ScrambleError('DISPOSED', 'Scramble request cancelled.'));
     if (this.disposed) return Promise.reject(new ScrambleError('DISPOSED', 'The scramble service has closed.'));
     if (!isScrambleEvent(eventId)) return Promise.reject(new ScrambleError('UNSUPPORTED_EVENT', 'This event is not supported.'));
     if (!this.binding || !this.send) return Promise.reject(new ScrambleError('ENGINE_UNAVAILABLE', 'The local engine is not ready.'));
     if (this.queue.length >= 8) return Promise.reject(new ScrambleError('GENERATION_FAILED', 'Too many queued scramble requests.'));
     return new Promise((resolve, reject) => {
-      const pending: Pending = { id: ++this.nextId, eventId, resolve, reject };
+      const pending: Pending = { id: ++this.nextId, eventId, notation: options.notation, resolve, reject };
       const cancel = () => {
         pending.cancelled = true;
         this.queue = this.queue.filter(request => request !== pending);
@@ -114,7 +125,7 @@ export class MobileScrambleService implements ScrambleService {
     this.progressTimer = setInterval(() => this.progress(), 1_000);
     this.progress();
     this.timer = setTimeout(() => this.binding?.fail(), this.options.generationTimeoutMs ?? 180_000);
-    try { this.send(requestScript({ version: BRIDGE_VERSION, channel: this.binding.channel, type: 'generate', id: pending.id, eventId: pending.eventId })); }
+    try { this.send(requestScript({ version: BRIDGE_VERSION, channel: this.binding.channel, type: 'generate', id: pending.id, eventId: pending.eventId, ...(pending.notation !== undefined ? { notation: pending.notation } : {}) })); }
     catch { this.binding.fail(); }
   }
 

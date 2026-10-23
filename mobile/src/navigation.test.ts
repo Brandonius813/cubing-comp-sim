@@ -1,25 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { pageDeparture } from './navigation';
-import type { TimerPhase } from './practice';
-
-test('review navigation preserves the pending result on both adjacent pages', () => {
-  for (const page of [0, 2]) assert.equal(pageDeparture('review', page, true), 'keep');
+import { pagingLocked } from './navigation';
+test('inspection and solving cannot be interrupted by page gestures', () => {
+  for (const phase of ['inspection','holding','running'] as const) assert.equal(pagingLocked(phase),true);
 });
-test('ready and waiting permit navigation without inventing interrupted solves', () => {
-  for (const page of [0, 2]) for (const phase of ['ready', 'waiting'] as const) assert.equal(pageDeparture(phase, page, false), 'keep');
+test('scramble, wait, ready and stopped review permit page gestures', () => {
+  for (const phase of ['scramble','waiting','ready','review'] as const) assert.equal(pagingLocked(phase),false);
 });
-test('leaving either active clock interrupts; an unstarted hold just cancels', () => {
-  for (const page of [0, 2]) {
-    assert.equal(pageDeparture('running', page, false), 'interrupt');
-    assert.equal(pageDeparture('inspection', page, true), 'interrupt');
-    assert.equal(pageDeparture('holding', page, true), 'interrupt');
-    assert.equal(pageDeparture('holding', page, false), 'cancel-hold');
-  }
-});
-test('selecting practice never changes an active or pending solve', () => {
-  for (const phase of ['ready', 'waiting', 'inspection', 'holding', 'running', 'review'] as TimerPhase[]) {
-    assert.equal(pageDeparture(phase, 1, false), 'keep');
-    assert.equal(pageDeparture(phase, 1, true), 'keep');
-  }
+test('slider touch suppresses paging until release in every otherwise unlocked phase', () => {
+  for (const phase of ['scramble','waiting','ready','review'] as const) { assert.equal(pagingLocked(phase,true),true); assert.equal(pagingLocked(phase,false),false); }
 });

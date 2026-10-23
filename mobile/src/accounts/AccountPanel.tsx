@@ -82,12 +82,14 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
   return <View style={styles.panel}>
     <Text accessibilityRole="header" style={styles.title}>Accounts and cloud saves</Text>
     {!auth.configured ? <Text style={styles.notice}>Accounts are not configured in this build. Your times remain on this device.</Text> : !session ? <>
+      {(['google', 'apple', 'wca'] as const).map(provider => <Action key={provider} label={`Sign in with ${provider === 'google' ? 'Google' : provider === 'apple' ? 'Apple' : 'WCA'}`} disabled={locked || provider === 'apple' || !auth.providers.includes(provider)} onPress={() => { if (provider !== 'apple') void run(async () => { await auth.signInWithProvider(provider); }); }} />)}
+      <Text style={styles.caption}>Apple sign-in requires provider setup.</Text>
       <TextInput accessibilityLabel="Account email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" placeholder="Email" placeholderTextColor={theme.muted} value={email} onChangeText={setEmail} editable={!locked} style={styles.input} />
       <TextInput accessibilityLabel="Account password" autoCapitalize="none" autoCorrect={false} secureTextEntry textContentType="password" placeholder="Password" placeholderTextColor={theme.muted} value={password} onChangeText={setPassword} editable={!locked} style={styles.input} />
       <Action label="Sign in" disabled={locked || !email.trim() || !password} onPress={() => void run(async () => { try { await auth.signIn(email, password); info('Signed in. Use Upload or Download to transfer a save.'); } finally { setPassword(''); } })} />
       <Action label="Create account" disabled={locked || !email.trim() || password.length < 8} onPress={() => void run(async () => { try { const active = await auth.signUp(email, password); info(active ? 'Account created. No history was transferred.' : 'Check your email to confirm the account, then return here to sign in.'); } finally { setPassword(''); } })} />
       <Action label="Send password reset email" disabled={locked || !email.trim()} onPress={() => void run(async () => { await auth.requestPasswordReset(email); info('If this address has an account, a reset email will arrive. Complete the reset on the website, then sign in here.'); })} />
-      {auth.providers.map(provider => <Action key={provider} label={`Continue with ${provider === 'google' ? 'Google' : 'WCA'}`} disabled={locked} onPress={() => void run(async () => { await auth.signInWithProvider(provider); })} />)}
+
     </> : <>
       <Text style={styles.identity}>{session.user.email || 'Signed-in account'}</Text>
       {!session.user.emailVerified && <Text style={styles.notice}>Verify your email before using cloud saves.</Text>}

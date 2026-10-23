@@ -1,17 +1,32 @@
-# Mobile UI review
+# Mobile preview feedback pass
 
-The preview uses a three-page horizontal pager: Scorecard, Practice (initial), Settings. No header or bottom navigation. Navigation remains available; leaving an active inspection/solve records an interrupted DNF for review. Leaving a stopped solve preserves it. Stationary stop gestures use the touch-down timestamp, while swipes are not timer presses.
+## Current behavior
 
-Practice has a plain scramble, centered timer/manual entry, optional scramble drawing, three loading dots, and Continue after a result. It does not scroll. Active timing hides the scramble and drawing. Scorecard has the event selector, desktop result boxes, editable penalties/times, and an event-filtered history sheet. Settings use one background, inline controls, system/light/dark appearance, fixed 550 ms hold, random-wait range slider, four voice styles and a 0–100 volume slider.
+Practice follows the desktop sequence: fresh scramble and large optional drawing, explicit tap to confirm scrambling, sampled wait (default fixed zero), Ready, optional inspection, solve, timed-result review, next scramble. Manual entry saves directly without a second confirmation. The last solve opens a round scorecard popup after saving; X, backdrop tap, or downward swipe dismiss it.
 
-Validation: TypeScript passed; 102 mobile domain tests and 3 engine bundler tests passed; iOS export passed. Actual Scorecard and Settings components were rendered using a temporary React Native Web harness at 390×844 in light/dark mode with no runtime errors. Those checks do not establish native pager, keyboard, sound or touch behavior. Native simulator/device testing was unavailable locally.
+Inspection, holds and timing lock horizontal paging. A rejected page gesture does not produce a DNF. Review remains navigable. Slider touches disable paging and settings scrolling until release/cancellation.
 
-Still requiring physical-device acceptance: timer and swipe discrimination, stopped-result preservation across settings changes, inspection audio, iPad/landscape sizing, slider/pager interaction, email login and explicit cloud upload/download. No authenticated cloud round trip was claimed.
+Scramble text defaults to bold 24 pt, adjustable 16–40 pt. Timer display supports decimals, whole seconds or Solve. Waiting shows Wait. Review has +2, DNF and Edit time above the result.
 
-Desktop parity limits: interface translations and bundled Geist fonts are not yet ported; native font choices are available. Hardware-keyboard shortcut customization is absent. Voice style is currently one global preference rather than remembered separately per language. JSON transfer still uses sharing and pasted JSON. End-round/back gesture scheme remains deferred as requested. Native telemetry is not configured, so browser telemetry controls are not shown. Shared timing, scoring, scramble generation, history validation, event formats and goal/bounds calculations remain reused.
+Scorecards have an outline and green/red best/worst bounds. Event options overlay the still-visible scorecard in a distinct scrollable dropdown. History uses compact round/result/time rows, with delete-round actions. Individual time editing has one penalty selection, immediate penalty saves, time save on blur/close, X, scramble notation and a regenerated drawing, and Delete solve. Removing a historical solve makes its round incomplete; it does not redirect the current practice session into that old round.
 
-Account preview configuration: existing deployed public Supabase/API/web settings supplied through the EAS preview environment, never committed. Email authentication endpoint returned 200 with email enabled; cloud save endpoint returned 401 without a session. Google/WCA/Apple are not enabled in this preview. No production provider settings were changed. Login and authenticated upload/download still need device acceptance.
+## Validation
 
-Review: https://github.com/Brandonius813/cubing-comp-sim/pull/53
+- TypeScript passed.
+- 110 mobile domain/bridge tests and 3 engine bundler tests passed.
+- iOS export passed.
+- Actual App and UI components were exercised through temporary React Native Web adapters, with test storage/audio/pager/engine services. Verified scramble confirmation, wait, timer paging lock, stopped review, immediate +2, next scramble, direct manual saves, five-solve round popup, dismissal, individual deletion, round deletion, inspection paging rejection and Solve display. No browser runtime errors. This is not native device testing.
+- Inspected phone-sized practice/editor/scorecard/dropdown/history/round-completion screenshots and a tablet-sized scorecard.
+- Exact production TNoodle bridge regenerated historical drawings for 2×2, 3×3, Clock and Square-1; drawings matched their generated SVGs exactly. Algorithms and verified engine hash unchanged.
 
-Preview build: https://expo.dev/accounts/brandonius813/projects/cubing-comp-sim/builds/89ab8c9d-6415-4e85-bdb3-b9036b79d421 (source d878f25; accepted and IN_PROGRESS when last checked). Expo Free allowance was 1/15 iOS builds before submission, with zero overage. Once finished, install this build over the existing app rather than deleting it, to retain local practice data.
+## Account status
+
+Google and WCA are enabled for this preview. Both authorization redirects reached their correct providers. Brandon added the mobile callback to Supabase; cancelled test flows then returned to `cubingcompsim://auth/callback` with matching state preserved. Completed human consent and authenticated cloud transfer remain device acceptance checks. No real account was used by these probes.
+
+Apple is disabled in the existing backend. Its button is visible but disabled with a setup note; this build does not claim working Apple login. Provider credentials and the existing Apple revocation/deletion requirements remain outstanding.
+
+The preview uses the existing public account configuration stored in EAS. No private credentials are committed. This pass does not merge main or publish to the App Store.
+
+## Device checks
+
+Install over the existing app. Check slider/pager arbitration on iPhone/iPad, keyboard/X editing, large scramble readability for long events, native round-popup swipe dismissal, voice playback, Google/WCA consent/return, and explicit cloud upload/download. Full desktop translations, bundled fonts, keyboard shortcut customization and native file-picker JSON transfer remain separate parity gaps.

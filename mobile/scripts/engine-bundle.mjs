@@ -22,7 +22,7 @@ export function makeEngineDocument({ source, runtime, manifest, license }) {
   if (!names.generate || !names.engineVersion) throw new Error('TNoodle production exports are missing.');
   const configuration = { channel: '__CCS_ENGINE_CHANNEL__', engineVersion: manifest.engineVersion, events,
     sha256: manifest.sha256, source: manifest.source, license };
-  const script = `(function(){\n${source.slice(0, match.index)}\n${runtime}\ninstallEngineBridge({engineVersion:${names.engineVersion},generate:${names.generate}},${JSON.stringify(configuration)});\n})();`;
+  const script = `(function(){\n${source.slice(0, match.index)}\n${runtime}\ninstallEngineBridge({engineVersion:${names.engineVersion},generate:${names.generate},draw:${names.draw ?? 'undefined'}},${JSON.stringify(configuration)});\n})();`;
   if (/<\/script/i.test(script)) throw new Error('Inline script contains a closing script tag.');
   return '<!doctype html><html><head><meta charset="utf-8">'
     + '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; connect-src \'none\'; img-src \'none\'; style-src \'none\'; object-src \'none\'; base-uri \'none\'; form-action \'none\'">'

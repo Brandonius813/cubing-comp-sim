@@ -1,3 +1,9 @@
+## Mobile device feedback (October 23, 2026)
+
+Brandon requested correcting the mobile flow to match desktop: scrambling must be explicitly confirmed before waiting, Ready precedes inspection, and typed entry saves directly. Default wait remains fixed zero. Inspection/holding/solving now lock paging, superseding the earlier no-lock preference; stopped review remains navigable. Slider interaction temporarily locks paging. Add adjustable bold scramble text, large scrambling-phase drawing, timer display options, round-completion scorecard popup, compact history, solve/round deletion, a drawn scorecard border and green/red bounds. Individual time editing has X, one immediate penalty selection, notation and drawing.
+
+Google/WCA preview buttons are enabled. Owner added the mobile Supabase callback and cancelled-flow checks verified native return with matching state. Apple backend remains disabled and needs its provider credentials plus revocation/deletion setup. Detailed evidence and remaining native acceptance checks are in `docs/mobile-minimal-ui-review.md`.
+
 ## Mobile development authorization (October 15, 2026)
 
 Brandon approved React Native + Expo and authorized implementation for iPhone, iPad and Android. The three separate horizontal pages are Scorecard (left), Practice (center and initial page), and Settings (right, including account and cloud saves). Keep these separate on tablets too; the earlier tablet scorecard-side-panel proposal is superseded. Provide accessible tap navigation alongside paging and protect inspection/timing from navigation gestures. Native TNoodle runtime setup may change while preserving pinned algorithms, fresh offline generation and drawings. Reuse the existing backend and explicit one-save upload/download replacement.
