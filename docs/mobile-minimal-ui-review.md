@@ -11,3 +11,7 @@ Still requiring physical-device acceptance: timer and swipe discrimination, stop
 Desktop parity limits: interface translations and bundled Geist fonts are not yet ported; native font choices are available. Hardware-keyboard shortcut customization is absent. Voice style is currently one global preference rather than remembered separately per language. JSON transfer still uses sharing and pasted JSON. End-round/back gesture scheme remains deferred as requested. Native telemetry is not configured, so browser telemetry controls are not shown. Shared timing, scoring, scramble generation, history validation, event formats and goal/bounds calculations remain reused.
 
 Account preview configuration: existing deployed public Supabase/API/web settings supplied through the EAS preview environment, never committed. Email authentication endpoint returned 200 with email enabled; cloud save endpoint returned 401 without a session. Google/WCA/Apple are not enabled in this preview. No production provider settings were changed. Login and authenticated upload/download still need device acceptance.
+
+Review: https://github.com/Brandonius813/cubing-comp-sim/pull/53
+
+Preview build: https://expo.dev/accounts/brandonius813/projects/cubing-comp-sim/builds/89ab8c9d-6415-4e85-bdb3-b9036b79d421 (source d878f25; accepted and IN_PROGRESS when last checked). Expo Free allowance was 1/15 iOS builds before submission, with zero overage. Once finished, install this build over the existing app rather than deleting it, to retain local practice data.
