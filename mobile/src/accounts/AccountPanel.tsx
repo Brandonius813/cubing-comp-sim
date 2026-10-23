@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, AppState, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CloudError, type AccountSession, type SaveMetadata } from '../../../src/cloud/types';
 import type { HistorySnapshot } from '../../../src/storage/validation';
+import { useMobileTheme } from '../ui';
 import { createNativeAccountServices, type NativeAccountServices } from './runtime';
 
 export interface AccountPanelProps {
@@ -20,10 +21,14 @@ function confirm(title: string, message: string): Promise<boolean> {
   ], { cancelable: true, onDismiss: () => resolve(false) }));
 }
 function Action({ label, onPress, disabled = false, destructive = false }: { label: string; onPress: () => void; disabled?: boolean; destructive?: boolean }) {
+  const theme = useMobileTheme();
+  const styles = makeStyles(theme);
   return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} onPress={onPress} disabled={disabled}
-    style={[styles.button, disabled && styles.disabled, destructive && styles.destructive]}><Text style={styles.buttonText}>{label}</Text></Pressable>;
+    style={[styles.button, disabled && styles.disabled, destructive && styles.destructive]}><Text style={[styles.buttonText, destructive && {color: theme.danger}]}>{label}</Text></Pressable>;
 }
 export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, onBusyChange, services: injected }: AccountPanelProps) {
+  const theme = useMobileTheme();
+  const styles = makeStyles(theme);
   const [services] = useState(() => injected ?? createNativeAccountServices());
   const { auth, cloud, transfers } = services;
   const [session, setSession] = useState<AccountSession | null>(null);
@@ -76,10 +81,9 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
   });
   return <View style={styles.panel}>
     <Text accessibilityRole="header" style={styles.title}>Accounts and cloud saves</Text>
-    <Text style={styles.caption}>Guest practice works offline. Signing in, signing out and deleting an account never erase or transfer local history.</Text>
     {!auth.configured ? <Text style={styles.notice}>Accounts are not configured in this build. Your times remain on this device.</Text> : !session ? <>
-      <TextInput accessibilityLabel="Account email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" placeholder="Email" placeholderTextColor="#a5b2c7" value={email} onChangeText={setEmail} editable={!locked} style={styles.input} />
-      <TextInput accessibilityLabel="Account password" autoCapitalize="none" autoCorrect={false} secureTextEntry textContentType="password" placeholder="Password" placeholderTextColor="#a5b2c7" value={password} onChangeText={setPassword} editable={!locked} style={styles.input} />
+      <TextInput accessibilityLabel="Account email" autoCapitalize="none" autoCorrect={false} keyboardType="email-address" textContentType="emailAddress" placeholder="Email" placeholderTextColor={theme.muted} value={email} onChangeText={setEmail} editable={!locked} style={styles.input} />
+      <TextInput accessibilityLabel="Account password" autoCapitalize="none" autoCorrect={false} secureTextEntry textContentType="password" placeholder="Password" placeholderTextColor={theme.muted} value={password} onChangeText={setPassword} editable={!locked} style={styles.input} />
       <Action label="Sign in" disabled={locked || !email.trim() || !password} onPress={() => void run(async () => { try { await auth.signIn(email, password); info('Signed in. Use Upload or Download to transfer a save.'); } finally { setPassword(''); } })} />
       <Action label="Create account" disabled={locked || !email.trim() || password.length < 8} onPress={() => void run(async () => { try { const active = await auth.signUp(email, password); info(active ? 'Account created. No history was transferred.' : 'Check your email to confirm the account, then return here to sign in.'); } finally { setPassword(''); } })} />
       <Action label="Send password reset email" disabled={locked || !email.trim()} onPress={() => void run(async () => { await auth.requestPasswordReset(email); info('If this address has an account, a reset email will arrive. Complete the reset on the website, then sign in here.'); })} />
@@ -112,10 +116,10 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
     {!!message && <Text accessibilityLiveRegion="polite" style={styles.notice}>{message}</Text>}
   </View>;
 }
-const styles = StyleSheet.create({
-  panel: { gap: 12, paddingVertical: 8 }, title: { color: '#f4f7fc', fontSize: 21, fontWeight: '700' },
-  caption: { color: '#a5b2c7', fontSize: 15, lineHeight: 22 }, notice: { color: '#f4f7fc', fontSize: 15, lineHeight: 22 },
-  identity: { color: '#f4f7fc', fontSize: 18, fontWeight: '600' }, input: { color: '#f4f7fc', backgroundColor: '#0d1118', borderWidth: 1, borderColor: '#607189', borderRadius: 10, padding: 14, minHeight: 48, fontSize: 17 },
-  button: { backgroundColor: '#2663bd', padding: 14, minHeight: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { color: '#ffffff', fontSize: 16, fontWeight: '600' }, destructive: { backgroundColor: '#923b43' }, disabled: { opacity: 0.45 },
+const makeStyles = (theme: ReturnType<typeof useMobileTheme>) => StyleSheet.create({
+  panel: { gap: 10 }, title: { color: theme.text, fontFamily: theme.fontFamily, fontSize: 20, fontWeight: '600', marginBottom: 10 },
+  caption: { color: theme.muted, fontFamily: theme.fontFamily, fontSize: 15, lineHeight: 22 }, notice: { color: theme.text, fontFamily: theme.fontFamily, fontSize: 15, lineHeight: 22 },
+  identity: { color: theme.text, fontFamily: theme.fontFamily, fontSize: 18, fontWeight: '600' }, input: { color: theme.text, fontFamily: theme.fontFamily, borderBottomWidth: 1, borderColor: theme.border, paddingVertical: 12, minHeight: 48, fontSize: 17 },
+  button: { paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
+  buttonText: { color: theme.accent, fontFamily: theme.fontFamily, fontSize: 17 }, destructive: {}, disabled: { opacity: 0.45 },
 });
