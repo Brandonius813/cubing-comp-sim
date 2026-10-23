@@ -30,3 +30,5 @@ The preview uses the existing public account configuration stored in EAS. No pri
 ## Device checks
 
 Install over the existing app. Check slider/pager arbitration on iPhone/iPad, keyboard/X editing, large scramble readability for long events, native round-popup swipe dismissal, voice playback, Google/WCA consent/return, and explicit cloud upload/download. Full desktop translations, bundled fonts, keyboard shortcut customization and native file-picker JSON transfer remain separate parity gaps.
+
+Latest preview: https://expo.dev/accounts/brandonius813/projects/cubing-comp-sim/builds/a4e3242a-b393-4946-ae3d-2350ffe45011 (source af6998d). Submission accepted October 23, 2026. Free allowance was 2/15 iOS builds used before submission, with zero overage. Review: https://github.com/Brandonius813/cubing-comp-sim/pull/53.
