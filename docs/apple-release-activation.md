@@ -4,7 +4,25 @@ Status: backend activated after owner approval on October 23. Migration 003 is a
 
 The host's containerd image ID is the archive's OCI manifest digest `sha256:f61209e2adc68e05a3287b024c10c948f0259945ab375d88b7d44fdfc3be8b45`; CI's Docker image ID below is its config digest. Both were verified against the same checksum-verified archive.
 
-The owner requested device testing before App Store Connect setup. Apple is enabled only in the internal EAS preview configuration for acceptance testing. Public website Apple gating remains closed. Mobile typecheck and all 114 tests passed again. Native build status will be recorded after EAS returns a result.
+The owner requested device testing before App Store Connect setup. Apple is enabled only in the internal EAS preview configuration for acceptance testing. Public website Apple gating remains closed. Mobile typecheck and all 114 tests passed again.
+
+Post-deployment provider checks also passed restricted-role database CRUD inside a rolled-back transaction, private-schema access denial for public Auth roles, read-only Auth administrator access, and an isolated R2 upload/download/delete round trip. The installed provider smoke check now recognizes the new Apple table and its runtime owner.
+
+The old ad hoc provisioning profile was invalid after the Apple capability change. It was refreshed through Apple Developer authentication and decoded to verify the exact team/bundle, `com.apple.developer.applesignin = [Default]`, and both registered devices. An initial unvalidated build request was canceled.
+
+Preview [e50ec086-f245-4f45-9dfc-20e742af50ba](https://expo.dev/accounts/brandonius813/projects/cubing-comp-sim/builds/e50ec086-f245-4f45-9dfc-20e742af50ba) **FINISHED** at 2026-10-23 16:23:17 UTC from source `263bb623fda9d73b00c7d2d5e2ff9f2474fa680a`. Distribution is INTERNAL, app version 0.1.0. The downloaded IPA's actual code-signing entitlements and embedded profile both include Apple sign-in; the exact bundle/team match and both devices are provisioned. This is a native binary build and signature inspection, not physical-device or real Apple consent evidence.
+
+## Device acceptance checklist
+
+Install the preview over the existing app, without uninstalling or clearing its data. Confirm existing history/settings remain. On both registered devices:
+
+1. Complete a timed round and a typed round. Stop timing on touch-down, hold/drag, then release; that touch must not advance to the next solve.
+2. Edit `1236`, blur the input, and confirm `12.36`. Check penalties, deletion, scorecard discarded-time parentheses, and inspection callouts.
+3. Sign in with Apple, cancel once, then sign in successfully. Confirm the account is connected only after grant capture completes. Repeat sign-in after logout.
+4. Restart and test offline scrambling. Record first 4x4 generation duration separately because CI exceeded the 180-second limit.
+5. Test cloud transfer with disposable practice data and explicit confirmation. Local history must not change merely because of sign-in or sign-out.
+
+Account deletion/revocation acceptance is still separate. The current mobile deletion route opens the website, whose public Apple sign-in gate is still closed. Do not claim that lifecycle passes from native login alone.
 
 ## Verified starting state
 
