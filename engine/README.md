@@ -33,11 +33,13 @@ Do not release a generated engine that fails this comparison.
 
 ## Explicit platform adaptations
 
-1. The original source is never modified in the vendor directory. `prepare-browser.mjs` copies sources into an ignored generated directory and replaces only `Puzzle.getSecureRandom()`. The JVM's SUN SHA1PRNG provider has no browser equivalent. TeaVM's `new SecureRandom()` uses browser WebCrypto. The randomness source changes; TNoodle's sampling, search, filtering, and drawing algorithms remain unchanged. Lack of WebCrypto is an error, never a reason to use Math.random.
+1. The original source is never modified in the vendor directory. `prepare-browser.mjs` copies sources into an ignored generated directory and adapts `Puzzle.getSecureRandom()` plus the explicit platform choice described below. The JVM's SUN SHA1PRNG provider has no browser equivalent. TeaVM's `new SecureRandom()` uses browser WebCrypto. The randomness source changes; TNoodle's sampling, search, filtering, and drawing algorithms remain unchanged. Lack of WebCrypto is an error, never a reason to use Math.random.
 2. The `compatibility/` directory defines inert GWT export annotations, an inert GWT marker interface, and the diagnostic logging methods the solvers call. GWT's old export runtime is not used. These do not implement puzzle behavior.
 3. `EngineCommon` uses an explicit constructor mapping instead of TNoodle's reflective registry. It still constructs the original upstream puzzle classes and calls `generateWcaScramble` and `drawScramble` directly.
 4. `BrowserEngine` exposes a small JavaScript boundary. Production generation uses fresh secure entropy. Seeded generation is exported only for conformance tests and is never called by application code.
 5. `JvmCompatibleRandom` preserves Java's specified `Random.nextInt(bound)` mapping over raw entropy. TeaVM 0.16 uses a different, also uniform bounded-integer algorithm by default. That difference made identical seeds sample different puzzle states in the first CI run. The adapter restores the JVM contract for production and conformance inputs. A 96-value vector spanning powers of two, rejection-heavy bounds, puzzle bounds, and `Integer.MAX_VALUE` is compared with the real JVM before puzzle conformance assertions. No puzzle or drawing assertion was removed or weakened.
+
+6. Browser builds select upstream `Edge3.IS_64BIT_PLATFORM = false`, using its existing equivalent 32-bit coordinate arithmetic. TeaVM translates the 64-bit branch to JavaScript BigInt, making the hottest 4×4 initialization/search loops expensive. The original JVM reference retains the upstream 64-bit choice. Both paths must produce the same seeded states and drawings under the existing conformance checks; random-state 4×4 generation is retained. This adaptation is identified by `webcrypto.3` and a new compiled artifact checksum.
 
 ## Application contract
 

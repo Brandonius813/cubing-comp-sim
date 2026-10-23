@@ -8,7 +8,7 @@ function fixture() {
   const sha256 = createHash('sha256').update(bytes).digest('hex');
   const upstreamCommit = 'a'.repeat(40);
   const sourceCommit = 'b'.repeat(40);
-  const engineVersion = 'test-engine-version';
+  const engineVersion = `tnoodle-lib@${upstreamCommit}+webcrypto.3`;
   const liveEvents = ['222', '333', '444', '555', '666', '777', '333oh', '333bf',
     '444bf', '555bf', 'minx', 'pyram', 'skewb', 'sq1', 'fto', 'clock'];
   return {
@@ -32,6 +32,7 @@ test('rejects altered bytes, swapped source identities, mismatched versions and 
     value => {value.proof.sourceCommit = value.lock.commit;},
     value => {value.proof.upstreamCommit = value.manifest.sourceCommit;},
     value => {value.proof.engineVersion = 'another-version';},
+    value => {value.proof.engineVersion = value.manifest.engineVersion = `tnoodle-lib@${value.lock.commit}+webcrypto.2`;},
     value => {value.proof.outcome = 'failed';},
     value => {value.manifest.source = 'https://github.com/Brandonius813/cubing-comp-sim/tree/main/engine';},
   ]) {
