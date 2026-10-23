@@ -14,6 +14,7 @@ function run(command, args) {
   if (result.status !== 0) throw new Error(`${command} failed with exit ${result.status}; no engine was published.`);
 }
 run(process.execPath, ['engine/scripts/prepare-browser.mjs']);
+run(process.execPath, ['engine/scripts/table-cache.mjs']);
 run('mvn', ['-B', '-f', 'engine/pom.xml', 'package']);
 const generated = path.join(root, 'engine/target/browser/tnoodle.js');
 const bytes = await readFile(generated);
@@ -24,7 +25,7 @@ await copyFile(generated, path.join(out, 'tnoodle.js'));
 await copyFile(path.join(root, 'engine/vendor/tnoodle-lib/LICENSE'), path.join(out, 'LICENSE.txt'));
 await writeFile(path.join(out, 'manifest.json'), JSON.stringify({
   schemaVersion: 1,
-  engineVersion: `tnoodle-lib@${lock.commit}+webcrypto.3`,
+  engineVersion: `tnoodle-lib@${lock.commit}+webcrypto.4`,
   upstreamCommit: lock.commit,
   sourceCommit: process.env.GITHUB_SHA || null,
   compiler: 'TeaVM 0.16.0',

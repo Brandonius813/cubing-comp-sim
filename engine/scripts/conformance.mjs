@@ -14,7 +14,7 @@ const modulePath = path.join(root, 'target/browser/tnoodle.mjs');
 await copyFile(compiled, modulePath);
 const engine = await import(pathToFileURL(modulePath).href);
 const lock = JSON.parse(await readFile(path.join(root, 'upstream-lock.json'), 'utf8'));
-assert.equal(engine.engineVersion(), `tnoodle-lib@${lock.commit}+webcrypto.3`);
+assert.equal(engine.engineVersion(), `tnoodle-lib@${lock.commit}+webcrypto.4`);
 const fixtures = (await readFile(path.join(root, 'target/reference-fixtures.jsonl'), 'utf8'))
   .trim().split('\n').map(line => JSON.parse(line));
 const required = ['222', '333', '444', '555', '666', '777', '333oh', '333bf',

@@ -41,6 +41,8 @@ Do not release a generated engine that fails this comparison.
 
 6. Browser builds select upstream `Edge3.IS_64BIT_PLATFORM = false`, using its existing equivalent 32-bit coordinate arithmetic. TeaVM translates the 64-bit branch to JavaScript BigInt, making the hottest 4×4 initialization/search loops expensive. The original JVM reference retains the upstream 64-bit choice. Both paths must produce the same seeded states and drawings under the existing conformance checks; random-state 4×4 generation is retained. This adaptation is identified by `webcrypto.3` and a new compiled artifact checksum.
 
+7. `webcrypto.4` bundles deterministic 4×4 initialization tables exported by upstream JVM `Tools.saveTo`. The browser loads them through upstream `Tools.initFrom` before generating 4×4 scrambles. This caches solver tables, never scrambles or random states. The original JVM reference still computes its tables independently. Every build regenerates the cache from the pinned vendor source and must pass the same state/drawing conformance checks.
+
 ## Application contract
 
 `src/scramble` exports:

@@ -14,7 +14,7 @@ Long scramble notation scrolls at the selected font size, without automatic shri
 
 ## Verification before binary build
 
-- Mobile TypeScript and 116 domain/bridge/bundler tests passed before engine performance changes.
+- Mobile TypeScript, 116 domain/bridge/bundler tests, and iOS JavaScript export passed before engine performance changes. The export is not a native binary build.
 - Regression fixture downloads a multi-event web save with a completed active round through the real transfer and storage logic, verifies replacement/reopening and retention of the recovery copy.
 - An isolated headless rendering harness exercised the actual App and AccountPanel with native-service adapters: direct inspection, optional Ready, 0.00 timer start/stop, download into All Stats, upload of the resulting state, hidden deletion popup, and exact 16/40 px sizing for both 6×6 and 7×7. No page runtime errors. This is not native-device testing.
 - The reported real cloud save was inspected read-only; its stored checksum passed and its completed active pointer confirmed the compatibility issue. No user save was modified by diagnosis.

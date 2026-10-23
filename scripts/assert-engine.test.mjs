@@ -8,7 +8,7 @@ function fixture() {
   const sha256 = createHash('sha256').update(bytes).digest('hex');
   const upstreamCommit = 'a'.repeat(40);
   const sourceCommit = 'b'.repeat(40);
-  const engineVersion = `tnoodle-lib@${upstreamCommit}+webcrypto.3`;
+  const engineVersion = `tnoodle-lib@${upstreamCommit}+webcrypto.4`;
   const liveEvents = ['222', '333', '444', '555', '666', '777', '333oh', '333bf',
     '444bf', '555bf', 'minx', 'pyram', 'skewb', 'sq1', 'fto', 'clock'];
   return {

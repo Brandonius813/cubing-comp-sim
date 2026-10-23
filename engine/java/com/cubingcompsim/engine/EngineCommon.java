@@ -9,7 +9,7 @@ import org.worldcubeassociation.tnoodle.scrambles.InvalidScrambleException;
 
 /** The explicit event mapping avoids reflective construction in a browser. */
 public final class EngineCommon {
-    public static final String VERSION = "tnoodle-lib@d01a947d9f028f38085cda9b0507a9cf3d3f38a8+webcrypto.3";
+    public static final String VERSION = "tnoodle-lib@d01a947d9f028f38085cda9b0507a9cf3d3f38a8+webcrypto.4";
     public static final String[] EVENTS = {
         "222", "333", "444", "555", "666", "777", "333oh", "333bf",
         "444bf", "555bf", "minx", "pyram", "skewb", "sq1", "fto", "clock"

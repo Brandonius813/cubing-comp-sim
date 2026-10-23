@@ -7,7 +7,7 @@ const events = ['222', '333', '444', '555', '666', '777', '333oh', '333bf',
 
 export function verifyEngineArtifact({manifest, proof, lock, bytes}) {
   const sha256 = createHash('sha256').update(bytes).digest('hex');
-  if (manifest.engineVersion !== `tnoodle-lib@${lock.commit}+webcrypto.3` || manifest.schemaVersion !== 1 || manifest.upstreamCommit !== lock.commit || manifest.sha256 !== sha256) {
+  if (manifest.engineVersion !== `tnoodle-lib@${lock.commit}+webcrypto.4` || manifest.schemaVersion !== 1 || manifest.upstreamCommit !== lock.commit || manifest.sha256 !== sha256) {
     throw new Error('Engine provenance or integrity does not match the pinned source.');
   }
   if (proof.schemaVersion !== 1 || proof.outcome !== 'passed' || proof.engineVersion !== manifest.engineVersion
