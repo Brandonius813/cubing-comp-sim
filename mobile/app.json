@@ -8,16 +8,12 @@
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.cubingcompsim.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false,
-        "UISupportedInterfaceOrientations~ipad": [
-          "UIInterfaceOrientationPortrait"
-        ]
+        "ITSAppUsesNonExemptEncryption": false
       },
-      "usesAppleSignIn": true,
-      "requireFullScreen": true
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "com.cubingcompsim.app"
