@@ -9,7 +9,7 @@ Copy these into App Store Connect. Anything marked **(you)** is a choice only th
 | Name | Cubing Comp Sim |
 | Subtitle (30 chars max) | Practice competition rounds |
 | Bundle ID | com.cubingcompsim.app |
-| Primary category | Sports **(you: or Utilities)** |
+| Primary category | Utilities |
 | Age rating | 4+. Questionnaire: answer "None" to every content question; no unrestricted web access; no user-generated content shared with others; no gambling, contests or medical content |
 | Content rights | Does not contain, show or access third-party content |
 | Price | Free |
