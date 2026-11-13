@@ -60,9 +60,14 @@ export class NativeAccounts {
   private readonly client: SupabaseClient | null;
   private readonly emailClient: SupabaseClient | null;
   private readonly webUrl: string;
+  /** A client whose sign-ins never replace the current session (used to prove identity). */
+  private readonly isolatedClient: () => SupabaseClient;
   private tail: Promise<unknown> = Promise.resolve();
   constructor(private readonly config: NativeAuthConfig, private readonly storage: SessionStorage,
-    private readonly uuid: () => string, private readonly browser: OpenAuthBrowser, client?: SupabaseClient, private readonly appleAuthorize?: NativeAppleAuthorize) {
+    private readonly uuid: () => string, private readonly browser: OpenAuthBrowser, client?: SupabaseClient, private readonly appleAuthorize?: NativeAppleAuthorize,
+    isolatedClient?: () => SupabaseClient) {
+    this.isolatedClient = isolatedClient ?? (() => createClient(this.config.url!, this.config.publicKey!, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, flowType: 'pkce' } }));
     const url = validOrigin(config.url);
     this.webUrl = validOrigin(config.webUrl) ?? '';
     this.providers = [...new Set((config.providers ?? '').split(',').filter((p): p is NativeProvider => p === 'google' || p === 'wca' || (p === 'apple' && Boolean(appleAuthorize))))];
@@ -225,6 +230,75 @@ export class NativeAccounts {
         return result.status;
       } finally { isolated.auth.dispose(); }
     });
+  }
+  /** Prove identity by signing in again with a connected provider in a separate
+   * client (the current session is untouched), then delete with that fresh proof.
+   * The server accepts an OAuth sign-in from the last five minutes. */
+  deleteWithProvider(provider: NativeProvider, expectedUserId: string, remove: (session: AccountSession) => Promise<{ status: 'deleted' | 'pending' }>): Promise<'deleted' | 'pending'> {
+    return this.serial(async () => {
+      const session = await this.verifiedSession();
+      if (session.user.id !== expectedUserId) throw new CloudError('auth_required', 'The account changed. Nothing was deleted.');
+      if (!this.providers.includes(provider) || !session.user.providers?.includes(providers[provider]))
+        throw new CloudError('reauth_required', 'That sign-in method is not connected to this account.');
+      const isolated = this.isolatedClient();
+      try {
+        const fresh = provider === 'apple' ? await this.appleProof(isolated) : await this.oauthProof(isolated, provider);
+        if (!fresh) throw new CloudError('reauth_required', 'Sign-in was cancelled. Nothing was deleted.');
+        if (fresh.user.id !== expectedUserId) {
+          await isolated.auth.signOut({ scope: 'local' }).catch(() => undefined);
+          throw new CloudError('reauth_required', 'That is a different account. Nothing was deleted.');
+        }
+        let result: { status: 'deleted' | 'pending' };
+        try { result = await remove(sessionView(fresh)!); }
+        catch (error) {
+          // The password wording from the shared API client does not fit here.
+          if (error instanceof CloudError && error.code === 'reauth_required')
+            throw new CloudError('reauth_required', 'The server could not confirm this sign-in. Nothing was deleted. Please try again.');
+          throw error;
+        }
+        // The operation queue prevents sign-in from overtaking deletion cleanup.
+        await this.sdk().auth.signOut({ scope: 'local' });
+        await this.storage.removeItem('ccs-native-session');
+        return result.status;
+      } finally { isolated.auth.dispose(); }
+    });
+  }
+  private async oauthProof(isolated: SupabaseClient, provider: Exclude<NativeProvider, 'apple'>): Promise<Session | null> {
+    // The intent stays in memory. Linking may also deliver this URL to
+    // handleCallback, which ignores it because no stored intent matches.
+    const intent: Intent = { provider, state: this.uuid(), startedAt: Date.now() };
+    const redirectTo = `${CALLBACK_URL}?ccs_state=${encodeURIComponent(intent.state)}`;
+    const { data, error } = await isolated.auth.signInWithOAuth({ provider: providers[provider], options: {
+      redirectTo, skipBrowserRedirect: true, ...(provider === 'google' ? { queryParams: { prompt: 'select_account' } } : {}),
+    } });
+    if (error || !data.url) throw new CloudError('auth_error', 'Could not start provider sign-in. Nothing was deleted.');
+    const authorization = new URL(data.url);
+    if (authorization.searchParams.get('code_challenge_method')?.toLowerCase() !== 's256' || !authorization.searchParams.get('code_challenge'))
+      throw new CloudError('auth_error', 'Secure provider sign-in is unavailable. Nothing was deleted.');
+    const result = await this.browser(data.url, CALLBACK_URL);
+    if (result.type !== 'success' || !result.url) return null;
+    let callback: ReturnType<typeof parseCallback>;
+    try { callback = parseCallback(result.url, JSON.stringify(intent)); }
+    catch { throw new CloudError('auth_error', 'Sign-in expired or could not be verified. Nothing was deleted.'); }
+    const exchanged = await isolated.auth.exchangeCodeForSession(callback.code, callback.flowId ? { flowId: callback.flowId } : undefined);
+    if (exchanged.error || !exchanged.data.session || !exchanged.data.session.user.identities?.some(identity => identity.provider === providers[provider]))
+      throw new CloudError('auth_error', 'Sign-in could not be verified. Nothing was deleted.');
+    return exchanged.data.session;
+  }
+  private async appleProof(isolated: SupabaseClient): Promise<Session | null> {
+    if (!this.appleAuthorize) throw new CloudError('not_configured', 'Apple sign-in is unavailable.');
+    const nonce = this.uuid() + this.uuid();
+    const state = this.uuid();
+    const credential = await this.appleAuthorize(nonce, state);
+    if (!credential) return null;
+    if (credential.state !== state || !credential.identityToken || !credential.authorizationCode)
+      throw new CloudError('auth_error', 'Apple sign-in could not be verified. Nothing was deleted.');
+    const { data, error } = await isolated.auth.signInWithIdToken({ provider: 'apple', token: credential.identityToken, nonce });
+    if (error || !data.session || !data.session.user.identities?.some(identity => identity.provider === 'apple'))
+      throw new CloudError('auth_error', 'Apple sign-in could not be verified. Nothing was deleted.');
+    // Refresh the server's Apple grant so deletion can revoke the app's Apple access.
+    await captureAppleGrant(this.config.apiUrl, data.session.access_token, { clientId: 'com.cubingcompsim.app', code: credential.authorizationCode });
+    return data.session;
   }
   dispose(): void { this.client?.auth.dispose(); if (this.emailClient !== this.client) this.emailClient?.auth.dispose(); }
 }

@@ -403,3 +403,10 @@ Penalty editing now presents a single +2/DNF toggle pair for both automatic insp
 ## Apple sign-in preparation (October 15, 2026)
 
 Brandon approved Apple sign-in on web and mobile while starting React Native/Expo work. He has not yet enrolled in the paid Apple Developer Program. Workstream #40 adds gated web provider plumbing, same-account linking/callback checks, and Apple initial-redirect validation. Both deployed provider manifests remain unchanged. Release builds explicitly reject enabling Apple until grant capture, server-side revocation, and deletion acceptance are implemented. Current API deletion deliberately does not accept Apple OAuth as proof; deleting a Supabase user alone does not revoke Apple's grant. Exact setup, proposed identifiers, native/browser choices, pending revocation design, and acceptance steps are recorded in `docs/apple-sign-in.md`. No credentials or production auth settings were changed.
+
+## App Store 1.0 decisions (November 13, 2026)
+
+- **License:** the whole application is GPL-3.0 (root `LICENSE`), matching the bundled TNoodle engine. The owner chose to ship on the App Store under GPL without first asking TNoodle's rights holders. Known risk: a rights holder could object to App Store distribution and Apple could remove the app.
+- **Accounts ship in 1.0.** Users who signed in with Apple, Google or WCA delete their account inside the app by signing in again with that provider (a separate client, so the current session is untouched). The server already accepts a recent OAuth sign-in as proof. Apple deletion re-sends the Apple grant first so the server can revoke Apple access.
+- **Version** is 1.0.0.
+- **Scrambles** are prepared one ahead per event in the background. Solves are timed from native touch timestamps, and page swiping is off in the `ready` phase.

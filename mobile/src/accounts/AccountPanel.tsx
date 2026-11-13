@@ -140,11 +140,18 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
                   info(status === 'deleted' ? 'Account deleted.' : 'Deletion requested. Cleanup is pending.');
                 } finally { setPassword(''); }
               })} />
-            </> : <Action label="Continue on website" destructive disabled={locked} onPress={() => {
-              const webUrl = process.env.EXPO_PUBLIC_WEB_URL;
-              if (webUrl) void Linking.openURL(webUrl + '/?account=delete');
-              setDeleteOpen(false);
-            }} />}
+            </> : <>
+              <Text style={styles.notice}>Sign in again to confirm it's you. Your account is deleted right after.</Text>
+              {(['apple', 'google', 'wca'] as const)
+                .filter(provider => auth.providers.includes(provider) && session.user.providers?.includes(provider === 'wca' ? 'custom:wca' : provider))
+                .map(provider => <Action key={provider} destructive disabled={locked || !cloud.configured}
+                  label={`Confirm with ${provider === 'apple' ? 'Apple' : provider === 'google' ? 'Google' : 'WCA'} and delete`}
+                  onPress={() => void run(async () => {
+                    const status = await auth.deleteWithProvider(provider, session.user.id, proof => cloud.deleteAccount(proof));
+                    setSession(null); setDeleteOpen(false);
+                    info(status === 'deleted' ? 'Account deleted.' : 'Deletion requested. Cleanup is pending.');
+                  })} />)}
+            </>}
             <Action label="Cancel" disabled={busy} onPress={() => { setDeleteOpen(false); setPassword(''); }} />
             {!!message && <Text style={styles.notice}>{message}</Text>}
           </View>

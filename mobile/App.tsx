@@ -1362,6 +1362,12 @@ function MobileApp() {
                     <View style={styles.section}>
                       <Text style={styles.sectionTitle}>About</Text>
                       <Text style={styles.body}>Built by Brandon True.</Text>
+                      <Text style={styles.body}>
+                        Cubing Comp Sim is free software under the GNU General
+                        Public License v3. Scrambles and drawings come from
+                        TNoodle by the WCA Software Team, also GPL-3.0. The
+                        complete source code is on GitHub.
+                      </Text>
                       <Button
                         label="Privacy policy"
                         onPress={() => {

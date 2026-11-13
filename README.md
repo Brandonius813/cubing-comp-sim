@@ -41,6 +41,10 @@ This project is maintained by Brandon True. Public visibility allows people to i
 
 ## Credits
 
-Scramble generation and puzzle drawings use [TNoodle](https://github.com/thewca/tnoodle-lib). Its [GPL-3.0 license](engine/vendor/tnoodle-lib/LICENSE), source, and build adaptations are included; see the [engine documentation](engine/README.md). Font and icon notices are included under [public/assets](public/assets/). An application-wide license has not yet been selected.
+Scramble generation and puzzle drawings use [TNoodle](https://github.com/thewca/tnoodle-lib). Its [GPL-3.0 license](engine/vendor/tnoodle-lib/LICENSE), source, and build adaptations are included; see the [engine documentation](engine/README.md). Font and icon notices are included under [public/assets](public/assets/).
+
+## License
+
+Cubing Comp Sim is free software: you can redistribute it and/or modify it under the terms of the [GNU General Public License v3.0](LICENSE). It comes with no warranty.
 
 Cubing Comp Sim is an independent training project and does not claim WCA approval.
