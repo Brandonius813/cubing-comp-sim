@@ -66,7 +66,8 @@ import { TimeEditor } from "./src/TimeEditor";
 import { Scorecard, RoundCard } from "./src/Scorecard";
 import { exportHistory, prepareHistoryReplacement } from "./src/history";
 import { pagingLocked } from "./src/navigation";
-import { TimerTouch } from "./src/touch";
+import { TimerTouch, nativeTouchTime, solveDuration } from "./src/touch";
+import { LiveTimer } from "./src/LiveTimer";
 import {
   MobileThemeProvider,
   PagerInteractionContext,
@@ -198,6 +199,8 @@ function MobileApp() {
   const [held, setHeld] = useState(false);
   const [screenReader, setScreenReader] = useState(false);
   const solveStart = useRef(0);
+  /** Native timestamp of the release that started the solve (see nativeTouchTime). */
+  const solveStartNative = useRef<number | null>(null);
   const holdStart = useRef(0);
   const inspectionStart = useRef<number | null>(null);
   const inspectionDuration = useRef<number | undefined>(undefined);
@@ -410,10 +413,17 @@ function MobileApp() {
     let animation = 0;
     const tick = () => {
       const now = performance.now();
-      if (phaseRef.current === "running")
-        setElapsed(Math.min(MAX_TIME_MS, now - solveStart.current));
-      else if (inspectionStart.current !== null)
-        setElapsed(now - inspectionStart.current);
+      // The running clock is drawn by LiveTimer. Inspection shows whole seconds
+      // and its penalties change on whole seconds, so re-render only when the
+      // second changes instead of on every frame.
+      if (phaseRef.current !== "running" && inspectionStart.current !== null) {
+        const inspected = now - inspectionStart.current;
+        setElapsed((previous) =>
+          Math.floor(previous / 1000) === Math.floor(inspected / 1000)
+            ? previous
+            : inspected,
+        );
+      }
       if (phaseRef.current === "holding")
         setHeld(now - holdStart.current >= holdMs);
       animation = requestAnimationFrame(tick);
@@ -423,14 +433,20 @@ function MobileApp() {
   }, [phase, holdMs]);
 
   const finish = useCallback(
-    (interrupted = false, stoppedAt = performance.now()) => {
+    (
+      interrupted = false,
+      stoppedAt = performance.now(),
+      stoppedNative: number | null = null,
+    ) => {
       audio.stop();
+      const measured = solveDuration(
+        solveStartNative.current,
+        stoppedNative,
+        stoppedAt - solveStart.current,
+      );
       const rawMs =
         phaseRef.current === "running"
-          ? Math.min(
-              MAX_TIME_MS,
-              Math.max(0, Math.floor((stoppedAt - solveStart.current) / 10) * 10),
-            )
+          ? Math.min(MAX_TIME_MS, Math.max(0, Math.floor(measured / 10) * 10))
           : null;
       setPending({
         attemptId: draftId.current,
@@ -498,7 +514,7 @@ function MobileApp() {
     volume: save?.preferences.voiceVolume ?? 1,
   });
   useEffect(() => () => audio.stop(), [audio]);
-  const beginSolve = () => {
+  const beginSolve = (startNative: number | null = null) => {
     audio.stop();
     const now = performance.now();
     inspectionDuration.current =
@@ -515,6 +531,7 @@ function MobileApp() {
       transition("ready");
     } else {
       solveStart.current = now;
+      solveStartNative.current = startNative;
       setElapsed(0);
       setHeld(false);
       transition("running");
@@ -549,7 +566,7 @@ function MobileApp() {
     if (phaseRef.current === "running") {
       stoppedTouch.current = true;
       touch.cancel();
-      finish(false, performance.now());
+      finish(false, performance.now(), nativeTouchTime(nativeEvent));
       return;
     }
     if (stoppedTouch.current) return;
@@ -649,7 +666,8 @@ function MobileApp() {
       startInspection();
       return;
     }
-    if (phaseRef.current === "holding" && duration >= holdMs) beginSolve();
+    if (phaseRef.current === "holding" && duration >= holdMs)
+      beginSolve(nativeTouchTime(event));
     else cancelTouch();
   };
   const accessibleActivate = () => {
@@ -1104,6 +1122,24 @@ function MobileApp() {
                               <View>
                                 <Button label="Ready" disabled={draftError || saving} onPress={() => { if (screenReader) accessibleActivate(); }} />
                               </View>
+                            ) : phase === "running" &&
+                              !pending &&
+                              save.preferences.timerDisplay !== "solve" ? (
+                              <LiveTimer
+                                adjustsFontSizeToFit
+                                numberOfLines={1}
+                                style={[
+                                  styles.timer,
+                                  { fontSize: width > 600 ? 112 : 80 },
+                                ]}
+                                startedAt={solveStart.current}
+                                format={(ms) => {
+                                  const shown = Math.min(MAX_TIME_MS, ms);
+                                  return save.preferences.timerDisplay === "seconds"
+                                    ? String(Math.floor(shown / 1000))
+                                    : formatTime(shown);
+                                }}
+                              />
                             ) : (
                               <Text
                                 adjustsFontSizeToFit
