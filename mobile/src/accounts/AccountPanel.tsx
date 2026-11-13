@@ -37,6 +37,7 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
   const [appleAvailable, setAppleAvailable] = useState(false);
   useEffect(() => { void AppleAuthentication.isAvailableAsync().then(setAppleAvailable).catch(() => undefined); }, []);
   const [session, setSession] = useState<AccountSession | null>(null);
+  const [deleteProviders, setDeleteProviders] = useState<string[]>([]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -124,13 +125,17 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
         <Action label="Download" disabled={locked || !cloud.configured || !session.user.emailVerified} onPress={() => transfer('download')} />
       </View>
       <Action label="Sign out" disabled={locked} onPress={() => void run(async () => { await auth.signOut(); info('Signed out. Local history is unchanged.'); })} />
-      <Action label="Delete account and cloud save" destructive disabled={locked} onPress={() => { setMessage(''); setDeleteOpen(true); }} />
+      <Action label="Delete account and cloud save" destructive disabled={locked} onPress={() => void run(async () => {
+        // Ask the server which sign-in methods are linked; the cached session may not list them.
+        setDeleteProviders((await auth.verifiedSession()).user.providers ?? []);
+        setDeleteOpen(true);
+      })} />
       <Modal visible={deleteOpen} transparent animationType="fade" onRequestClose={() => { if (!busy) { setDeleteOpen(false); setPassword(''); } }}>
         <View style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }}>
           <View style={{ backgroundColor: theme.background, borderRadius: 16, padding: 24, gap: 12 }}>
             <Text style={styles.title}>Delete account and cloud save?</Text>
             <Text style={styles.notice}>This is permanent. Local history stays on this device.</Text>
-            {session.user.providers?.includes('email') ? <>
+            {deleteProviders.includes('email') ? <>
               <TextInput accessibilityLabel="Confirm password for account deletion" placeholder="Password" placeholderTextColor={theme.muted}
                 secureTextEntry autoCapitalize="none" autoCorrect={false} value={password} onChangeText={setPassword} editable={!locked} style={styles.input} />
               <Action label="Delete account" destructive disabled={locked || !password || !cloud.configured} onPress={() => void run(async () => {
@@ -143,7 +148,7 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
             </> : <>
               <Text style={styles.notice}>Sign in again to confirm it's you. Your account is deleted right after.</Text>
               {(['apple', 'google', 'wca'] as const)
-                .filter(provider => auth.providers.includes(provider) && session.user.providers?.includes(provider === 'wca' ? 'custom:wca' : provider))
+                .filter(provider => auth.providers.includes(provider) && deleteProviders.includes(provider === 'wca' ? 'custom:wca' : provider))
                 .map(provider => <Action key={provider} destructive disabled={locked || !cloud.configured}
                   label={`Confirm with ${provider === 'apple' ? 'Apple' : provider === 'google' ? 'Google' : 'WCA'} and delete`}
                   onPress={() => void run(async () => {

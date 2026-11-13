@@ -20,6 +20,13 @@ export function sessionView(session: Session | null): AccountSession | null {
     providers: [...new Set(session.user.identities?.map(identity => identity.provider) ?? [])],
   } } : null;
 }
+/** Token responses do not always include the user's linked identities, so fall
+ * back to the server's live user record before deciding a provider is missing. */
+export async function hasIdentity(client: SupabaseClient, session: Session, provider: string): Promise<boolean> {
+  if (session.user.identities?.some(identity => identity.provider === provider)) return true;
+  const { data, error } = await client.auth.getUser(session.access_token);
+  return !error && data.user?.id === session.user.id && Boolean(data.user.identities?.some(identity => identity.provider === provider));
+}
 function validOrigin(input?: string): string | null {
   if (!input) return null;
   try {
@@ -107,7 +114,9 @@ export class NativeAccounts {
     if (error || !data.user || data.user.id !== session.user.id) throw new CloudError('auth_required', 'The session expired or was revoked. Sign in again.');
     if (!data.user.email_confirmed_at) throw new CloudError('email_unverified', 'Verify your email before using cloud saves.');
     if ((await this.getSession())?.user.id !== session.user.id) throw new CloudError('auth_required', 'The account changed. Try again.');
-    return session;
+    // Linked providers from the live user record; token responses can omit them.
+    const live = data.user.identities?.map(identity => identity.provider) ?? [];
+    return { ...session, user: { ...session.user, providers: [...new Set([...(session.user.providers ?? []), ...live])] } };
   }
   setActive(active: boolean): void {
     if (!this.client) return;
@@ -185,8 +194,14 @@ export class NativeAccounts {
     if (credential.state !== state || !credential.identityToken || !credential.authorizationCode)
       throw new CloudError('auth_error', 'Apple sign-in could not be verified.');
     const { data, error } = await this.sdk().auth.signInWithIdToken({ provider: 'apple', token: credential.identityToken, nonce });
-    if (error || !data.session || !data.session.user.identities?.some(identity => identity.provider === 'apple'))
+    if (error || !data.session) throw new CloudError('auth_error', 'Apple sign-in could not be verified.');
+    // The SDK has already stored this session, so a failed check must sign out
+    // rather than leave the user signed in behind an error message.
+    if (!(await hasIdentity(this.sdk(), data.session, 'apple'))) {
+      await this.sdk().auth.signOut({ scope: 'local' });
+      await this.storage.removeItem('ccs-native-session');
       throw new CloudError('auth_error', 'Apple sign-in could not be verified.');
+    }
     try {
       await captureAppleGrant(this.config.apiUrl, data.session.access_token, {
         clientId: 'com.cubingcompsim.app', code: credential.authorizationCode,
@@ -206,7 +221,7 @@ export class NativeAccounts {
     try {
       const callback = parseCallback(url, pending);
       const { data, error } = await this.sdk().auth.exchangeCodeForSession(callback.code, callback.flowId ? { flowId: callback.flowId } : undefined);
-      if (error || !data.session || !data.session.user.identities?.some(identity => identity.provider === providers[callback.provider])) {
+      if (error || !data.session || !(await hasIdentity(this.sdk(), data.session, providers[callback.provider]))) {
         await this.sdk().auth.signOut({ scope: 'local' });
         await this.storage.removeItem('ccs-native-session');
         throw new Error('Provider exchange failed.');
@@ -281,7 +296,7 @@ export class NativeAccounts {
     try { callback = parseCallback(result.url, JSON.stringify(intent)); }
     catch { throw new CloudError('auth_error', 'Sign-in expired or could not be verified. Nothing was deleted.'); }
     const exchanged = await isolated.auth.exchangeCodeForSession(callback.code, callback.flowId ? { flowId: callback.flowId } : undefined);
-    if (exchanged.error || !exchanged.data.session || !exchanged.data.session.user.identities?.some(identity => identity.provider === providers[provider]))
+    if (exchanged.error || !exchanged.data.session || !(await hasIdentity(isolated, exchanged.data.session, providers[provider])))
       throw new CloudError('auth_error', 'Sign-in could not be verified. Nothing was deleted.');
     return exchanged.data.session;
   }
@@ -294,7 +309,7 @@ export class NativeAccounts {
     if (credential.state !== state || !credential.identityToken || !credential.authorizationCode)
       throw new CloudError('auth_error', 'Apple sign-in could not be verified. Nothing was deleted.');
     const { data, error } = await isolated.auth.signInWithIdToken({ provider: 'apple', token: credential.identityToken, nonce });
-    if (error || !data.session || !data.session.user.identities?.some(identity => identity.provider === 'apple'))
+    if (error || !data.session || !(await hasIdentity(isolated, data.session, 'apple')))
       throw new CloudError('auth_error', 'Apple sign-in could not be verified. Nothing was deleted.');
     // Refresh the server's Apple grant so deletion can revoke the app's Apple access.
     await captureAppleGrant(this.config.apiUrl, data.session.access_token, { clientId: 'com.cubingcompsim.app', code: credential.authorizationCode });

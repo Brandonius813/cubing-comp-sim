@@ -322,3 +322,37 @@ test('Apple deletion refreshes the server Apple grant before deleting', async ()
     assert.deepEqual(order, ['grant', 'delete']);
   } finally { globalThis.fetch = originalFetch; }
 });
+
+test('Apple sign-in checks the live user when the token response omits identities, and signs out if Apple is missing', async () => {
+  const memory = secureMemory(); let current: Session | null = null; let signedOut = 0; let liveIdentities = [{ provider: 'apple' }];
+  const client = { auth: {
+    getSession: async () => ({ data: { session: current }, error: null }),
+    // Token response without identities, as the server may send for an existing user.
+    signInWithIdToken: async () => { current = { access_token: 'native-access', user: { id: 'apple-user' } } as Session; return { data: { session: current }, error: null }; },
+    getUser: async () => ({ data: { user: { id: 'apple-user', identities: liveIdentities } }, error: null }),
+    signOut: async () => { signedOut++; current = null; return { error: null }; },
+  } } as unknown as SupabaseClient;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch;
+  try {
+    const config = { url: 'https://example.supabase.co', webUrl: 'https://web.example.test', apiUrl: 'https://api.example.test', publicKey: 'sb_publishable_test', providers: 'apple' };
+    const auth = new NativeAccounts(config, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client,
+      async (_nonce, state) => ({ identityToken: 'apple-token', authorizationCode: 'native-code', state }));
+    await auth.signInWithProvider('apple');
+    assert.equal(current!.user.id, 'apple-user'); assert.equal(signedOut, 0);
+    current = null; liveIdentities = [{ provider: 'google' }];
+    await assert.rejects(auth.signInWithProvider('apple'), /could not be verified/);
+    assert.equal(current, null); assert.equal(signedOut, 1);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('verified sessions list linked providers from the live user record', async () => {
+  const memory = secureMemory();
+  const cached = { access_token: 't', user: { id: 'a', email: 'a@example.test', email_confirmed_at: 'now' } } as unknown as Session;
+  const client = { auth: {
+    getSession: async () => ({ data: { session: cached }, error: null }),
+    getUser: async () => ({ data: { user: { id: 'a', email_confirmed_at: 'now', identities: [{ provider: 'apple' }, { provider: 'custom:wca' }] } }, error: null }),
+  } } as unknown as SupabaseClient;
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test', providers: 'apple' }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client);
+  assert.deepEqual((await auth.verifiedSession()).user.providers, ['apple', 'custom:wca']);
+});
