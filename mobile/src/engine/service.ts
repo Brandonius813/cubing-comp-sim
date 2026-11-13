@@ -32,6 +32,8 @@ export class MobileScrambleService implements ScrambleService {
   private startedAt = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private restartHost: (() => void) | undefined;
+  /** One scramble made ahead of time for the event most recently prefetched. */
+  private prepared: { eventId: string; promise: Promise<GeneratedScramble> } | undefined;
 
   constructor(private readonly options: { generationTimeoutMs?: number; bootTimeoutMs?: number } = {}) {}
 
@@ -92,7 +94,33 @@ export class MobileScrambleService implements ScrambleService {
     return this.request(eventId, { signal, notation }).then(result => result.svg);
   }
   generate(eventId: string, options: { signal?: AbortSignal } = {}): Promise<GeneratedScramble> {
-    return this.request(eventId, options);
+    const prepared = this.prepared;
+    if (!prepared || prepared.eventId !== eventId || options.signal?.aborted) return this.request(eventId, options);
+    // Hand over the scramble made ahead of time. It was generated fresh by the
+    // same engine; it was only started earlier. A cancelled caller puts it back.
+    this.prepared = undefined;
+    return new Promise((resolve, reject) => {
+      const cancel = () => {
+        if (!this.prepared && !this.disposed) this.prepared = prepared;
+        reject(new ScrambleError('DISPOSED', 'Scramble request cancelled.'));
+      };
+      options.signal?.addEventListener('abort', cancel, { once: true });
+      prepared.promise.then(
+        scramble => { options.signal?.removeEventListener('abort', cancel); resolve(scramble); },
+        // If the early attempt failed (for example the engine restarted), make a new one now.
+        () => { options.signal?.removeEventListener('abort', cancel); if (!options.signal?.aborted) this.request(eventId, options).then(resolve, reject); },
+      );
+    });
+  }
+
+  /** Start making the next scramble for this event in the background, so the
+   * next generate() call for it returns without waiting. At most one is kept. */
+  prefetch(eventId: string): void {
+    if (this.disposed || this.prepared?.eventId === eventId || !isScrambleEvent(eventId)) return;
+    const promise = this.request(eventId, {});
+    const prepared = { eventId, promise };
+    this.prepared = prepared;
+    promise.catch(() => { if (this.prepared === prepared) this.prepared = undefined; });
   }
   private request(eventId: string, options: { signal?: AbortSignal; notation?: string }): Promise<GeneratedScramble> {
     if (options.signal?.aborted) return Promise.reject(new ScrambleError('DISPOSED', 'Scramble request cancelled.'));
@@ -155,6 +183,7 @@ export class MobileScrambleService implements ScrambleService {
   }
   dispose(): void {
     this.disposed = true;
+    this.prepared = undefined;
     this.binding?.dispose();
     this.restartHost = undefined;
     this.rejectAll(new ScrambleError('DISPOSED', 'The scramble service has closed.'));

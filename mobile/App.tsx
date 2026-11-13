@@ -339,6 +339,9 @@ function MobileApp() {
         if (saveRef.current) saveRef.current = { ...saveRef.current, draft };
         draftId.current = draft.id;
         setScramble(next);
+        // Start the following scramble now, while this one is being solved,
+        // so slow events (4x4 and up) don't make you wait after each solve.
+        engine.prefetch(eventId);
         setDraftError(false);
         setWaitRemaining(draft.waitRemainingMs ?? 0);
         waitUntil.current = performance.now() + (draft.waitRemainingMs ?? 0);

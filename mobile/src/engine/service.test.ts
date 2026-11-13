@@ -204,3 +204,60 @@ test('disposing during native host retirement rejects queued requests', async ()
   service.dispose();
   await Promise.all([first, second]);
 });
+
+test('a prefetched scramble is handed to the next generate call without a new engine request', async () => {
+  const f = fixture(); f.ready();
+  try {
+    f.service.prefetch('444');
+    assert.equal(f.sent.length, 1);
+    f.service.prefetch('444'); // already preparing one for this event
+    assert.equal(f.sent.length, 1);
+    f.binding.receive(f.result(1, '444'));
+    const next = await f.service.generate('444');
+    assert.equal(next.eventId, '444');
+    assert.equal(f.sent.length, 1);
+    // The prepared scramble is used once; the following request goes to the engine.
+    const after = f.service.generate('444');
+    assert.equal(f.sent.length, 2);
+    f.binding.receive(f.result(2, '444'));
+    assert.equal((await after).eventId, '444');
+  } finally { f.service.dispose(); }
+});
+
+test('a prefetch for another event is not handed out', async () => {
+  const f = fixture(); f.ready();
+  try {
+    f.service.prefetch('444');
+    f.binding.receive(f.result(1, '444'));
+    const other = f.service.generate('333');
+    assert.equal(f.sent.length, 2);
+    f.binding.receive(f.result(2, '333'));
+    assert.equal((await other).eventId, '333');
+  } finally { f.service.dispose(); }
+});
+
+test('a cancelled caller returns the prefetched scramble for the next request', async () => {
+  const f = fixture(); f.ready();
+  try {
+    f.service.prefetch('444');
+    const controller = new AbortController();
+    const cancelled = f.service.generate('444', { signal: controller.signal });
+    controller.abort();
+    await assert.rejects(cancelled, /cancelled/);
+    f.binding.receive(f.result(1, '444'));
+    assert.equal((await f.service.generate('444')).eventId, '444');
+    assert.equal(f.sent.length, 1);
+  } finally { f.service.dispose(); }
+});
+
+test('a failed prefetch falls back to a fresh request on a restarted engine', async () => {
+  const f = fixture(); f.ready();
+  f.service.prefetch('444');
+  const waiting = f.service.generate('444');
+  const newBinding = f.service.bind(version, () => {}, () => {}); // engine restarted, prefetch rejected
+  newBinding.receive(JSON.stringify({ version: 1, channel: newBinding.channel, type: 'ready', engineVersion: version, events: SCRAMBLE_EVENTS }));
+  await new Promise(resolve => setImmediate(resolve));
+  newBinding.receive(f.result(2, '444').replace(f.binding.channel, newBinding.channel));
+  assert.equal((await waiting).eventId, '444');
+  f.service.dispose();
+});
