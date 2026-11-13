@@ -258,3 +258,67 @@ test('web-shaped cloud history replaces mobile history, survives reopening, and 
   assert.notEqual(desktop.history.activeRoundId, null, 'import must not mutate the cloud snapshot');
   assert.deepEqual((await repository.loadRecovery())?.history, local.history);
 });
+
+function providerDeletionFixture(options: { provider: 'google' | 'apple'; freshUser?: string; browser?: 'success' | 'cancel'; linked?: string[] }) {
+  const memory = secureMemory();
+  const linked = options.linked ?? [options.provider];
+  const main = { access_token: 'main-token', user: { id: 'a', email: 'a@example.test', email_confirmed_at: 'now', identities: linked.map(provider => ({ provider })) } } as unknown as Session;
+  let current: Session | null = main; let mainSignOuts = 0; let isolatedDisposed = 0; let callback = '';
+  const client = { auth: {
+    getSession: async () => ({ data: { session: current }, error: null }),
+    getUser: async () => ({ data: { user: current?.user ?? null }, error: null }),
+    signOut: async () => { mainSignOuts++; current = null; return { error: null }; },
+  } } as unknown as SupabaseClient;
+  const fresh = { access_token: 'fresh-token', user: { id: options.freshUser ?? 'a', identities: [{ provider: options.provider }] } } as Session;
+  const isolated = { auth: {
+    signInWithOAuth: async (args: { options: { redirectTo: string } }) => { callback = `${args.options.redirectTo}&code=fresh`; return { data: { url: 'https://provider.example.test?code_challenge_method=s256&code_challenge=c' }, error: null }; },
+    exchangeCodeForSession: async () => ({ data: { session: fresh }, error: null }),
+    signInWithIdToken: async () => ({ data: { session: fresh }, error: null }),
+    signOut: async () => ({ error: null }),
+    dispose: () => { isolatedDisposed++; },
+  } } as unknown as SupabaseClient;
+  let uuid = 0;
+  const auth = new NativeAccounts(
+    { url: 'https://example.supabase.co', webUrl: 'https://web.example.test', apiUrl: 'https://api.example.test', publicKey: 'sb_publishable_test', providers: 'google,apple' },
+    memory.storage, () => String(++uuid).padStart(36, 'x'),
+    async () => options.browser === 'cancel' ? { type: 'cancel' } : { type: 'success', url: callback },
+    client, async (_nonce, state) => ({ identityToken: 'apple-token', authorizationCode: 'apple-code', state }), () => isolated);
+  return { auth, get current() { return current; }, get mainSignOuts() { return mainSignOuts; }, get isolatedDisposed() { return isolatedDisposed; } };
+}
+
+test('provider deletion signs in again in a separate client and deletes with that fresh session', async () => {
+  const f = providerDeletionFixture({ provider: 'google' });
+  const proofs: string[] = [];
+  const status = await f.auth.deleteWithProvider('google', 'a', async proof => { proofs.push(proof.accessToken); return { status: 'deleted' }; });
+  assert.equal(status, 'deleted');
+  assert.deepEqual(proofs, ['fresh-token']);
+  assert.equal(f.mainSignOuts, 1); assert.equal(f.current, null); assert.equal(f.isolatedDisposed, 1);
+});
+
+test('provider deletion deletes nothing when cancelled, for another account, or for an unlinked provider', async () => {
+  let removed = 0; const remove = async () => { removed++; return { status: 'deleted' as const }; };
+  const cancelled = providerDeletionFixture({ provider: 'google', browser: 'cancel' });
+  await assert.rejects(cancelled.auth.deleteWithProvider('google', 'a', remove), /cancelled/);
+  const other = providerDeletionFixture({ provider: 'google', freshUser: 'b' });
+  await assert.rejects(other.auth.deleteWithProvider('google', 'a', remove), /different account/);
+  const unlinked = providerDeletionFixture({ provider: 'google', linked: ['apple'] });
+  await assert.rejects(unlinked.auth.deleteWithProvider('google', 'a', remove), /not connected/);
+  assert.equal(removed, 0);
+  assert.notEqual(cancelled.current, null); assert.notEqual(other.current, null);
+});
+
+test('Apple deletion refreshes the server Apple grant before deleting', async () => {
+  const originalFetch = globalThis.fetch; const order: string[] = [];
+  globalThis.fetch = (async (url, init) => {
+    order.push('grant');
+    assert.equal(String(url), 'https://api.example.test/v1/account/apple-grant');
+    assert.equal((init!.headers as Record<string, string>).Authorization, 'Bearer fresh-token');
+    return new Response('{}', { status: 200 });
+  }) as typeof fetch;
+  try {
+    const f = providerDeletionFixture({ provider: 'apple' });
+    const status = await f.auth.deleteWithProvider('apple', 'a', async () => { order.push('delete'); return { status: 'pending' }; });
+    assert.equal(status, 'pending');
+    assert.deepEqual(order, ['grant', 'delete']);
+  } finally { globalThis.fetch = originalFetch; }
+});
