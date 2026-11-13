@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths: ['src/**', 'public/**', 'engine/**', 'scripts/**', 'tests/**', 'deploy/**', 'package*.json', 'index.html', 'tsconfig.json', 'vite.config.ts', 'wrangler.json', '.github/workflows/web-checks.yml', '.github/workflows/deploy-production.yml']
   pull_request:
+    paths: ['src/**', 'public/**', 'engine/**', 'scripts/**', 'tests/**', 'deploy/**', 'package*.json', 'index.html', 'tsconfig.json', 'vite.config.ts', 'wrangler.json', '.github/workflows/web-checks.yml', '.github/workflows/deploy-production.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,7 +39,15 @@ jobs:
         env:
           WRANGLER_SEND_METRICS: 'false'
           WRANGLER_SEND_ERROR_REPORTS: 'false'
-      - run: npx playwright install --with-deps chromium firefox webkit
+      # Pull requests test in Chromium only. Main (which gates the live website) tests all three.
+      - name: Choose browsers
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "BROWSERS=chromium" >> "$GITHUB_ENV"
+          else
+            echo "BROWSERS=chromium firefox webkit" >> "$GITHUB_ENV"
+          fi
+      - run: npx playwright install --with-deps $BROWSERS
       - name: Provide an audio output for headless browser playback
         run: |
           sudo apt-get install -y pulseaudio
@@ -51,7 +60,7 @@ jobs:
       - run: node scripts/check-back-navigation.mjs
       - run: node scripts/branding-check.mjs
       - run: |
-          for browser in chromium firefox webkit; do
+          for browser in $BROWSERS; do
             BROWSER="$browser" npm run test:browser
             BROWSER="$browser" timeout --kill-after=10s 180s node scripts/check-offline-navigation.mjs
             BROWSER="$browser" node scripts/account-ui-check.mjs
