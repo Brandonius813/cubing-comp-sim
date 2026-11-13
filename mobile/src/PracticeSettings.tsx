@@ -85,6 +85,14 @@ export function PracticeSettings({ preferences, onChange, disabled }: Props) {
           onChange={(enabled) => update({ holdMs: enabled ? 550 : 0 })}
         />
       </SettingRow>
+      <SettingRow label="Haptic when ready">
+        <Toggle
+          label="Haptic when ready"
+          value={preferences.readyHaptic ?? true}
+          disabled={disabled}
+          onChange={(readyHaptic) => update({ readyHaptic })}
+        />
+      </SettingRow>
       <SelectSetting
         label="Wait duration"
         value={settings.waitEnabled ? settings.waitMode : "none"}

@@ -11,6 +11,8 @@ export type TimerPhase = 'scramble' | 'ready' | 'waiting' | 'inspection' | 'hold
 export type MobilePreferences = Pick<Settings, 'eventId' | 'inspection'> & Partial<Settings> & {
   scrambleFontSize?: number;
   readyScreen?: boolean;
+  /** A single haptic tap when a hold turns green (armed). Default on. */
+  readyHaptic?: boolean;
   timerDisplay?: 'decimal' | 'seconds' | 'solve';
   showScrambleDrawing?: boolean;
   inspectionAudio?: boolean;
@@ -54,6 +56,8 @@ export function validateMobilePreferences(preferences: MobilePreferences): Mobil
   const settings = mobileSettings(preferences);
   const readyScreen = preferences.readyScreen ?? false;
   if (typeof readyScreen !== 'boolean') throw new Error('Invalid Ready Screen setting.');
+  const readyHaptic = preferences.readyHaptic ?? true;
+  if (typeof readyHaptic !== 'boolean') throw new Error('Invalid haptic setting.');
   const scrambleFontSize = preferences.scrambleFontSize ?? 24;
   const timerDisplay = preferences.timerDisplay ?? 'decimal';
   if (!Number.isInteger(scrambleFontSize) || scrambleFontSize < 16 || scrambleFontSize > 40 || !['decimal', 'seconds', 'solve'].includes(timerDisplay)) throw new Error('Invalid display settings.');
@@ -65,7 +69,7 @@ export function validateMobilePreferences(preferences: MobilePreferences): Mobil
   if (typeof showScrambleDrawing !== 'boolean' || typeof inspectionAudio !== 'boolean' || !isLocale(voiceLanguage)
     || !['male-1', 'male-2', 'female-1', 'female-2'].includes(voice)
     || typeof voiceVolume !== 'number' || !Number.isFinite(voiceVolume) || voiceVolume < 0 || voiceVolume > 1) throw new Error('Invalid inspection audio settings.');
-  return { ...settings, readyScreen, scrambleFontSize, timerDisplay, holdMs: settings.holdMs > 0 ? 550 : 0, showScrambleDrawing, inspectionAudio, voiceLanguage, voice, voiceVolume };
+  return { ...settings, readyScreen, readyHaptic, scrambleFontSize, timerDisplay, holdMs: settings.holdMs > 0 ? 550 : 0, showScrambleDrawing, inspectionAudio, voiceLanguage, voice, voiceVolume };
 }
 
 export function emptySave(): MobileSave {

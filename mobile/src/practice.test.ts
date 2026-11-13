@@ -220,3 +220,10 @@ test('no wait and no Ready Screen enters inspection directly, while no-inspectio
   assert.equal(validateMobileSave({...save, preferences: {...save.preferences, readyScreen: true}}).preferences.readyScreen, true);
   assert.throws(() => validateMobileSave({...save, preferences: {...save.preferences, readyScreen: 'yes'}}));
 });
+
+test('the ready haptic defaults on, can be turned off, and rejects non-boolean values', () => {
+  const save = emptySave();
+  assert.equal(validateMobileSave(save).preferences.readyHaptic, true);
+  assert.equal(validateMobileSave({...save, preferences: {...save.preferences, readyHaptic: false}}).preferences.readyHaptic, false);
+  assert.throws(() => validateMobileSave({...save, preferences: {...save.preferences, readyHaptic: 'yes' as unknown as boolean}}));
+});

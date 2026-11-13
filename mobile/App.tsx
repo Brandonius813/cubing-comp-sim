@@ -26,6 +26,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { PuzzleDrawing } from "./src/PuzzleDrawing";
 import { ScrambleNotation } from "./src/ScrambleNotation";
 import { useKeepAwake } from "expo-keep-awake";
+import * as Haptics from "expo-haptics";
 import { getEvent } from "../src/core/events";
 import {
   formatAttempt,
@@ -599,6 +600,9 @@ function MobileApp() {
           break;
         case "armed":
           setHeld(true);
+          // One firm tap the moment the timer turns green: a single impact, not a vibration pattern.
+          if (saveRef.current?.preferences.readyHaptic ?? true)
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
           break;
         case "start":
           if (phaseRef.current === "holding") beginSolve(padEvent.nativeAt);
