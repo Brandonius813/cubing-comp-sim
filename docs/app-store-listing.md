@@ -20,22 +20,14 @@ Copy these into App Store Connect. Anything marked **(you)** is a choice only th
 
 ## Version 1.0 text
 
-**Promotional text (170 chars max):**
-> Practice like it's competition day: official-style scrambles, 15-second inspection with callouts, and a scorecard that averages your round the way the WCA does.
+**Promotional text:** Simulate a cubing competition
 
-**Description:**
-> Cubing Comp Sim turns practice into a competition round.
+**Description** (owner's wording, plus the non-affiliation line):
+> Practice like it's an official WCA competition!
 >
-> Pick an event and get a fresh, random-state scramble with a drawing of the scrambled puzzle. Scrambles are generated on your phone by TNoodle, the same scramble program used at official competitions, and work offline.
+> This is a speed cubing timer app, but set up to track times and "flow" like a competition round. You can add forced waiting time between solves, like you're waiting for your puzzle at a competition, the app tracks your times by ao5 or mo3, depending on the event, and will generate a BPA/WPA for each round.
 >
-> • Hold-and-release timer with optional 15-second inspection and spoken 8- and 12-second callouts
-> • +2 and DNF penalties, including inspection penalties
-> • Round scorecards with averages and means calculated like an official round
-> • Typed time entry if you use a separate timer
-> • 2x2 through 7x7, blindfolded, one-handed, Megaminx, Pyraminx, Skewb, Square-1, Clock and more
-> • Optional account (Apple, Google, WCA or email) to back up your history to the cloud. Uploads and downloads only happen when you tap them.
->
-> Practice as a guest: no account needed. Cubing Comp Sim is free and open source (GPL-3.0).
+> It also has a cloud save feature, so that you can solve on your phone or laptop, then pick up where you left off on either device.
 >
 > Cubing Comp Sim is an independent project and is not affiliated with or endorsed by the World Cube Association.
 
@@ -78,7 +70,7 @@ If Apple asks for a demo account, create a throwaway email account and enter it 
 
 ## Screenshots (you)
 
-Required: **iPhone 6.9"** (1320 × 2868 or 1290 × 2796) and, because the app runs on iPad, **iPad 13"** (2064 × 2752 or 2048 × 2732). Take 3–5 each on a real device, with no personal account details on screen:
+Required: **iPhone 6.9"** (1320 × 2868 or 1290 × 2796). 1.0 is iPhone-only, so no iPad screenshots. Uploaded: scramble, round in progress, round complete, All Stats. Take 3–5 each on a real device, with no personal account details on screen:
 
 1. Practice with a 3x3 or 4x4 scramble and its drawing
 2. Timer running (or inspection countdown)
