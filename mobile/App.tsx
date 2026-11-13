@@ -66,7 +66,8 @@ import { TimeEditor } from "./src/TimeEditor";
 import { Scorecard, RoundCard } from "./src/Scorecard";
 import { exportHistory, prepareHistoryReplacement } from "./src/history";
 import { pagingLocked } from "./src/navigation";
-import { TimerTouch, nativeTouchTime, solveDuration } from "./src/touch";
+import { nativeTouchTime, solveDuration } from "./src/touch";
+import { HoldPad, type HoldPadEvent, type PadInput, type PressKind } from "./src/hold-pad";
 import { LiveTimer } from "./src/LiveTimer";
 import {
   MobileThemeProvider,
@@ -201,15 +202,15 @@ function MobileApp() {
   const solveStart = useRef(0);
   /** Native timestamp of the release that started the solve (see nativeTouchTime). */
   const solveStartNative = useRef<number | null>(null);
-  const holdStart = useRef(0);
   const inspectionStart = useRef<number | null>(null);
   const inspectionDuration = useRef<number | undefined>(undefined);
-  const touch = useRef(new TimerTouch()).current;
-  const stoppedTouch = useRef(false);
-  const inspectionTap = useRef(false);
   const eventId = save?.preferences.eventId ?? "333";
   const event = getEvent(eventId);
   const holdMs = save?.preferences.holdMs ?? 0;
+  const holdMsRef = useRef(holdMs);
+  holdMsRef.current = holdMs;
+  /** The timer's touch surface: all hold/stop/tap decisions live in src/hold-pad.ts. */
+  const pad = useRef(new HoldPad(() => holdMsRef.current)).current;
   const activeRound = save?.history.rounds.find(
     (round) => round.id === save.history.activeRoundId,
   );
@@ -427,8 +428,8 @@ function MobileApp() {
             : inspected,
         );
       }
-      if (phaseRef.current === "holding")
-        setHeld(now - holdStart.current >= holdMs);
+      // Green is the pad's "armed" state, the same one that decides the start.
+      if (phaseRef.current === "holding") applyPad(pad.tick(now));
       animation = requestAnimationFrame(tick);
     };
     animation = requestAnimationFrame(tick);
@@ -476,7 +477,7 @@ function MobileApp() {
         current === "inspection" ||
         current === "holding"
       ) {
-        touch.cancel();
+        pad.reset();
         finish(true);
         Alert.alert(
           "Attempt interrupted",
@@ -495,7 +496,7 @@ function MobileApp() {
       listener.remove();
       blur.remove();
     };
-  }, [finish, touch]);
+  }, [finish, pad]);
 
   useEffect(() => {
     const listener = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -551,128 +552,73 @@ function MobileApp() {
     setElapsed(0);
     transition("inspection");
   };
-  const touchPoint = (event: GestureResponderEvent) => ({
-    x: event.nativeEvent.pageX,
-    y: event.nativeEvent.pageY,
-    at: performance.now(),
-  });
-  const cancelTouch = () => {
-    touch.cancel();
-    inspectionTap.current = false;
-    if (phaseRef.current === "holding") {
-      setHeld(false);
-      transition(inspectionStart.current === null ? "ready" : "inspection");
-    }
+  // ---- Timer touch surface ----
+  // Raw touches go to the HoldPad, which behaves like a competition timing mat
+  // (see src/hold-pad.ts). This screen only decides what a new press means in
+  // the current phase, and reacts to what the pad reports.
+  const padInput = (event: GestureResponderEvent): PadInput => {
+    const native = event.nativeEvent;
+    const changed = native.changedTouches?.length ? native.changedTouches : [native];
+    return {
+      changed: changed.map((contact) => ({ id: contact.identifier, x: contact.pageX, y: contact.pageY })),
+      remaining: Array.isArray(native.touches) ? native.touches.length : Number.NaN,
+      at: performance.now(),
+      nativeAt: nativeTouchTime(event),
+    };
   };
-  const touchStart = (nativeEvent: GestureResponderEvent) => {
-    if (screenReader) return;
-    if (phaseRef.current === "running") {
-      stoppedTouch.current = true;
-      touch.cancel();
-      finish(false, performance.now(), nativeTouchTime(nativeEvent));
-      return;
-    }
-    if (stoppedTouch.current) return;
-    if (
-      !scramble ||
-      generating ||
-      savingRef.current ||
-      draftError
-    )
-      return;
+  /** What a new press on the timer means right now. */
+  const pressKind = (): PressKind => {
     const current = phaseRef.current;
-    if (current === "review") {
-      touch.begin(
-        touchPoint(nativeEvent),
-        nativeEvent.nativeEvent.touches.length,
-      );
-      return;
-    }
-    if (manualEntry) return;
-    if (nativeEvent.nativeEvent.touches.length !== 1) {
-      cancelTouch();
-      return;
-    }
-    if (current === "holding" || current === "waiting") return;
-    touch.begin(
-      touchPoint(nativeEvent),
-      nativeEvent.nativeEvent.touches.length,
-    );
-    if (nativeEvent.nativeEvent.touches.length !== 1) {
-      cancelTouch();
-      return;
-    }
-    if (
-      current === "scramble" ||
-      (manualMode &&
-        (current === "inspection" ||
-          (current === "ready" &&
-            (!save?.preferences.inspection || !event.inspection))))
-    )
-      return;
-    if (
-      current === "ready" &&
-      save?.preferences.inspection &&
-      event.inspection
-    ) {
-      inspectionTap.current = true;
-      return;
-    }
-    holdStart.current = performance.now();
-    setHeld(holdMs === 0);
-    transition("holding");
+    if (screenReader) return "ignore";
+    if (current === "running") return "stop";
+    if (!scramble || generating || savingRef.current || draftError) return "ignore";
+    // Page swipes are possible on these screens, so a drag must not count as a tap.
+    if (current === "scramble" || current === "review") return "swipeTap";
+    if (manualEntry || current === "holding" || current === "waiting") return "ignore";
+    if (current === "ready" && save?.preferences.inspection && event.inspection) return "tap";
+    if (manualMode) return current === "ready" || current === "inspection" ? "tap" : "ignore";
+    if (current === "ready" || current === "inspection") return "hold";
+    return "ignore";
   };
-  const touchMove = (event: GestureResponderEvent) => {
-    if (screenReader || stoppedTouch.current) return;
-    if (!touch.move(touchPoint(event), event.nativeEvent.touches.length))
-      cancelTouch();
+  const onTap = () => {
+    const current = phaseRef.current;
+    if (current === "review") void saveResult();
+    else if (current === "scramble") confirmPuzzle();
+    else if (current === "ready" && save?.preferences.inspection && event.inspection) startInspection();
+    else if (manualMode && (current === "ready" || current === "inspection")) beginSolve();
   };
-  const touchEnd = (event: GestureResponderEvent) => {
-    if (screenReader) return;
-    if (stoppedTouch.current) {
-      if (event.nativeEvent.touches.length === 0) stoppedTouch.current = false;
-      touch.cancel();
-      return;
+  function applyPad(events: HoldPadEvent[]) {
+    for (const padEvent of events) {
+      switch (padEvent.type) {
+        case "stop":
+          if (phaseRef.current === "running") finish(false, performance.now(), padEvent.nativeAt);
+          break;
+        case "holdStart":
+          setHeld(false);
+          transition("holding");
+          break;
+        case "armed":
+          setHeld(true);
+          break;
+        case "start":
+          if (phaseRef.current === "holding") beginSolve(padEvent.nativeAt);
+          break;
+        case "holdAbort":
+          if (phaseRef.current === "holding") {
+            setHeld(false);
+            transition(inspectionStart.current === null ? "ready" : "inspection");
+          }
+          break;
+        case "tap":
+          onTap();
+          break;
+      }
     }
-    if (event.nativeEvent.touches.length !== 0) {
-      cancelTouch();
-      return;
-    }
-    const point = touchPoint(event);
-    const duration = touch.end(point);
-    if (duration === null) {
-      cancelTouch();
-      return;
-    }
-    if (phaseRef.current === "running") {
-      finish(false, point.at - duration);
-      return;
-    }
-    if (phaseRef.current === "review") {
-      void saveResult();
-      return;
-    }
-    if (phaseRef.current === "scramble") {
-      confirmPuzzle();
-      return;
-    }
-    if (
-      manualMode &&
-      (phaseRef.current === "inspection" ||
-        (phaseRef.current === "ready" && !inspectionTap.current))
-    ) {
-      beginSolve();
-      return;
-    }
-    if (inspectionTap.current && phaseRef.current === "ready") {
-      inspectionTap.current = false;
-      startInspection();
-      return;
-    }
-    if (phaseRef.current === "holding" && duration >= holdMs)
-      beginSolve(nativeTouchTime(event));
-    else cancelTouch();
-  };
+  }
+  const touchStart = (event: GestureResponderEvent) => applyPad(pad.press(padInput(event), pressKind()));
+  const touchMove = (event: GestureResponderEvent) => pad.move(padInput(event));
+  const touchEnd = (event: GestureResponderEvent) => applyPad(pad.release(padInput(event)));
+  const touchCancel = () => applyPad(pad.cancel(performance.now()));
   const accessibleActivate = () => {
     if (
       !scramble ||
@@ -954,7 +900,7 @@ function MobileApp() {
     }
     if (index !== 1) {
       Keyboard.dismiss();
-      cancelTouch();
+      pad.reset();
     }
     setPage(index);
   };
@@ -1058,7 +1004,7 @@ function MobileApp() {
                       onTouchStart={touchStart}
                       onTouchMove={touchMove}
                       onTouchEnd={touchEnd}
-                      onTouchCancel={() => { stoppedTouch.current = false; cancelTouch(); }}
+                      onTouchCancel={touchCancel}
                     >
                       {phase === "scramble" ? (
                         <View style={styles.scramblePhase}>
