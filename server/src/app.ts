@@ -1,3 +1,4 @@
+import type { AppleGrants } from './apple.js';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
@@ -12,7 +13,7 @@ declare module 'fastify' {
 
 export async function createApi(options: {
   saves: SaveService; verifyAccount: VerifyAccount; origins: string[];
-  deletions?: AccountDeletion;
+  deletions?: AccountDeletion; apple?: AppleGrants;
   isAccountBlocked?: (userId: string) => Promise<boolean>;
   release?: string; logLevel?: string; logging?: boolean;
   trustedProxyIps?: string[];
@@ -29,7 +30,7 @@ export async function createApi(options: {
   });
   app.decorateRequest('account', null);
   app.decorateRequest('uploadSlot', false);
-  await app.register(cors, { origin: options.origins, credentials: false, methods: ['GET', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization', 'If-Match', 'Idempotency-Key'], exposedHeaders: ['ETag'], maxAge: 600 });
+  await app.register(cors, { origin: options.origins, credentials: false, methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization', 'If-Match', 'Idempotency-Key'], exposedHeaders: ['ETag'], maxAge: 600 });
   await app.register(rateLimit, { max: 60, timeWindow: '1 minute' });
   let inFlightUploads = 0;
   const releaseSlot = (request: { uploadSlot: boolean }) => {
@@ -66,6 +67,11 @@ export async function createApi(options: {
     void reply.status(status).send({ error: { code }, requestId: request.id });
   });
 
+  app.post('/v1/account/apple-grant', { bodyLimit: 16384 }, async request => {
+    if (!options.apple) throw new ApiError(503, 'apple_not_configured');
+    await options.apple.capture(request.account!, request.body);
+    return { status: 'saved' };
+  });
   app.get('/health', async () => ({ status: 'ok' }));
   app.delete('/v1/account', { bodyLimit: 1024 }, async (request, reply) => {
     if (!options.deletions) throw new ApiError(503, 'deletion_not_configured');

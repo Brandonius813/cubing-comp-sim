@@ -2,7 +2,7 @@ name: Dependency security checks
 on:
   push:
     branches: [main]
-    paths: ['package*.json', 'server/package*.json', '.github/workflows/dependency-checks.yml']
+    paths: ['package*.json', 'server/package*.json', 'mobile/package*.json', '.github/workflows/dependency-checks.yml']
   pull_request:
 permissions:
   contents: read
@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        directory: ['.', 'server']
+        directory: ['.', 'server', 'mobile']
     defaults:
       run:
         working-directory: ${{ matrix.directory }}

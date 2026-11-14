@@ -1,0 +1,358 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createSecureStorage, type SecureKeyValue } from './accounts/secure-storage';
+import { parseCallback, CALLBACK_URL, NativeAccounts, isPublicClientKey } from './accounts/auth';
+import { CloudSaves } from '../../src/cloud/api';
+import { ExplicitTransfers } from './accounts/transfers';
+import type { HistorySnapshot } from '../../src/storage/validation';
+import type { AccountSession, SaveMetadata } from '../../src/cloud/types';
+import type { SupabaseClient, Session } from '@supabase/supabase-js';
+
+function secureMemory() {
+  const values = new Map<string, string>(); let fail: ((key: string) => boolean) | undefined;
+  const raw: SecureKeyValue = { getItemAsync: async key => values.get(key) ?? null,
+    setItemAsync: async (key, value) => { if (fail?.(key)) throw new Error('disk full'); values.set(key, value); },
+    deleteItemAsync: async key => { values.delete(key); } };
+  let id = 0;
+  return { values, raw, storage: createSecureStorage(raw, () => `generation-${++id}`), failWrites: (fn?: (key: string) => boolean) => { fail = fn; } };
+}
+const snapshot = (): HistorySnapshot => ({ app: 'cubing-comp-sim', schemaVersion: 1, exportedAt: 1, rounds: [], activeRoundId: null });
+const account = (id = 'a'): AccountSession => ({ accessToken: `${id}-token`, user: { id, email: `${id}@example.test`, emailVerified: true } });
+const metadata: SaveMetadata = { revision: 1, savedAt: '2026-10-20T00:00:00Z', roundCount: 0, attemptCount: 0, bytes: 100, sha256: 'a'.repeat(64) };
+
+test('secure sessions are chunked, stripped of provider credentials and atomically replaced', async () => {
+  const memory = secureMemory();
+  const raw = JSON.stringify({ access_token: 'access', refresh_token: 'refresh', provider_token: 'provider-secret', provider_refresh_token: 'provider-refresh-secret', user: { name: '漢🧊'.repeat(1000) } });
+  await memory.storage.setItem('session', raw);
+  const stored = JSON.parse((await memory.storage.getItem('session'))!);
+  assert.equal(stored.access_token, 'access'); assert.equal(stored.provider_token, undefined); assert.equal(stored.provider_refresh_token, undefined);
+  assert.equal(stored.user.name, '漢🧊'.repeat(1000));
+  for (const [key, value] of memory.values) if (key !== 'ccs.session') assert.ok(Buffer.byteLength(value, 'utf8') < 2048);
+  const previous = await memory.storage.getItem('session');
+  memory.failWrites(key => key.endsWith('generation-2.1'));
+  await assert.rejects(memory.storage.setItem('session', 'next'.repeat(500)), /disk full/);
+  assert.equal(await memory.storage.getItem('session'), previous);
+  memory.failWrites(); await memory.storage.removeItem('session'); assert.equal(await memory.storage.getItem('session'), null);
+  assert.equal(memory.values.size, 0);
+});
+
+test('failed secure manifest commit preserves prior value and removes new chunks', async () => {
+  const memory = secureMemory(); await memory.storage.setItem('session', 'first');
+  memory.failWrites(key => key === 'ccs.session');
+  await assert.rejects(memory.storage.setItem('session', 'replacement'), /disk full/);
+  assert.equal(await memory.storage.getItem('session'), 'first');
+  assert.ok(![...memory.values.keys()].some(key => key.includes('generation-2')));
+});
+
+test('incomplete and unsupported secure sessions fail visibly rather than yielding a partial credential', async () => {
+  const memory = secureMemory(); await memory.storage.setItem('session', 'long'.repeat(500));
+  memory.values.delete('ccs.session.generation-1.0');
+  await assert.rejects(memory.storage.getItem('session'), /incomplete/);
+  memory.values.set('ccs.session', JSON.stringify({ version: 2, generation: 'x', count: 1 }));
+  await assert.rejects(memory.storage.getItem('session'), /Invalid secure/);
+});
+
+test('PKCE callback is bound to scheme, host, path, fresh intent and cryptographic state', () => {
+  const now = Date.now(); const state = 'a'.repeat(36);
+  const intent = JSON.stringify({ provider: 'google', state, startedAt: now });
+  const good = `${CALLBACK_URL}?ccs_state=${state}&code=one-use`;
+  assert.deepEqual(parseCallback(good, intent, now), { code: 'one-use', flowId: undefined, provider: 'google' });
+  for (const url of [good.replace('cubingcompsim:', 'https:'), good.replace('/callback', '/other'), good.replace(state, 'b'.repeat(36)), `${good}&code=second`, `${good}#access_token=secret`, `${good}&error=denied`]) assert.throws(() => parseCallback(url, intent, now));
+  assert.throws(() => parseCallback(good, intent, now + 601_000));
+  assert.throws(() => parseCallback(good, null, now));
+  assert.throws(() => parseCallback(good, JSON.stringify({ provider: 'apple', state, startedAt: now }), now));
+});
+
+test('auth restores and signs in without any cloud/history dependency; Apple stays gated', async () => {
+  const memory = secureMemory(); let sdkCalls = 0;
+  const rawSession = { access_token: 'token', user: { id: 'a', email: 'a@example.test', email_confirmed_at: 'today', identities: [{ provider: 'email' }] } } as Session;
+  const client = { auth: { getSession: async () => { sdkCalls++; return { data: { session: rawSession }, error: null }; }, signInWithPassword: async () => ({ data: { session: rawSession }, error: null }) } } as unknown as SupabaseClient;
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test', providers: 'google,wca,apple' }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client);
+  assert.deepEqual(auth.providers, ['google', 'wca']);
+  assert.equal((await auth.getSession())?.user.id, 'a');
+  await auth.signIn('a@example.test', 'secret'); assert.equal(sdkCalls, 1);
+});
+
+test('preparing upload does not upload; confirmation is one use and account-bound', async () => {
+  let current = account(); let uploads = 0; let replacements = 0;
+  const cloud = { getSaveMetadata: async () => metadata, upload: async () => { uploads++; return metadata; }, download: async () => ({ metadata, snapshot: snapshot() }) };
+  const transfers = new ExplicitTransfers(cloud, async () => current, () => 'operation');
+  const ticket = await transfers.prepareUpload(snapshot()); assert.equal(uploads, 0);
+  current = account('b');
+  await assert.rejects(transfers.confirm(ticket, async () => { replacements++; }), /account changed/);
+  assert.equal(uploads, 0); assert.equal(replacements, 0);
+  current = account(); const valid = await transfers.prepareUpload(snapshot());
+  await transfers.confirm(valid, async () => { replacements++; });
+  assert.equal(uploads, 1); assert.equal(replacements, 0);
+  await assert.rejects(transfers.confirm(valid, async () => undefined), /expired/);
+});
+
+test('invalid cloud download cannot replace local history and failed replacement remains visible', async () => {
+  let replacements = 0;
+  const bad = new ExplicitTransfers({ getSaveMetadata: async () => null, upload: async () => metadata,
+    download: async () => ({ metadata, snapshot: { bad: true } as unknown as HistorySnapshot }) }, async () => account(), () => 'operation');
+  await assert.rejects(bad.prepareDownload()); assert.equal(replacements, 0);
+  const transfers = new ExplicitTransfers({ getSaveMetadata: async () => metadata, upload: async () => metadata,
+    download: async () => ({ metadata, snapshot: snapshot() }) }, async () => account(), () => 'operation');
+  const ticket = await transfers.prepareDownload(); assert.equal(replacements, 0);
+  await assert.rejects(transfers.confirm(ticket, async () => { replacements++; throw new Error('atomic persistence rejected'); }), /atomic persistence/);
+  assert.equal(replacements, 1);
+  await assert.rejects(transfers.confirm(ticket, async () => undefined), /expired/);
+});
+
+test('logout/account change during download discards the remote result', async () => {
+  let current = account();
+  const transfers = new ExplicitTransfers({ getSaveMetadata: async () => metadata, upload: async () => metadata,
+    download: async () => { current = account('b'); return { metadata, snapshot: snapshot() }; } }, async () => current, () => 'operation');
+  await assert.rejects(transfers.prepareDownload(), /account changed/);
+});
+
+
+test('native configuration accepts only public client keys', () => {
+  assert.equal(isPublicClientKey('sb_publishable_public'), true);
+  assert.equal(isPublicClientKey('sb_secret_server'), false);
+  const key = (role: string) => `header.${Buffer.from(JSON.stringify({ role })).toString('base64url')}.signature`;
+  assert.equal(isPublicClientKey(key('anon')), true);
+  assert.equal(isPublicClientKey(key('service_role')), false);
+});
+
+test('duplicate warm/browser OAuth completion exchanges one code; cancelled browser transfers nothing', async () => {
+  const memory = secureMemory(); let exchanges = 0; let callback = ''; let cancelled = false;
+  const session = { access_token: 'token', user: { id: 'a', identities: [{ provider: 'google' }] } } as Session;
+  const client = { auth: {
+    getSession: async () => ({ data: { session: null }, error: null }),
+    signInWithOAuth: async (args: { options: { redirectTo: string } }) => { callback = `${args.options.redirectTo}&code=single`; return { data: { url: 'https://provider.example.test?code_challenge_method=s256&code_challenge=test-challenge' }, error: null }; },
+    exchangeCodeForSession: async () => { exchanges++; return { data: { session }, error: null }; },
+  } } as unknown as SupabaseClient;
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test', providers: 'google' }, memory.storage, () => 'a'.repeat(36), async () => cancelled ? { type: 'cancel' } : { type: 'success', url: callback }, client);
+  await auth.signInWithProvider('google'); await auth.handleCallback(callback);
+  assert.equal(exchanges, 1);
+  cancelled = true; await auth.signInWithProvider('google'); await auth.handleCallback(callback);
+  assert.equal(exchanges, 1);
+  assert.equal(await memory.storage.getItem('ccs-native-oauth-intent'), null);
+});
+
+test('revoked sessions are rejected before cloud use even when local session exists', async () => {
+  const memory = secureMemory();
+  const rawSession = { access_token: 'old-token', user: { id: 'a', email_confirmed_at: 'today' } } as Session;
+  const client = { auth: { getSession: async () => ({ data: { session: rawSession }, error: null }),
+    getUser: async () => ({ data: { user: null }, error: { message: 'revoked' } }) } } as unknown as SupabaseClient;
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test' }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client);
+  await assert.rejects(auth.verifiedSession(), /expired or was revoked/);
+});
+
+
+test('cloud requests use portable AbortController without AbortSignal.timeout', async t => {
+  t.mock.method(AbortSignal, 'timeout', () => { throw new Error('unavailable on React Native'); });
+  const cloud = new CloudSaves('https://api.example.test', async (_input, init) => {
+    assert.ok(init?.signal instanceof AbortSignal);
+    assert.equal(init.signal.aborted, false);
+    return new Response(JSON.stringify({ save: metadata }), { status: 200 });
+  });
+  assert.deepEqual(await cloud.getSaveMetadata(account()), metadata);
+});
+
+
+test('missing or invalid email callback origin disables native accounts without production fallback', async () => {
+  const memory = secureMemory();
+  for (const webUrl of [undefined, '', 'http://web.example.test', 'https://user:password@web.example.test', 'https://web.example.test/callback', 'https://web.example.test/?other=origin']) {
+    const auth = new NativeAccounts({ url: 'https://example.supabase.co', publicKey: 'sb_publishable_test', webUrl }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }));
+    assert.equal(auth.configured, false);
+    assert.equal(await auth.getSession(), null);
+    await assert.rejects(auth.signUp('a@example.test', 'password-for-test'), /not configured/);
+    await assert.rejects(auth.requestPasswordReset('a@example.test'), /not configured/);
+    auth.dispose();
+  }
+});
+
+
+test('provider sign-in refuses plain PKCE and never opens the browser', async () => {
+  const memory = secureMemory(); let opened = false;
+  const client = { auth: {
+    getSession: async () => ({ data: { session: null }, error: null }),
+    signInWithOAuth: async () => ({ data: { url: 'https://provider.example.test?code_challenge_method=plain&code_challenge=verifier' }, error: null }),
+  } } as unknown as SupabaseClient;
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test', providers: 'google' }, memory.storage, () => 'a'.repeat(36), async () => { opened = true; return { type: 'cancel' }; }, client);
+  await assert.rejects(auth.signInWithProvider('google'), /Secure provider sign-in/);
+  assert.equal(opened, false);
+  assert.equal(await memory.storage.getItem('ccs-native-oauth-intent'), null);
+});
+
+test('native Apple validates state and captures its code before completing sign-in', async () => {
+  const memory = secureMemory(); let current: Session | null = null; let signedOut = 0; let receivedNonce = '';
+  const client = { auth: {
+    getSession: async () => ({ data: { session: current }, error: null }),
+    signInWithIdToken: async (input: { nonce: string }) => {
+      assert.equal(input.nonce, receivedNonce);
+      current = { access_token: 'native-access', user: { id: 'apple-user', identities: [{ provider: 'apple' }] } } as Session;
+      return { data: { session: current }, error: null };
+    },
+    signOut: async () => { signedOut++; current = null; return { error: null }; },
+  } } as unknown as SupabaseClient;
+  const originalFetch = globalThis.fetch;
+  let requests = 0; let fail = false;
+  globalThis.fetch = (async (url, init) => {
+    requests++;
+    assert.equal(String(url), 'https://api.example.test/v1/account/apple-grant');
+    assert.deepEqual(JSON.parse(init!.body as string), { clientId: 'com.cubingcompsim.app', code: 'native-code' });
+    return new Response('{}', { status: fail ? 503 : 200 });
+  }) as typeof fetch;
+  try {
+    const config = { url: 'https://example.supabase.co', webUrl: 'https://web.example.test', apiUrl: 'https://api.example.test', publicKey: 'sb_publishable_test', providers: 'apple' };
+    const auth = new NativeAccounts(config, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client,
+      async (nonce, state) => { receivedNonce = nonce; return { identityToken: 'apple-token', authorizationCode: 'native-code', state }; });
+    await auth.signInWithProvider('apple');
+    assert.equal(requests, 1); assert.equal(current!.user.id, 'apple-user');
+    current = null; fail = true;
+    await assert.rejects(auth.signInWithProvider('apple'), /Could not finish/);
+    assert.equal(signedOut, 1); assert.equal(current, null);
+    const wrong = new NativeAccounts(config, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client,
+      async () => ({ identityToken: 'token', authorizationCode: 'code', state: 'wrong' }));
+    await assert.rejects(wrong.signInWithProvider('apple'), /could not be verified/);
+    assert.equal(requests, 2);
+    const cancelled = new NativeAccounts(config, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client, async () => null);
+    await cancelled.signInWithProvider('apple');
+    assert.equal(requests, 2);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('web-shaped cloud history replaces mobile history, survives reopening, and retains recovery', async () => {
+  const { createSaveRepository } = await import('./storage-core');
+  const { emptySave, recordResult, changeEvent } = await import('./practice');
+  const { prepareHistoryReplacement } = await import('./history');
+  const scramble = { eventId: '333' as const, notation: 'R U', svg: '<svg/>', engineVersion: 'fixture', generatedAt: 1 };
+  const result = { rawMs: 10000, penalty: 'none' as const, inputMethod: 'timer' as const };
+  const local = recordResult(emptySave(), scramble, result);
+  let desktop = emptySave();
+  for (let i = 0; i < 10; i++) desktop = recordResult(desktop, scramble, result);
+  desktop = changeEvent(desktop, '555');
+  for (let i = 0; i < 5; i++) desktop = recordResult(desktop, {...scramble, eventId: '555'}, result);
+  desktop.history.activeRoundId = desktop.history.rounds.at(-1)!.id; // Web selects its completed round.
+  let body: string | null = null; let backup: string | null = null;
+  const driver = { read: async () => body, readRecovery: async () => backup,
+    write: async (next: string, recovery: boolean) => { if (recovery) backup = body; body = next; } };
+  const repository = createSaveRepository(driver);
+  await repository.store(local);
+  let visible = local;
+  const remoteMetadata = {...metadata, roundCount: 3, attemptCount: 15};
+  const cloud = new CloudSaves('https://api.example.test', async (_url, init) => {
+    assert.equal(init?.method, undefined);
+    return new Response(JSON.stringify({ save: remoteMetadata, snapshot: desktop.history }));
+  });
+  const transfers = new ExplicitTransfers(cloud, async () => account(), () => 'download-15');
+  const ticket = await transfers.prepareDownload();
+  assert.equal(visible.history.rounds.length, 1, 'preparation cannot modify local history');
+  await transfers.confirm(ticket, async snapshot => {
+    const next = prepareHistoryReplacement(visible, snapshot);
+    await repository.replace(next);
+    const stored = await repository.load();
+    assert.deepEqual(stored.history, next.history);
+    visible = stored;
+  });
+  assert.equal(visible.history.rounds.length, 3);
+  assert.equal(visible.history.rounds.reduce((n, r) => n + r.attempts.length, 0), 15);
+  assert.ok(!visible.history.rounds.some(r => r.id === local.history.rounds[0].id));
+  assert.deepEqual((await createSaveRepository(driver).load()).history.rounds, desktop.history.rounds);
+  assert.equal(visible.history.activeRoundId, null);
+  assert.equal(visible.preferences.eventId, '555');
+  assert.notEqual(desktop.history.activeRoundId, null, 'import must not mutate the cloud snapshot');
+  assert.deepEqual((await repository.loadRecovery())?.history, local.history);
+});
+
+function providerDeletionFixture(options: { provider: 'google' | 'apple'; freshUser?: string; browser?: 'success' | 'cancel'; linked?: string[] }) {
+  const memory = secureMemory();
+  const linked = options.linked ?? [options.provider];
+  const main = { access_token: 'main-token', user: { id: 'a', email: 'a@example.test', email_confirmed_at: 'now', identities: linked.map(provider => ({ provider })) } } as unknown as Session;
+  let current: Session | null = main; let mainSignOuts = 0; let isolatedDisposed = 0; let callback = '';
+  const client = { auth: {
+    getSession: async () => ({ data: { session: current }, error: null }),
+    getUser: async () => ({ data: { user: current?.user ?? null }, error: null }),
+    signOut: async () => { mainSignOuts++; current = null; return { error: null }; },
+  } } as unknown as SupabaseClient;
+  const fresh = { access_token: 'fresh-token', user: { id: options.freshUser ?? 'a', identities: [{ provider: options.provider }] } } as Session;
+  const isolated = { auth: {
+    signInWithOAuth: async (args: { options: { redirectTo: string } }) => { callback = `${args.options.redirectTo}&code=fresh`; return { data: { url: 'https://provider.example.test?code_challenge_method=s256&code_challenge=c' }, error: null }; },
+    exchangeCodeForSession: async () => ({ data: { session: fresh }, error: null }),
+    signInWithIdToken: async () => ({ data: { session: fresh }, error: null }),
+    signOut: async () => ({ error: null }),
+    dispose: () => { isolatedDisposed++; },
+  } } as unknown as SupabaseClient;
+  let uuid = 0;
+  const auth = new NativeAccounts(
+    { url: 'https://example.supabase.co', webUrl: 'https://web.example.test', apiUrl: 'https://api.example.test', publicKey: 'sb_publishable_test', providers: 'google,apple' },
+    memory.storage, () => String(++uuid).padStart(36, 'x'),
+    async () => options.browser === 'cancel' ? { type: 'cancel' } : { type: 'success', url: callback },
+    client, async (_nonce, state) => ({ identityToken: 'apple-token', authorizationCode: 'apple-code', state }), () => isolated);
+  return { auth, get current() { return current; }, get mainSignOuts() { return mainSignOuts; }, get isolatedDisposed() { return isolatedDisposed; } };
+}
+
+test('provider deletion signs in again in a separate client and deletes with that fresh session', async () => {
+  const f = providerDeletionFixture({ provider: 'google' });
+  const proofs: string[] = [];
+  const status = await f.auth.deleteWithProvider('google', 'a', async proof => { proofs.push(proof.accessToken); return { status: 'deleted' }; });
+  assert.equal(status, 'deleted');
+  assert.deepEqual(proofs, ['fresh-token']);
+  assert.equal(f.mainSignOuts, 1); assert.equal(f.current, null); assert.equal(f.isolatedDisposed, 1);
+});
+
+test('provider deletion deletes nothing when cancelled, for another account, or for an unlinked provider', async () => {
+  let removed = 0; const remove = async () => { removed++; return { status: 'deleted' as const }; };
+  const cancelled = providerDeletionFixture({ provider: 'google', browser: 'cancel' });
+  await assert.rejects(cancelled.auth.deleteWithProvider('google', 'a', remove), /cancelled/);
+  const other = providerDeletionFixture({ provider: 'google', freshUser: 'b' });
+  await assert.rejects(other.auth.deleteWithProvider('google', 'a', remove), /different account/);
+  const unlinked = providerDeletionFixture({ provider: 'google', linked: ['apple'] });
+  await assert.rejects(unlinked.auth.deleteWithProvider('google', 'a', remove), /not connected/);
+  assert.equal(removed, 0);
+  assert.notEqual(cancelled.current, null); assert.notEqual(other.current, null);
+});
+
+test('Apple deletion refreshes the server Apple grant before deleting', async () => {
+  const originalFetch = globalThis.fetch; const order: string[] = [];
+  globalThis.fetch = (async (url, init) => {
+    order.push('grant');
+    assert.equal(String(url), 'https://api.example.test/v1/account/apple-grant');
+    assert.equal((init!.headers as Record<string, string>).Authorization, 'Bearer fresh-token');
+    return new Response('{}', { status: 200 });
+  }) as typeof fetch;
+  try {
+    const f = providerDeletionFixture({ provider: 'apple' });
+    const status = await f.auth.deleteWithProvider('apple', 'a', async () => { order.push('delete'); return { status: 'pending' }; });
+    assert.equal(status, 'pending');
+    assert.deepEqual(order, ['grant', 'delete']);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('Apple sign-in checks the live user when the token response omits identities, and signs out if Apple is missing', async () => {
+  const memory = secureMemory(); let current: Session | null = null; let signedOut = 0; let liveIdentities = [{ provider: 'apple' }];
+  const client = { auth: {
+    getSession: async () => ({ data: { session: current }, error: null }),
+    // Token response without identities, as the server may send for an existing user.
+    signInWithIdToken: async () => { current = { access_token: 'native-access', user: { id: 'apple-user' } } as Session; return { data: { session: current }, error: null }; },
+    getUser: async () => ({ data: { user: { id: 'apple-user', identities: liveIdentities } }, error: null }),
+    signOut: async () => { signedOut++; current = null; return { error: null }; },
+  } } as unknown as SupabaseClient;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response('{}', { status: 200 })) as typeof fetch;
+  try {
+    const config = { url: 'https://example.supabase.co', webUrl: 'https://web.example.test', apiUrl: 'https://api.example.test', publicKey: 'sb_publishable_test', providers: 'apple' };
+    const auth = new NativeAccounts(config, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client,
+      async (_nonce, state) => ({ identityToken: 'apple-token', authorizationCode: 'native-code', state }));
+    await auth.signInWithProvider('apple');
+    assert.equal(current!.user.id, 'apple-user'); assert.equal(signedOut, 0);
+    current = null; liveIdentities = [{ provider: 'google' }];
+    await assert.rejects(auth.signInWithProvider('apple'), /could not be verified/);
+    assert.equal(current, null); assert.equal(signedOut, 1);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test('verified sessions list linked providers from the live user record', async () => {
+  const memory = secureMemory();
+  const cached = { access_token: 't', user: { id: 'a', email: 'a@example.test', email_confirmed_at: 'now' } } as unknown as Session;
+  const client = { auth: {
+    getSession: async () => ({ data: { session: cached }, error: null }),
+    getUser: async () => ({ data: { user: { id: 'a', email_confirmed_at: 'now', identities: [{ provider: 'apple' }, { provider: 'custom:wca' }] } }, error: null }),
+  } } as unknown as SupabaseClient;
+  const auth = new NativeAccounts({ url: 'https://example.supabase.co', webUrl: 'https://web.example.test', publicKey: 'sb_publishable_test', providers: 'apple' }, memory.storage, () => 'a'.repeat(36), async () => ({ type: 'cancel' }), client);
+  assert.deepEqual((await auth.verifiedSession()).user.providers, ['apple', 'custom:wca']);
+});

@@ -1,3 +1,51 @@
+## Portrait orientation (October 23, 2026)
+
+The owner requested portrait lock. Mobile orientation is portrait; iPad also declares portrait with full-screen mode so multitasking does not restore landscape orientations. This requires a new native build and is not included in preview 5dcaa7f0.
+
+## Selected-event stats and scramble layout (October 23, 2026)
+
+The owner's latest feedback supersedes the earlier all-event All Stats decision: filter the popup and its round numbering to the currently selected CompSim event. Preserve the full stored history. Give notation more vertical space, place the drawing lower with less padding, and show a gray down chevron only while more notation remains below the viewport. Render Megaminx U/F labels as centered vector shapes in native views to avoid SVG text baseline differences; preserve engine face geometry and stored SVG provenance.
+
+The owner cancelled the paid Supabase Pro/custom auth domain plan because of ongoing cost. Keep the existing URL and callbacks. No domain was created or activated, and no paid upgrade is authorized. See docs/auth-custom-domain.md.
+
+## Device feedback and branded authentication (October 23, 2026)
+
+The owner requested fixing scramble stalls and long-text sizing, optional no-wait Ready, no-inspection 0.00 arming, concise cloud controls, and failed cloud download before another free iOS preview. Read-only diagnosis confirmed web saves may select a completed active round, which native import wrongly rejected. Normalize only the native active pointer, retain all solves and recovery, verify persistence, and show all events in All Stats. UI/domain verification is recorded in docs/mobile-device-feedback.md; native acceptance and the next build remain pending.
+
+The owner explicitly requested a subagent for actual 4×4 performance, preserving verified scramble correctness. The owner also chose a branded Supabase domain and will upgrade to paid Supabase. Prepare auth.cubingcompsim.com; provider callbacks must be added before activation. No browser/computer UI control is allowed. App Store Connect remains unset; focus on device review.
+
+## Approved Apple backend activation and device preview (October 23, 2026)
+
+The owner approved backend activation and requested a device preview before App Store Connect setup, which has not been done. Production now runs the checksum-verified `4070c38` API and cleanup image. Migration 003 is applied with private-schema runtime ownership, RLS and restored administrator restrictions. Live API health and runtime transactional access passed; the upgraded account cleanup completed and both timers resumed. Apple is enabled in the internal preview for human acceptance, retaining the public web release gate until consent/revocation checks pass. Mobile typecheck and 114 tests passed. Preview `e50ec086-f245-4f45-9dfc-20e742af50ba` finished successfully from `263bb62`; the downloaded IPA's signed Apple entitlement, team/bundle and two-device provisioning were verified. Physical device testing remains pending. See `docs/apple-release-activation.md` for the install link, evidence and limitations.
+
+## Apple backend deployment preparation (October 23, 2026)
+
+PR #53 was already merged into `feat/ios-review-ready` when this follow-up started. Production still runs API `eb1916b` and web `d17fa698`, with public Apple controls closed. The tested API artifact `4070c38` has the same tree as implementation `c04019d`; its CI passed all 34 API tests including PostgreSQL plus three backup tests. The checksum-verified image and private Apple candidate configuration are staged on the existing host, not activated. Isolated container health, protected-route checks and database TLS preflight passed. Migration 003 passed a rollback-only test including runtime RLS access; it has not been applied persistently. Exact evidence, coordinated cleanup upgrade, and remaining release failures are in `docs/apple-release-activation.md`.
+
+The owner requested no browser/computer control while using the computer. Continue via APIs, CLI and SSH. Production rollout approval remains required by the current task; no new binary, website publication, real Apple consent/revocation or App Store submission occurred in this preparation.
+
+## Apple activation and second mobile feedback pass (October 23, 2026)
+
+Owner enabled Apple in production Supabase after registering App/Services IDs. Verified enabled setting and initial Apple redirect; no human consent completed. Prepared native nonce/state login and web grant capture, encrypted private server grant storage, and durable revocation before account deletion. Backend signing/encryption secrets and migration/deployment remain outstanding, so public provider gates remain closed. See docs/apple-sign-in.md.
+
+Mobile now returns idle restored Ready/Wait drafts to the original scramble confirmation, preserving manual text and pending results. Active solve stops immediately on first touch-down, swallowing that touch's subsequent movement/release. Scramble confirmation, Ready and Continue have visible blue rounded controls; review adds Delete. Added Settings heading, Timer Update label, None wait option, Google/WCA logo buttons, All Stats label, normalized two-decimal editing and parentheses around discarded times. Browser-adapter flow checks passed including held/moved stop, manual save, five-solve summary and deletion. Native timing remains to be checked on hardware.
+
+## Mobile device feedback (October 23, 2026)
+
+Brandon requested correcting the mobile flow to match desktop: scrambling must be explicitly confirmed before waiting, Ready precedes inspection, and typed entry saves directly. Default wait remains fixed zero. Inspection/holding/solving now lock paging, superseding the earlier no-lock preference; stopped review remains navigable. Slider interaction temporarily locks paging. Add adjustable bold scramble text, large scrambling-phase drawing, timer display options, round-completion scorecard popup, compact history, solve/round deletion, a drawn scorecard border and green/red bounds. Individual time editing has X, one immediate penalty selection, notation and drawing.
+
+Google/WCA preview buttons are enabled. Owner added the mobile Supabase callback and cancelled-flow checks verified native return with matching state. Apple backend remains disabled and needs its provider credentials plus revocation/deletion setup. Detailed evidence and remaining native acceptance checks are in `docs/mobile-minimal-ui-review.md`.
+
+## Mobile development authorization (October 15, 2026)
+
+Brandon approved React Native + Expo and authorized implementation for iPhone, iPad and Android. The three separate horizontal pages are Scorecard (left), Practice (center and initial page), and Settings (right, including account and cloud saves). Keep these separate on tablets too; the earlier tablet scorecard-side-panel proposal is superseded. Provide accessible tap navigation alongside paging and protect inspection/timing from navigation gestures. Native TNoodle runtime setup may change while preserving pinned algorithms, fresh offline generation and drawings. Reuse the existing backend and explicit one-save upload/download replacement.
+
+The owner also approved adding Sign in with Apple to web and mobile. Provider enablement needs real Apple setup, consent and deletion/revocation acceptance. No developer enrollment, signed app build or physical-device result is claimed by this authorization.
+
+The durable implementation plan, issue ownership and agent handoff are in `docs/mobile-roadmap.md`; testing is in `docs/mobile-testing.md`. GitHub tracker #36 and workstreams #37–#41 coordinate parallel branches. This is the current approved checkpoint; older statements deferring mobile work no longer apply. Native distribution licensing remains an early release prerequisite.
+
+The first code checkpoint adds the three-page Expo shell, local timer/manual practice, SQLite confirmed-history persistence, and isolated offline engine bridge. TypeScript, 18 mobile tests, and iOS/Android JavaScript exports passed. No native app was compiled or tested on hardware. Cold 4×4 host generation took 176.046 seconds; high transitive tooling advisories also remain open. Native feature parity and interrupted-attempt recovery are subsequent work, as documented in `mobile/README.md`. Brandon confirmed he has not enrolled in the paid Apple Developer Program. Separate draft PR #42 prepares web Apple provider support while keeping production disabled pending credentials and grant revocation/deletion.
+
 ## Privacy links and provider button appearance (October 15, 2026)
 
 The owner moved the app's About, Privacy Policy, and Terms of Service links into Settings > Privacy, removing them from the home and Help footers. Standalone public information pages retain their navigation. Provider buttons now use the app's blue accent, with each official logo centered beside its label. Added the official WCA symbol and retained the Google mark on a white backing; sign-in, linking, and confirmation use the same layout. The owner also reports publishing the Google application.
@@ -352,3 +400,13 @@ Brandon requested publishing the localization audit fixes and correcting inspect
 Typed solves do not automatically receive inspection penalties: the app cannot know when a physical desk timer was started. Inspection callouts remain available. Keyboard-timed solves retain automatic inspection scoring. A digit from the number row or numpad during Ready or Inspection immediately opens typed entry and retains that first digit, without changing the saved input-mode preference. Existing attempts and explicit penalty corrections remain unchanged.
 
 Penalty editing now presents a single +2/DNF toggle pair for both automatic inspection and user-applied penalties. Explicit edits replace the combined selection and clear the separate inspection contribution; existing records retain their original data until edited.
+## Apple sign-in preparation (October 15, 2026)
+
+Brandon approved Apple sign-in on web and mobile while starting React Native/Expo work. He has not yet enrolled in the paid Apple Developer Program. Workstream #40 adds gated web provider plumbing, same-account linking/callback checks, and Apple initial-redirect validation. Both deployed provider manifests remain unchanged. Release builds explicitly reject enabling Apple until grant capture, server-side revocation, and deletion acceptance are implemented. Current API deletion deliberately does not accept Apple OAuth as proof; deleting a Supabase user alone does not revoke Apple's grant. Exact setup, proposed identifiers, native/browser choices, pending revocation design, and acceptance steps are recorded in `docs/apple-sign-in.md`. No credentials or production auth settings were changed.
+
+## App Store 1.0 decisions (November 13, 2026)
+
+- **License:** the whole application is GPL-3.0 (root `LICENSE`), matching the bundled TNoodle engine. The owner chose to ship on the App Store under GPL without first asking TNoodle's rights holders. Known risk: a rights holder could object to App Store distribution and Apple could remove the app.
+- **Accounts ship in 1.0.** Users who signed in with Apple, Google or WCA delete their account inside the app by signing in again with that provider (a separate client, so the current session is untouched). The server already accepts a recent OAuth sign-in as proof. Apple deletion re-sends the Apple grant first so the server can revoke Apple access.
+- **Version** is 1.0.0.
+- **Scrambles** are prepared one ahead per event in the background. Solves are timed from native touch timestamps, and page swiping is off in the `ready` phase.

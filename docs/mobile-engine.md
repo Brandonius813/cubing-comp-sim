@@ -1,0 +1,207 @@
+# Mobile TNoodle feasibility bridge
+
+The first mobile implementation keeps the existing pinned TNoodle algorithms and places their compiled JavaScript in an isolated, locally bundled WebView. The app's screens, touch controls and timer remain React Native views. The React Native JavaScript runtime sends a small request and receives notation plus SVG; it never executes TNoodle's expensive generation work.
+
+This is a feasibility implementation, not native-device acceptance or store-distribution approval. Keep the independent TNoodle license review open before distributing store binaries.
+
+## Why this first experiment
+
+The website already has a Java-to-JavaScript TNoodle release with reference fixtures for all sixteen supported events. React Native does not provide the browser's module Web Worker integration. Hosting that same compiled module in a separate WebView runtime is a small way to measure whether reuse works on both Apple and Android devices without rewriting algorithms or tying generation to a server.
+
+The module uses the WebView's `crypto.getRandomValues`. No seeded-production, `Math.random`, online-generation or precomputed-scramble fallback exists. Missing secure randomness is an error. A WebView's hidden layout and separate execution context do not prove acceptable battery, memory, timing responsiveness or background behavior. Those are device gates.
+
+## Runtime contract
+
+```tsx
+const engine = useMemo(() => new MobileScrambleService(), []);
+// Keep this host mounted while the practice screen exists.
+<TnoodleEngineHost key={engineRestart} service={engine} onStatus={setEngineStatus} />
+const scramble = await engine.generate('333');
+```
+
+Only the validated `generate` action is available in the app bridge. The result retains the existing `GeneratedScramble` contract: event ID, exact notation, matching SVG, engine version and generation timestamp.
+
+Each mounted host has a new channel ID. Requests have monotonic IDs and are serialized. The native side verifies the engine version and complete event list before sending work, then validates every response and checks its event against the pending request. Retired channels, unknown IDs and duplicate responses cannot change the current attempt. A bounded queue avoids unbounded concurrent requests.
+
+Startup has a 15-second timeout; a dispatched generation has the existing website's 180-second timeout. These are temporary failure bounds, not acceptable performance targets. Process termination, invalid responses or a timeout reject pending work and unmount the computation host. Retry remounts a clean host. There is no claim that the engine continues running after the operating system suspends the app.
+
+The WebView loads a static HTML string from the native JavaScript bundle. It has no remote URL, external script, font, table, image or CDN dependency. Its Content Security Policy blocks network/resource loads. Navigation is restricted to its initial blank document; file access, storage and shared cookies are disabled. The host receives no credentials or local history.
+
+## Reproducible preparation
+
+From the repository root, after installing the root development dependencies and the Java/Maven prerequisites:
+
+```sh
+npm run engine:verify
+node mobile/scripts/engine-bundle.mjs
+```
+
+Alternatively, reuse an already verified artifact with its matching manifest, conformance proof and license:
+
+```sh
+node mobile/scripts/engine-bundle.mjs --engine-dir /absolute/path/to/public/engine
+```
+
+The builder reuses `scripts/assert-engine.mjs`. It checks the compiled bytes' SHA-256, pinned upstream commit, source identities, proof outcome, all sixteen fresh-generation results and at least two seeded reference cases per event. A mismatched or missing artifact blocks preparation.
+
+The bundler removes only the generated module's final ESM export statement and wraps its unchanged algorithm body with the private message bridge. It rejects unexpected export syntax and closing-script injection. No minifier, runtime compiler or algorithm transpilation is added. The engine license and corresponding-source URL remain inside the bundle.
+
+The generated `mobile/assets/engine.generated.ts` is about 650 KB with the current artifact. It is an ignored build output, not a second checked-in algorithm copy. The root vendored source and existing build pipeline remain authoritative. Re-run preparation whenever the engine or bridge changes.
+
+## Automated verification
+
+```sh
+node --test mobile/scripts/engine-bundle.test.mjs
+cd mobile
+node --import tsx --test src/engine/service.test.ts
+cd ..
+node mobile/scripts/engine-verify.mjs
+```
+
+The focused tests cover channel and request isolation, queued jobs, timeouts and restart, mismatched event/version rejection, closing the host, unsupported events, missing secure randomness, and static resource restrictions.
+
+The full verification command first boots the exact production HTML in a fresh Node VM with no DOM, fetch or network APIs. It generates fresh notation and SVG for all sixteen events. A separate test-only copy exposes the compiled conformance functions from the same transformed scope and checks the matching JVM fixtures, bounded-random vectors, puzzle states, SVGs and minimum-distance rules. Those test hooks are never written into the production asset. It also parses/draws the fresh production results and checks their distance constraints.
+
+This creates ignored `mobile/assets/engine.verification.generated.json` with input-engine, production-document and reference-fixture hashes, case counts and measured durations. Its scope explicitly identifies Node VM evidence. It is not a native WebView proof.
+
+For local diagnosis without the Java fixture file, `engine-verify.mjs --smoke` runs the production bridge's sixteen fresh generators only. That mode explicitly records zero fixture cases and cannot satisfy the full CI gate.
+
+Local evidence on October 15, 2026: the three bundler/runtime tests and five service/protocol tests passed, and the exact production bridge generated all sixteen events in Node VM smoke mode using engine SHA-256 `37008dff9676c9c782da7b31bcb0cedf562a07e288bafb0ea16fa68267c17f57`. The first 4×4 request took 176.046 seconds; 4×4 blindfolded later took 8.328 seconds and FTO took 5.132 seconds. This is a serious cold-start performance issue to investigate, not a phone benchmark. The test ran zero reference fixtures because the local fixture file was unavailable. Native timing, audio, rendering and offline-installation tests remain unrun.
+
+## Remaining native gates
+
+- Install a standalone development/release build on an actual iPhone, iPad and Android device. Disable connectivity before first launch and generate fresh scrambles for every event. Loading from a development server or Expo Go is not this test.
+- Run matching seeded/state/SVG reference checks inside the actual Apple and Android WebView runtimes. Node equivalence does not establish their compiler/runtime equivalence.
+- Measure cold and warm 4×4/FTO latency, memory, battery and native touch/timer responsiveness. Existing website CI had slow cold initialization; these timeout bounds are not performance approval.
+- Confirm the native SVG renderer displays each TNoodle drawing correctly, especially large cubes, Clock, Square-1 and FTO.
+- Test closing/reopening, memory-pressure process termination, app suspension, failed startup, timed-out work and retry. Check stale messages cannot reach a new attempt.
+- Verify no network request is necessary or attempted by the engine. Check `crypto.getRandomValues` availability on the minimum supported OS/WebView versions.
+- Test updating the app with saved drafts from a previous engine version; preserve the stored notation and drawing rather than replacing them silently.
+
+If the isolated WebView fails these gates, compare an explicitly hosted background JavaScript runtime/native bridge. The experiment does not authorize weakening the TNoodle correctness or offline requirements.
+
+Implementation references: [React Native WebView guide](https://github.com/react-native-webview/react-native-webview/blob/master/docs/Guide.md), [WebView API reference](https://github.com/react-native-webview/react-native-webview/blob/master/docs/Reference.md), [WebCrypto getRandomValues](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues), and the repository's [engine documentation](../engine/README.md).
+
+## October 20 review implementation
+
+The service accepts an optional `AbortSignal` as the second argument to
+`generate`. A cancelled queued request is removed before dispatch. Cancelling
+an active request rejects that caller immediately, but the isolated synchronous
+TNoodle computation keeps its slot until it finishes or the existing timeout
+expires. Its result is discarded. The next request then uses the same engine,
+retaining expensive initialized tables. This is logical cancellation, not a
+claim that injected JavaScript can preempt synchronous native WebView work.
+Unmount/reset still rejects the entire queue and retires the host channel.
+
+`EngineStatus.phase` remains `ready` while generating, with optional
+`generation: { eventId, elapsedMs, queued }` progress. The elapsed value uses the
+native monotonic clock and updates once per second. It is not an estimated
+percentage or completion time. The app can render progress without running any
+engine algorithm in the React Native runtime. A request-specific error with an
+unknown/retired request ID no longer kills unrelated active work.
+
+Source inspection of the pinned `cs.threephase.Search.init()` shows the first
+4x4 path initializes Center1 symmetry/move/pruning tables, Center2 and Center3,
+and Edge3 move, symmetry and pruning tables. Edge3's pruning generation scans
+its state space over successive depths. Those tables are retained only within
+the current engine runtime. This explains a plausible initialization cost, but
+is not a measured per-function profile and does not establish that all observed
+latency is initialization. No table cache, algorithm substitution or timeout
+increase has been introduced. Persisting compiler-private tables without
+versioned validation and matching reference evidence would be unsafe.
+
+The verification script now removes any prior generated success report before
+starting and checks the exact reference fixture hash before expensive work.
+Both normal and explicit smoke modes generate fresh results for all 16 events
+in a first pass and repeat pass. The report separates `timings` and
+`warmTimings`. Both passes share one host, so related events in the first pass
+can already benefit from initialized tables. These are Node VM timings, not
+cold native process measurements. Smoke mode still records zero JVM fixtures
+and cannot satisfy reference conformance.
+
+Environment inspection for this review found only Apple Command Line Tools;
+`xcrun simctl list devices available` failed because `simctl` is unavailable.
+`node engine/scripts/reference.mjs 2` verified all 72 pinned vendor files, then
+failed at `javac`: no compiler-capable JDK is installed. The available Java
+runtime reported 1.8.0_371; Maven was not found. No fresh JVM fixture or native
+WebView acceptance result is claimed. The existing artifact's SHA-256 remains
+`37008dff9676c9c782da7b31bcb0cedf562a07e288bafb0ea16fa68267c17f57`.
+
+### Actual checks in this review
+
+- `node --import ./mobile/node_modules/tsx/dist/loader.mjs --test mobile/src/engine/service.test.ts`: **10 passed**, covering queue bounds, aborts, disposal, startup/generation timeouts, stale responses/errors, correlation and progress.
+- `node --test mobile/scripts/engine-bundle.test.mjs`: **3 passed**, including network-independent document construction and secure-randomness failure.
+- `./node_modules/.bin/tsc --noEmit -p mobile/tsconfig.json`: **passed**.
+- `node mobile/scripts/engine-bundle.mjs --engine-dir ../mobile-foundation/public/engine`: **passed**, preserving the verified engine hash above. The sibling path is only the local review artifact source, not a build requirement.
+- The production-bridge smoke run (before the verifier gained its second pass) generated 2x2 in **59 ms**, 3x3 in **1,633 ms**, then **failed** at the unchanged **180,000 ms** timeout during the first 4x4. It did not complete the all-event pass. Warm measurements are therefore unavailable. The timeout was not increased and no slower retry was represented as acceptance.
+- `node --check mobile/scripts/engine-verify.mjs`: **passed** for the revised verifier. Its full reference mode failed immediately on the missing exact `reference-fixtures.jsonl`, as intended, without leaving a generated success report. The revised two-pass path has not completed in this environment.
+
+**Release status:** the engine remains a verified-artifact integration with
+passing host/protocol unit tests, not an accepted all-event native runtime.
+Cold 4x4 exceeded the unchanged failure bound in the contextified Node VM
+harness. The diagnostic below shows that this does not establish equivalent
+latency in another JavaScript runtime. Device performance must be measured
+before choosing a table cache or different isolated runtime. Resolving that requires
+compiler/reference tooling and native testing; the timeout and correctness
+gates remain intact.
+
+
+### Additional bounded diagnostics
+
+A separate production-document smoke run excluded `444` and `444bf` and
+completed the other **14 events**, with a 30-second per-request bound and the
+same no-network contextified Node VM setup. No reference fixtures were used.
+
+| Event | Contextified VM first pass, ms |
+| --- | ---: |
+| 222 | 52 |
+| 333 | 1,625 |
+| 555 | 537 |
+| 666 | 907 |
+| 777 | 1,503 |
+| 333oh | 249 |
+| 333bf | 263 |
+| 555bf | 515 |
+| minx | 86 |
+| pyram | 21 |
+| skewb | 30 |
+| sq1 | 118 |
+| fto | 4,956 |
+| clock | 146 |
+
+A second diagnostic executed the **same unmodified production document** in
+Node's ordinary current context with `vm.runInThisContext`, rather than a
+`vm.createContext` context. It used fresh process state, then generated the
+following sequence with a 60-second per-request bound:
+
+| Event | Non-contextified Node diagnostic, ms |
+| --- | ---: |
+| 333 | 626 |
+| 444 | 11,813 |
+| 444bf | 688 |
+| fto | 5,008 |
+
+The 4x4 request was the first 4x4-family request in that process; 4BLD reused
+its initialized tables. Neither run altered TNoodle, seeded production
+randomness, changed timeout settings in the app, or substituted scrambles.
+The results included nonempty notation and SVG and matched each requested
+event and pinned engine identity. No puzzle-state/reference equivalence or
+native UI/rendering claim follows from these checks.
+
+The difference between >180 seconds and 11.813 seconds is consistent with a
+substantial contextified-VM performance penalty, but these are single fresh
+random generations, not identical seeded workloads or a controlled profiler.
+It does not quantify the exact overhead or predict WKWebView latency. FTO was
+similar across the two runs. The ordinary Node context also has Node globals
+available, so its result does **not** replace the isolated no-network harness
+or any reference gate. The diagnostic makes no application/runtime change.
+
+Machine-readable measurements and exact engine/document hashes are in
+[`engine-review-node-evidence.json`](engine-review-node-evidence.json).
+Document SHA-256 was
+`c211721799b87f356f08508bdd8120ddee505d7def7d6a42a5af18b2127d9eed` in both runs.
+Reproduction uses `makeEngineDocument` with the validated artifact and current
+bridge, substitutes a private test channel, extracts the existing script body,
+and executes it unchanged; only the host evaluation method differs. These
+separate diagnostics expand smoke coverage, but do not turn the failed full
+contextified run into a pass or satisfy all-event native acceptance.

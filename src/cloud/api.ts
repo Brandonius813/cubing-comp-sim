@@ -1,4 +1,4 @@
-import { validateHistorySnapshot, type HistorySnapshot } from '../storage';
+import { validateHistorySnapshot, type HistorySnapshot } from '../storage/validation';
 import { CloudError, type AccountSession, type SaveMetadata, type CloudErrorCode, type DeletionResult } from './types';
 
 const messages: Record<CloudErrorCode, string> = {
@@ -45,13 +45,16 @@ export class CloudSaves {
     if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new CloudError('offline', messages.offline);
     const started = performance.now();
     const operation = path.includes('metadata') ? 'metadata' : path.includes('account') ? 'account' : init.method === 'PUT' ? 'upload' : 'download';
-    const observe = (status: number) => { if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('ccs-api-observed', { detail: { code: operation, status, duration: performance.now()-started } })); };
+    const observe = (status: number) => { if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent('ccs-api-observed', { detail: { code: operation, status, duration: performance.now()-started } })); };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120_000);
+    try {
     let response: Response;
     try {
       response = await this.fetcher(`${this.base}${path}`, {
         ...init, credentials: 'omit', cache: 'no-store',
         headers: { ...init.headers, Authorization: `Bearer ${session.accessToken}` },
-        signal: AbortSignal.timeout(120_000),
+        signal: controller.signal,
       });
     } catch { observe(0); throw new CloudError('network_error', messages.network_error); }
     observe(response.status);
@@ -67,6 +70,7 @@ export class CloudSaves {
     }
     try { return await response.json(); }
     catch { throw new CloudError('invalid_save', messages.invalid_save); }
+    } finally { clearTimeout(timeout); }
   }
 
   async getSaveMetadata(session: AccountSession): Promise<SaveMetadata | null> {
