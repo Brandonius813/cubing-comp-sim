@@ -64,6 +64,19 @@ export function AccountPanel({ getSnapshot, replaceSnapshot, disabled = false, o
     const state = AppState.addEventListener('change', next => auth.setActive(next === 'active'));
     return () => { mounted.current = false; unsubscribe(); link.remove(); state.remove(); transfers.cancel(); if (!injected) auth.dispose(); };
   }, [auth, transfers, injected]);
+  // Show the cloud save summary as soon as someone is signed in, instead of
+  // leaving it blank until they find the refresh icon.
+  const sessionUserId = session?.user.id;
+  const sessionVerified = session?.user.emailVerified ?? false;
+  useEffect(() => {
+    if (!sessionUserId || !sessionVerified || !cloud.configured) return;
+    let current = true;
+    void auth.verifiedSession()
+      .then(verified => cloud.getSaveMetadata(verified))
+      .then(result => { if (current && mounted.current && accountId.current === sessionUserId) setMetadata(result); })
+      .catch(() => undefined); // The refresh icon still reports errors on demand.
+    return () => { current = false; };
+  }, [sessionUserId, sessionVerified, auth, cloud]);
   async function run(task: () => Promise<void>) {
     if (busyRef.current || disabled) return;
     busyRef.current = true; setBusy(true); onBusyChange?.(true); setMessage('');
