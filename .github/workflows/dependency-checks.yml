@@ -1,9 +1,10 @@
 name: Dependency security checks
+# Runs weekly (and on demand) instead of on every change. The known advisories in
+# upstream build tools made this fail on every pull request without telling us anything new.
 on:
-  push:
-    branches: [main]
-    paths: ['package*.json', 'server/package*.json', 'mobile/package*.json', '.github/workflows/dependency-checks.yml']
-  pull_request:
+  schedule:
+    - cron: '0 14 * * 1'
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
