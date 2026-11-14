@@ -49,7 +49,8 @@ export interface MobileDraft {
 }
 
 export function mobileSettings(preferences: MobilePreferences): Settings {
-  return validateSettings({ ...DEFAULT_SETTINGS, holdMs: 0, ...preferences });
+  // New installs default to hold-to-start (owner decision, November 14, 2026).
+  return validateSettings({ ...DEFAULT_SETTINGS, holdMs: 550, ...preferences });
 }
 
 export function validateMobilePreferences(preferences: MobilePreferences): MobilePreferences {
@@ -61,7 +62,7 @@ export function validateMobilePreferences(preferences: MobilePreferences): Mobil
   const scrambleFontSize = preferences.scrambleFontSize ?? 24;
   const timerDisplay = preferences.timerDisplay ?? 'decimal';
   if (!Number.isInteger(scrambleFontSize) || scrambleFontSize < 16 || scrambleFontSize > 40 || !['decimal', 'seconds', 'solve'].includes(timerDisplay)) throw new Error('Invalid display settings.');
-  const showScrambleDrawing = preferences.showScrambleDrawing === undefined ? false : preferences.showScrambleDrawing;
+  const showScrambleDrawing = preferences.showScrambleDrawing === undefined ? true : preferences.showScrambleDrawing;
   const inspectionAudio = preferences.inspectionAudio === undefined ? true : preferences.inspectionAudio;
   const voiceLanguage = preferences.voiceLanguage === undefined ? 'en' : preferences.voiceLanguage;
   const voice = preferences.voice === undefined ? 'male-1' : preferences.voice;

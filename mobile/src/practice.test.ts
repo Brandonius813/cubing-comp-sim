@@ -56,10 +56,10 @@ test('an interrupted timed attempt remains DNF even if its review penalty is cha
   assert.equal(save.history.rounds[0].attempts[0].penalty, 'DNF');
 });
 
-test('legacy saves migrate to zero hold and disabled waits without discarding history', () => {
+test('saves without a hold setting default to hold-to-start and disabled waits without discarding history', () => {
   const legacy = { ...emptySave(), preferences: { eventId: '333', inspection: true } };
   const migrated = validateMobileSave(legacy);
-  assert.equal(migrated.preferences.holdMs, 0);
+  assert.equal(migrated.preferences.holdMs, 550);
   assert.equal(migrated.preferences.waitEnabled, false);
   assert.equal(migrated.preferences.waitMode, 'fixed');
   assert.throws(() => validateMobileSave({ ...legacy, preferences: { ...legacy.preferences, holdMs: -1 } }));
@@ -176,10 +176,10 @@ test('audio defaults are migrated but corrupt explicit values fail closed', () =
   }
 });
 
-test('visual preference migrates off and appearance/input controls survive a saved round trip', () => {
+test('scramble drawing defaults on and appearance/input controls survive a saved round trip', () => {
   const legacy = emptySave();
   delete legacy.preferences.showScrambleDrawing;
-  assert.equal(validateMobileSave(legacy).preferences.showScrambleDrawing, false);
+  assert.equal(validateMobileSave(legacy).preferences.showScrambleDrawing, true);
   assert.equal(validateMobileSave({ ...legacy, preferences: { ...legacy.preferences, holdMs: 300 } }).preferences.holdMs, 550);
   const next = validateMobileSave({ ...legacy, preferences: { ...legacy.preferences, showScrambleDrawing: true, theme: 'light', inputMethod: 'manual', holdMs: 550, waitMode: 'random', waitMinSeconds: 0, waitMaxSeconds: 180, voiceVolume: .37, textFont: 'georgia', numberFont: 'system-mono' } });
   const restored = validateMobileSave(JSON.parse(JSON.stringify(next)));
