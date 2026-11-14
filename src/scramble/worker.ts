@@ -6,7 +6,7 @@ interface EngineModule {
   engineVersion(): string;
 }
 
-const EXPECTED_VERSION = 'tnoodle-lib@d01a947d9f028f38085cda9b0507a9cf3d3f38a8+webcrypto.2';
+const EXPECTED_VERSION = 'tnoodle-lib@d01a947d9f028f38085cda9b0507a9cf3d3f38a8+webcrypto.4';
 let enginePromise: Promise<EngineModule> | undefined;
 
 async function getEngine(): Promise<EngineModule> {

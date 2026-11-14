@@ -1,5 +1,9 @@
 /** Account-provider copy falls back to English until translations are reviewed. */
 export const accountEn = {
+  continueApple: 'Continue with Apple',
+  linkedApple: 'Apple connected',
+  linkApple: 'Connect Apple',
+  confirmAppleIdentity: 'Confirm with Apple',
   continueGoogle: 'Continue with Google',
   continueWca: 'Continue with WCA',
   emailAlternative: 'Or use email',

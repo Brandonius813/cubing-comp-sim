@@ -27,7 +27,7 @@ test('real PostgreSQL save transactions', {
   try {
     await admin.query(`CREATE SCHEMA ${schema}`);
     created = true;
-    for (const filename of ['001_cloud_saves.sql', '002_account_deletion.sql']) {
+    for (const filename of ['001_cloud_saves.sql', '002_account_deletion.sql', '003_apple_grants.sql']) {
       await pool.query(await readFile(new URL(`../migrations/${filename}`, import.meta.url), 'utf8'));
     }
     const repository = new PostgresSaves(pool);

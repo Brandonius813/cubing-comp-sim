@@ -1,3 +1,4 @@
+import { AppleGrants, PostgresAppleGrants } from './apple.js';
 import { Pool } from 'pg';
 import { readConfig } from './config.js';
 import { PostgresSaves } from './postgres.js';
@@ -13,8 +14,9 @@ export function dependencies() {
   pool.on('error', () => process.stderr.write('{"level":"error","code":"database_connection_failed"}\n'));
   const objects = new S3SaveObjects(config.s3);
   const deletionRepository = new PostgresDeletions(pool);
+  const apple = config.apple ? new AppleGrants(config.apple, new PostgresAppleGrants(pool)) : undefined;
   const deletions = config.supabaseServiceRoleKey
-    ? new AccountDeletion(deletionRepository, objects, createIdentityDeleter(config.supabaseUrl, config.supabaseServiceRoleKey), () => process.stderr.write('{"level":"warn","code":"account_deletion_pending"}\n'))
+    ? new AccountDeletion(deletionRepository, objects, createIdentityDeleter(config.supabaseUrl, config.supabaseServiceRoleKey), () => process.stderr.write('{"level":"warn","code":"account_deletion_pending"}\n'), apple)
     : undefined;
-  return { config, pool, repository: new PostgresSaves(pool), objects, deletions, deletionRepository };
+  return { apple, config, pool, repository: new PostgresSaves(pool), objects, deletions, deletionRepository };
 }

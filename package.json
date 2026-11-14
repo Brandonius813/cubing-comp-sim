@@ -7,7 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "node scripts/assert-engine.mjs && node scripts/assert-inspection-pack.mjs && tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "vitest run src",
+    "test": "vitest run --dir src",
     "typecheck": "tsc -b",
     "engine:build": "node scripts/build-engine.mjs",
     "engine:verify": "node engine/scripts/reference.mjs 2 && node scripts/build-engine.mjs && node engine/scripts/conformance.mjs",
